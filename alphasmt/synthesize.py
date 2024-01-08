@@ -20,8 +20,10 @@ def createBenchmarkList(benchmark_directory, timeout, batchSize, tmp_folder, z3p
     resLst = evaluator.getResLst(None)
     # par2 list from resLst; for each entry (solved, time) in resLst, if solved, return time; else return 2 * timeout
     par2Lst = [2 * timeout if not res[0] else res[1] for res in resLst]
-    # sort benchmarkLst resLst into a ascending list by par2Lst
-    benchmarkLst = [x for _, x in sorted(zip(par2Lst, benchmarkLst))]
+    # # sort benchmarkLst resLst into a ascending list by par2Lst
+    # benchmarkLst = [x for _, x in sorted(zip(par2Lst, benchmarkLst))]
+    # sort benchmarkLst resLst into a descending list by par2Lst
+    benchmarkLst = [x for _, x in sorted(zip(par2Lst, benchmarkLst), reverse=True)]
     return benchmarkLst
 
 def createProbeStats(bench_lst):
