@@ -3,7 +3,7 @@
   "logic": "QF_S",
   "batch_size": 2,
   "s1config": {
-    "bench_dir": "/Users/zhengyanglumacmini/Desktop/example",
+    "bench_dirs": "/Users/zhengyanglumacmini/Desktop/example",
     "sim_num": 15,
     "timeout": 1,
     "is_mean_est": false,
@@ -12,7 +12,7 @@
     "is_log": true
   },
   "s2config": {
-    "bench_dir": "/Users/zhengyanglumacmini/Desktop/example",
+    "bench_dirs": "/Users/zhengyanglumacmini/Desktop/example",
     "sim_num": 50,
     "timeout": 5,
     "is_mean_est": false,

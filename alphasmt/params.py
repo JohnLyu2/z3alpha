@@ -14,9 +14,9 @@ BASIC_PARAMS = {
         
     },
     # "propagate-values"
-    21: {
-        "push_ite_bv": ["true","false"] # z3-qfbv
-    },
+    # 21: {
+    #     "push_ite_bv": ["true","false"] # z3-qfbv
+    # },
     # "nla2bv" 
     5: {
         "nla2bv_max_bv_size": [4, 8, 16, 32, 64, 128]
@@ -66,6 +66,9 @@ def create_params_dict(logic):
         params[20]["pull_cheap_ite"] = ["true","false"]
         # for qfbv
         params[20]["push_ite_bv"] = ["true","false"]
+        # "propagate-values"
+        params[21] = {}
+        params[21]["push_ite_bv"] = ["true","false"]
     elif logic == "QF_NRA":
         # "simplify"
         params[20]["som"] = ["true","false"]
@@ -75,6 +78,9 @@ def create_params_dict(logic):
         # for qfbv
         params[20]["push_ite_bv"] = ["true","false"]
         params[20]["pull_cheap_ite"] = ["true","false"]
+        # "propagate-values"
+        params[21] = {}
+        params[21]["push_ite_bv"] = ["true","false"]
     elif logic == "QF_BV":
         # "simplify"
         params[20]["som"] = ["true","false"]
@@ -82,6 +88,9 @@ def create_params_dict(logic):
         params[20]["push_ite_bv"] = ["true","false"] # z3-qfbv fast-qfbv
         params[20]["hoist_mul"] = ["true","false"]
         params[20]["pull_cheap_ite"] = ["true","false"]
+        # "propagate-values"
+        params[21] = {}
+        params[21]["push_ite_bv"] = ["true","false"]
     elif logic == "QF_S":
         pass
     else:

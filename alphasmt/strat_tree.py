@@ -243,7 +243,7 @@ class PreprocessTactic(ASTNode):
             36: "add-bounds",
             37: "normalize-bounds",
             38: "lia2pb",
-            # 40
+            # 40 - 43 are QF_S only
             40: "ext_str",
             41: "ext_strSimplify",
             42: "ext_strToRegex",
@@ -478,10 +478,6 @@ class StrategyAST():
             self.root.addChildren([S2Strategy(timeout, s2dict, if_depth = 0)])
     def __str__(self):
         return str(self.root)
-
-    # def smt2str(self):
-    #     assert self.isTerminal()
-    #     return self.root.children[0].smt2str()
 
     @staticmethod
     def _findFstNonTermRec(nonterm_stack):
