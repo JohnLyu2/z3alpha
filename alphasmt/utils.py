@@ -28,22 +28,22 @@ def calculatePercentile(lst, percentile):
     index = int(len(sortedLst) * percent)
     return sortedLst[index]
 
-def write_strat_res_to_csv(res_dict, csv_path, bench_lst):
+def write_strat_res_to_csv(res_lst, csv_path, bench_lst):
     with open(csv_path, 'w') as f:
         writer = csv.writer(f)
         # write header
         writer.writerow(["strat"] + bench_lst)
-        for strat in res_dict:
-            res_lst = []
-            for res_tuple in res_dict[strat]:
+        for strat, res in res_lst:
+            write_lst = []
+            for res_tuple in res:
                 if res_tuple[0]:
-                    res_lst.append(res_tuple[1])
+                    write_lst.append(res_tuple[1])
                 else:
-                    res_lst.append(-res_tuple[1])
-            writer.writerow([strat] + res_lst)
+                    write_lst.append(-res_tuple[1])
+            writer.writerow([strat] + write_lst)
 
 def read_strat_res_from_csv(csv_path):
-    res_dict = {}
+    results = []
     with open(csv_path, 'r') as f:
         reader = csv.reader(f)
         header = next(reader)
@@ -57,6 +57,6 @@ def read_strat_res_from_csv(csv_path):
                     res_lst.append((False, -stime))
                 else:
                     res_lst.append((True, stime))
-            res_dict[strat] = res_lst
-    return res_dict, bench_lst
+            results.append((strat, res_lst))
+    return results, bench_lst
 

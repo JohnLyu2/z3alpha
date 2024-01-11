@@ -21,6 +21,7 @@ def main():
     parser.add_argument('--no_syn', action='store_false', default = True, help='does not need to perform s2 synthesize')
     configJsonPath = parser.parse_args()
     config = json.load(open(configJsonPath.json_config, 'r'))
+    num_strat = config['ln_strat_num']
     s2config = config['s2config']
     is_cache = configJsonPath.no_caching
     is_syn = configJsonPath.no_syn
@@ -38,17 +39,18 @@ def main():
             creader = csv.reader(f)
             next(creader)
             stratLst = [row[0] for row in creader]
-        res_dict, bench_lst, cache_time = cache4stage2(stratLst, config, log, log_folder)
+        res_lst, bench_lst, cache_time = cache4stage2(stratLst, config, log, log_folder)
 
     if not is_syn:
         return
 
     if not is_cache:
         ln_strat_file = s2config['ln_res']
-        res_dict, bench_lst = read_strat_res_from_csv(ln_strat_file)
+        # change!
+        res_lst, bench_lst = read_strat_res_from_csv(ln_strat_file)
         log.info(f"s2syn: read {len(res_dict)} strategies from {ln_strat_file}")
     
-    bst_strat, s2mcts_time = stage2_synthesize(res_dict,bench_lst, config, log, log_folder)
+    bst_strat, s2mcts_time = stage2_synthesize(res_lst, bench_lst, config, log, log_folder)
     log.info(f"Best strategy found: {bst_strat}")
     log.info(f"S2: Cache time: {cache_time:.0f}, MCTS time: {s2mcts_time:.0f}, Total time: {cache_time + s2mcts_time:.0f}")
 

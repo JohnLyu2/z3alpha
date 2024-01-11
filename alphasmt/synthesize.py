@@ -100,6 +100,9 @@ def stage1_synthesize(config, stream_logger, log_folder):
 
 def cache4stage2(selected_strat, config, stream_logger, log_folder):
     startTime = time.time()
+    num_strat = config['ln_strat_num']
+    # assert len(selected_strat) >= num_strat
+    selected_strat = selected_strat[:num_strat]
     z3path = config['z3path'] if 'z3path' in config else "z3"
     s2config = config['s2config']
     s2benchDirs = s2config['bench_dirs']
@@ -107,21 +110,29 @@ def cache4stage2(selected_strat, config, stream_logger, log_folder):
     batch_size = config['batch_size']
     tmp_folder = config['temp_folder']
     s2benchLst = createBenchmarkList(s2benchDirs, s2timeout, batch_size, tmp_folder, z3path, is_sorted=True)
-    s2_res_dict = {}
+    s2_res_lst = []
     s2evaluator = SolverEvaluator(z3path, s2benchLst, s2timeout, batch_size, tmp_dir=tmp_folder)
     for i in range(len(selected_strat)):
         strat = selected_strat[i]
         stream_logger.info(f"Stage 2 Caching: {i+1}/{len(selected_strat)}")
-        s2_res_dict[strat] = s2evaluator.getResLst(strat)
+        strat_res = s2evaluator.getResLst(strat)
+        s2_res_lst.append((strat, strat_res))
     ln_res_csv = os.path.join(log_folder, "ln_res.csv")
-    write_strat_res_to_csv(s2_res_dict, ln_res_csv, s2benchLst)
+    write_strat_res_to_csv(s2_res_lst, ln_res_csv, s2benchLst)
     stream_logger.info(f"Cached results saved to {ln_res_csv}")
     endTime = time.time()
     cacheTime = endTime - startTime
     stream_logger.info(f"Stage 2 Cache Time: {cacheTime:.0f}")
-    return s2_res_dict, s2benchLst, cacheTime
+    return s2_res_lst, s2benchLst, cacheTime
 
-def stage2_synthesize(res_dict, bench_lst, config, stream_logger, log_folder):
+def stage2_synthesize(results, bench_lst, config, stream_logger, log_folder):
+    num_strat = config['ln_strat_num']
+    # assert len(results) >= num_strat
+    # results is a list of (strat, res_lst); get the first num_strat strat
+    results = results[:num_strat]
+    res_dict = {}
+    for strat, res_lst in results:
+        res_dict[strat] = res_lst
     selected_strat = list(res_dict.keys())
     act_lst, solver_dict, preprocess_dict, s1strat2acts = convert_strats_to_act_lists(selected_strat)
     stream_logger.info(f"preprocess dict: {preprocess_dict}")
