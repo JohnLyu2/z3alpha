@@ -31,7 +31,7 @@ def main():
     os.makedirs(log_folder)
     
     cache_time = 0
-    res_dict = None
+    res_lst = None
     bench_lst = None
     if is_cache:
         ln_strat_file = s2config['ln_res']
@@ -48,7 +48,7 @@ def main():
         ln_strat_file = s2config['ln_res']
         # change!
         res_lst, bench_lst = read_strat_res_from_csv(ln_strat_file)
-        log.info(f"s2syn: read {len(res_dict)} strategies from {ln_strat_file}")
+        log.info(f"s2syn: read {len(res_lst)} strategies from {ln_strat_file}")
     
     bst_strat, s2mcts_time = stage2_synthesize(res_lst, bench_lst, config, log, log_folder)
     log.info(f"Best strategy found: {bst_strat}")
