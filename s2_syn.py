@@ -18,36 +18,37 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('json_config', type=str, help='The experiment configuration file in json')
     parser.add_argument('--no_caching', action='store_false', default = True, help='cache results are provided; no need to caching s1 strats')
+    parser.add_argument('--benchlst4cahce', action='store_true', default = False, help='bench list is provided for caching')
     parser.add_argument('--no_syn', action='store_false', default = True, help='does not need to perform s2 synthesize')
     configJsonPath = parser.parse_args()
     config = json.load(open(configJsonPath.json_config, 'r'))
-    num_strat = config['ln_strat_num']
+    # num_strat = config['ln_strat_num']
     s2config = config['s2config']
     is_cache = configJsonPath.no_caching
+    is_cache_benchlst = configJsonPath.benchlst4cahce
     is_syn = configJsonPath.no_syn
     assert is_cache or is_syn, "no caching and no synthesize; nothing to do"
     log_folder = f"experiments/results/out-{datetime.datetime.now():%Y-%m-%d_%H-%M-%S}/"
     assert(not os.path.exists(log_folder))
     os.makedirs(log_folder)
-    
-    cache_time = 0
-    res_lst = None
-    bench_lst = None
-    if is_cache:
-        ln_strat_file = s2config['ln_res']
-        with open(ln_strat_file, 'r') as f:
-            creader = csv.reader(f)
-            next(creader)
-            stratLst = [row[0] for row in creader]
-        res_lst, bench_lst, cache_time = cache4stage2(stratLst, config, log, log_folder)
+    ln_strat_file = s2config['ln_res']
+    res_lst, bench_lst = read_strat_res_from_csv(ln_strat_file)
+    assert(len(res_lst) > 0)
 
-    if not is_syn:
-        return
+    cache_time = 0
+    if is_cache:
+        # res_lst is a list of (strat, res_lst)
+        stratLst = [x[0] for x in res_lst]
+        if is_cache_benchlst:
+            assert(len(bench_lst) > 0)
+        else:
+            bench_lst = None
+        res_lst, bench_lst, cache_time = cache4stage2(stratLst, config, log, log_folder, benchlst=bench_lst)
+
+    if not is_syn: return
 
     if not is_cache:
-        ln_strat_file = s2config['ln_res']
-        # change!
-        res_lst, bench_lst = read_strat_res_from_csv(ln_strat_file)
+        assert(len(bench_lst) > 0)
         log.info(f"s2syn: read {len(res_lst)} strategies from {ln_strat_file}")
     
     bst_strat, s2mcts_time = stage2_synthesize(res_lst, bench_lst, config, log, log_folder)

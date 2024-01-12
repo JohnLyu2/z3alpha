@@ -98,7 +98,7 @@ def stage1_synthesize(config, stream_logger, log_folder):
     stream_logger.info(f"Stage 1 Time: {s1time:.0f}")
     return selected_strat, s1time
 
-def cache4stage2(selected_strat, config, stream_logger, log_folder):
+def cache4stage2(selected_strat, config, stream_logger, log_folder, benchlst = None):
     startTime = time.time()
     num_strat = config['ln_strat_num']
     # assert len(selected_strat) >= num_strat
@@ -109,7 +109,8 @@ def cache4stage2(selected_strat, config, stream_logger, log_folder):
     s2timeout = s2config['timeout']
     batch_size = config['batch_size']
     tmp_folder = config['temp_folder']
-    s2benchLst = createBenchmarkList(s2benchDirs, s2timeout, batch_size, tmp_folder, z3path, is_sorted=True)
+    s2benchLst = benchlst if benchlst else createBenchmarkList(s2benchDirs, s2timeout, batch_size, tmp_folder, z3path, is_sorted=True)
+    # s2benchLst = createBenchmarkList(s2benchDirs, s2timeout, batch_size, tmp_folder, z3path, is_sorted=True)
     s2_res_lst = []
     s2evaluator = SolverEvaluator(z3path, s2benchLst, s2timeout, batch_size, tmp_dir=tmp_folder)
     for i in range(len(selected_strat)):
