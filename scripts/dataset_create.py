@@ -5,10 +5,12 @@ import shutil
 import pathlib
 
 def create_dir(target_dir, files):
+    counter = 0
     for source_filepath in files:
-        file = pathlib.Path(source_filepath).name
-        target_filepath = os.path.join(target_dir, file)
+        # file = pathlib.Path(source_filepath).name
+        target_filepath = os.path.join(target_dir, f"benchmark{counter}.smt2")
         os.symlink(source_filepath, target_filepath)
+        counter += 1
 
 def main():
     parser = argparse.ArgumentParser(description='Create split dataset from files in the folder.')
@@ -48,6 +50,6 @@ def main():
     create_dir(valid_dir, all_files[train_size:train_size+valid_size])
     create_dir(test_dir, all_files[train_size+valid_size:train_size+valid_size+test_size])
 
-
+# sample usage: python dataset_create.py --split_size "250 500" --benchmark_dir /home/z52lu/smtlib/QF_S/2019-Jiang/slog --dataset_folder /home/z52lu/smtlib/QF_S/2019-Jiang/slog_exp
 if __name__ == '__main__':
     main()

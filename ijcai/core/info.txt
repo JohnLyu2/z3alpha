@@ -1,0 +1,3 @@
+/home/z52lu/fastsmtData/smt_data/qf_bv/bruttomesso/core/test
+270
+fastsmt: /home/z52lu/fastsmt/fastsmt/experiments/eval/core_ijcai/core_mul.txt
