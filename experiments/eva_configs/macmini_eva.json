@@ -11,5 +11,6 @@
   "timeout": 1,
   "batch_size": 2,
   "res_dir": "/Users/zhengyanglumacmini/Desktop/AlphaSMT/scripts/temp_res",
-  "test_dir": "/Users/zhengyanglumacmini/Desktop/AlphaSMT/benchmarks/small_test"
+  "test_dir": "/Users/zhengyanglumacmini/Desktop/AlphaSMT/benchmarks/small_test",
+  "tmp_dir": "/tmp/"
 }

@@ -20,6 +20,7 @@ def main():
     batchSize = config['batch_size']
     res_dir = config['res_dir']
     test_dir = config['test_dir']
+    tmp_dir = config['tmp_dir'] if 'tmp_dir' in config else "/tmp/"
 
     test_solvers = {}
 
@@ -43,7 +44,7 @@ def main():
             solver_path, strat_path = test_solvers[solver]
             strat = open(strat_path, 'r').read() if strat_path else None
             csv_path = os.path.join(res_dir, f"{solver}.csv")
-            testEvaluator = SolverEvaluator(solver_path, test_lst, timeout, batchSize, is_write_res=True, res_path=csv_path)
+            testEvaluator = SolverEvaluator(solver_path, test_lst, timeout, batchSize, is_write_res=True, res_path=csv_path, tmp_dir=tmp_dir)
             resTuple = testEvaluator.testing(strat)
             csvwriter.writerow([solver, resTuple[0], resTuple[1], resTuple[2]])
             print(f"{solver} test results: solved {resTuple[0]} instances with par2 {resTuple[1]} and par10 {resTuple[2]:.2f}")
