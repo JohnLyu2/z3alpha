@@ -7,7 +7,8 @@ The only environmental prerequisites are Z3 and its Python binding (Z3Py). After
 
 - **Z3 Executable**
 Open a terminal and run:
-```bash
+  ```bash
   z3 -h
+  ```
 
 If you 
