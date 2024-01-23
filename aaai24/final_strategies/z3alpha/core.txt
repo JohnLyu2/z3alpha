@@ -1,1 +1,0 @@
-(then simplify bit-blast (then solve-eqs (then (using-params propagate-values :push_ite_bv true) (then (using-params simplify :elim_and true :som true :blast_distinct true :flat true :hi_div0 true :local_ctx true :hoist_mul true :push_ite_bv true :pull_cheap_ite true) (then solve-eqs (then elim-uncnstr sat))))))

@@ -1,1 +1,0 @@
-(then (using-params simplify :elim_and false :som false :blast_distinct false :flat false :hi_div0 false :local_ctx false :hoist_mul false :push_ite_bv false :pull_cheap_ite false) (then simplify bit-blast (then elim-uncnstr smt)))

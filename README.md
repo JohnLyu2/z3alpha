@@ -12,4 +12,14 @@ Open a terminal and run:
   z3 -h
   ```
 
-If you 
+If you see the help message, Z3 is installed correctly. If not, add Z3 to your system's PATH.
+
+### Z3Py
+In a Python environment, check the Z3 Python binding (Z3Py):
+```python
+try:
+    import z3
+except ImportError:
+    raise Exception("Z3 Python binding not found.")
+```
+If no errors occur, Z3Py is ready for use.

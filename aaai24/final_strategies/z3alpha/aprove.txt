@@ -1,1 +1,0 @@
-(or-else (then (using-params nla2bv :nla2bv_max_bv_size 4) smt) (or-else (try-for (then ctx-simplify (then solve-eqs (then cofactor-term-ite (then solve-eqs qfnra-nlsat)))) 8000) smt))

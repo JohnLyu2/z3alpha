@@ -1,1 +1,0 @@
-(then elim-uncnstr (or-else (try-for smt 4000) (then elim-uncnstr qfnra-nlsat)))

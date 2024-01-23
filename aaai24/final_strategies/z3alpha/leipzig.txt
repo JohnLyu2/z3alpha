@@ -1,1 +1,0 @@
-(or-else (then (using-params nla2bv :nla2bv_max_bv_size 4) smt) (or-else (then (using-params nla2bv :nla2bv_max_bv_size 8) smt) (then propagate-values qfnra-nlsat)))
