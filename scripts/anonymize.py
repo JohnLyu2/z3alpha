@@ -1,10 +1,10 @@
 from pathlib import Path
 import csv
 
-csv_lst = list(Path('/Users/zhengyanglumacmini/Desktop/AlphaSMT/ijcai24').rglob('*.csv'))
+csv_lst = list(Path('/home/z52lu/alphasmt/ijcai24').rglob('*.csv'))
 raw_lst = []
 
-def replace_symbolink_csv(csv_file):
+def replace_path_csv(csv_file):
     with open(csv_file, 'r') as f:
         csv_reader = csv.reader(f)
         header = next(csv_reader)
@@ -12,9 +12,12 @@ def replace_symbolink_csv(csv_file):
     for row in data:
         path_str = row[1]
         path = Path(path_str)
+        part_to_remove = Path("/home/z52lu")
+        part_to_add = Path("benchmarks")
         if path.is_symlink():
             path = path.resolve()
-            row[1] = str(path)
+        path = part_to_add / path.relative_to(part_to_remove)
+        row[1] = str(path)
     with open(csv_file, 'w') as f:
         csv_writer = csv.writer(f)
         csv_writer.writerow(header)
@@ -29,5 +32,6 @@ for csv_file in csv_lst:
             print(csv_file)
             raw_lst.append(csv_file)
 
-# print(csv_lst)
+for csv_file in raw_lst:     
+    replace_path_csv(csv_file)
 
