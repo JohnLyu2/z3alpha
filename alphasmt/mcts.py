@@ -11,6 +11,7 @@ log_handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(message)
 log.addHandler(log_handler)
 
 INIT_Q = 0 
+IS_MEAN_EST = False
 
 class MCTSNode():
     def __init__(self, logic, is_mean, logger, c_ucb, is_log, action_history=[]):
@@ -114,7 +115,7 @@ class MCTS_RUN():
         self.z3path = z3path
         self.config = config
         self.numSimulations = config['sim_num']
-        self.isMean = config['is_mean_est']
+        self.isMean = IS_MEAN_EST
         self.discount = 1  # now set to 1
         self.c_uct = config['c_uct']
         # self.alpha = alpha
@@ -132,7 +133,7 @@ class MCTS_RUN():
             self.resDatabase = config['s2dict']['res_cache']
         self.sim_log = logging.getLogger(f"s{self.stage}mcts")
         self.sim_log.propagate = False
-        self.sim_log.setLevel(logging.DEBUG)
+        self.sim_log.setLevel(logging.INFO)
         simlog_handler = logging.FileHandler(f"{log_folder}/s{self.stage}mcts.log")
         self.sim_log.addHandler(simlog_handler)
         self.tmpFolder = tmp_folder

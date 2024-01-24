@@ -1,11 +1,11 @@
-Z3alpha is a tool to synthesize tailored Z3 stragegy to your problem set.
+Z3alpha is a tool to synthesize a tailored Z3 stragegy to your problem set.
 Our tool is built on top of Z3 SMT solver (https://github.com/Z3Prover/z3). Currently we support Z3 12.2.2.
 
 # Prerequisites
 
 The only environmental prerequisites are Z3 and its Python binding (Z3Py). After installing Z3 from the [Z3 GitHub repository](https://github.com/Z3Prover/z3), verify the setup:
 
-### Z3 Executable
+**Z3 Executable**
 
 Open a terminal and run:
   ```bash
@@ -14,7 +14,7 @@ Open a terminal and run:
 
 If you see the help message, Z3 is installed correctly. If not, add Z3 to your system's PATH.
 
-### Z3Py
+**Z3Py**
 In a Python environment, check the Z3 Python binding (Z3Py):
 ```python
 try:
@@ -24,7 +24,19 @@ except ImportError:
 ```
 If no errors occur, Z3Py is ready for use.
 
-# IJCAI-24 Submission Experiment Data
+# A Synthesis Example
+
+Here, we provide an example of synthesizing a tailored Z3 strategy for a toy benchmark set `benchmarks/small`. The `synthesize_full.py` script performs the staged MCTS, which takes a configuraiton json file as an argument. The configuration file specifies settings such as the MCTS simulation number, training datasets, timeouts, etc. The configuraiton file this toy example is provied at `experiments/syn_configs/sample.json`. 
+
+The command for this toy exmaple is as follows:
+
+```bash
+$ python ./synthesize_full.py experiments/syn_configs/sample.json
+```
+
+After this command terminates, the synthesized strategy is saved to a result directory under `experiments/results/`, along with the logs (if enabled). The result directory is named as `out-<starting time:%Y-%m-%d_%H-%M-%S>`.
+
+# IJCAI-24 Experiment Data
 We have included all experimental result data in `ijcai24_data/`. For each experiment, there is a subfolder (e.g., `ijcai24_data/QF_BV/core/`) containing all competing solvers' testing statistics and sample Z3alpha and FastSMT synthesized strategies. The experiments were conducted on a high-performance CentOS 7 cluster equipped with Intel E5-2683 v4 (Broadwell) processors running at 2.10 GHz, accompanied by 75 gigabytes of memory.
 
 # Reproduce IJCAI-24 Experiments
@@ -36,6 +48,14 @@ Navigate to the `benchmarks/` directory and run the corresponding benchmark down
 $ ./download_fastsmt_benchmarks.sh
 ```
 
+## Z3alpha Strategy Synthesis
+
+We provide the configuration json file for each experiment in `experiments/syn_configs/`. When under the repository root, run the `synthesize_full.py` script with the corresponding configuration file to start the synthesis. For example, to synthesize a strategy for *leipzig*, run:
+
+```bash
+$ python ./synthesize_full.py experiments/syn_configs/leipzig.json
+```
+
 ## FastSMT Strategy Synthesis
 For installation and operation of FastSMT, please refer to the guidance available in the [FastSMT GitHub repository](https://fastsmt.ethz.ch/). We have made minor modifications to the FastSMT source code to facilitate compatibility with Z3 12.2.2. We have also updated the tactic and parameter canadidates for each tested SMT logic. All these changes are provided in [link]. 
 
@@ -45,3 +65,5 @@ To reproduce the QF_S experiment, please use the Z3 version at https://anonymous
 ```bash
 $ z3 smt.string_solver=z3str3 smt.str.tactic=3probe <smt2file>
 ```
+
+## Z3str4
