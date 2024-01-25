@@ -67,7 +67,7 @@ For installation and operation of FastSMT, please refer to the guidance availabl
 Please check the [CVC5 webpage](https://cvc5.github.io/) for installation and operation instructions. We use CVC5-1.0.5 as one baseline solver in our experiments. 
 
 **Z3str4**
-To reproduce the QF_S experiment, please use the Z3 version at https://anonymous.4open.science/r/z3str-60A. Z3str4 is invoked from the command line with:
+To reproduce the QF_S experiment, please use the Z3 version at https://anonymous.4open.science/r/z3str-60AF. Z3str4 is invoked from the command line with:
 
 ```bash
 $ z3 smt.string_solver=z3str3 smt.str.tactic=3probe <smt2file>
