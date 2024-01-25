@@ -4,7 +4,8 @@ import pathlib
 import sys
 import argparse
 import json
-sys.path.append('..')
+sys.path.append('./')
+sys.path.append('../')
 
 from alphasmt.evaluator import SolverEvaluator
 
@@ -19,6 +20,8 @@ def main():
     timeout = config['timeout']
     batchSize = config['batch_size']
     res_dir = config['res_dir']
+    if not os.path.exists(res_dir):
+        os.makedirs(res_dir)
     test_dir = config['test_dir']
     tmp_dir = config['tmp_dir'] if 'tmp_dir' in config else "/tmp/"
 

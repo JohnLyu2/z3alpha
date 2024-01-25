@@ -1,7 +1,6 @@
 import copy
 from alphasmt.selector import search_next_action
 
-MAX_TIMEOUT_STRAT = 3
 MAX_IF_DEPTH = 3 
 TIMEOUTS = ["v2", "v8", "v32", "v128", "v512"] # in seconds
 PERCENTILES = ["90p", "70p", "50p"]
