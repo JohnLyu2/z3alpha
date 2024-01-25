@@ -1,2 +1,0 @@
-/home/z52lu/alphasmt/benchmarks/qflra_exp/test
-1003
