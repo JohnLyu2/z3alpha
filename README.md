@@ -61,7 +61,7 @@ $ python ./synthesize_full.py experiments/syn_configs/leipzig.json
 
 **FastSMT**
 
-For installation and operation of FastSMT, please refer to the guidance available in the [FastSMT GitHub repository](https://fastsmt.ethz.ch/). We have made minor modifications to the FastSMT source code to facilitate compatibility with Z3 4.12.2. We have also updated the tactic and parameter canadidates for each tested SMT logic. All these changes are provided in https://anonymous.4open.science/r/fastsmt-237A. 
+For installation and operation of FastSMT, please refer to the guidance available in the [FastSMT GitHub repository](https://fastsmt.ethz.ch/). We have made minor modifications to the FastSMT source code to facilitate compatibility with Z3 4.12.2. We have also updated the tactic and parameter canadidates for each tested SMT logic. All these changes are provided in [https://anonymous.4open.science/r/fastsmt-237A](https://anonymous.4open.science/r/fastsmt-237A). 
 
 **CVC5**
 
@@ -69,7 +69,7 @@ Please check the [CVC5 webpage](https://cvc5.github.io/) for installation and op
 
 **Z3str4**
 
-To reproduce the QF_S experiment, please use the Z3 version at https://anonymous.4open.science/r/z3str-60AF. Z3str4 is invoked from the command line with:
+To reproduce the QF_S experiment, please use the Z3 version at [https://anonymous.4open.science/r/z3str-60AF](https://anonymous.4open.science/r/z3str-60AF). Z3str4 is invoked from the command line with:
 
 ```bash
 $ z3 smt.string_solver=z3str3 smt.str.tactic=3probe <smt2file>
