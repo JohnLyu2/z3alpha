@@ -54,17 +54,18 @@ class SolverRunner(threading.Thread):
                 self.join()
             except OSError:
                 pass
-            return self.id, None, self.timeout, self.smt_file
+            return self.id, "timeout", self.timeout, self.smt_file
 
         out, err = self.p.communicate()
 
         lines = out[:-1].decode("utf-8").split('\n')
         res = lines[0]
+        runtime = self.time_after - self.time_before
 
         # this error format may not be the same with solvers other than z3
         if res.startswith('(error'):
-            log.warn(f"Error occured when strategy: {self.strategy}\ninstance: {self.smt_file}\nMessage: {res}")
-            return self.id, None, None, self.smt_file
+            log.warn(f"Error occured when solver: {self.solver_path}\n strategy: {self.strategy}\ninstance: {self.smt_file}\nMessage: {res}")
+            return self.id, "error", runtime, self.smt_file
 
         # rlimit = None
         # for line in lines:
@@ -74,10 +75,7 @@ class SolverRunner(threading.Thread):
         #             if token.isdigit():
         #                 rlimit = int(token)
 
-        if res == 'unknown':
-            res = None
-
-        return self.id, res, self.time_after - self.time_before, self.smt_file
+        return self.id, res, runtime, self.smt_file
 
 class SolverEvaluator():
     def __init__(self, solver_path, benchmark_lst, timeout, batch_size, tmp_dir="/tmp/", is_write_res=False, res_path=None):
@@ -112,7 +110,7 @@ class SolverEvaluator():
                 task.join(time_left)
                 id, resTask, timeTask, pathTask = task.collect()
                 solved = True if (resTask == 'sat' or resTask == 'unsat') else False
-                results[id] = (solved, timeTask)
+                results[id] = (solved, timeTask, resTask)
         # assert no entries in results is still -1
         for i in range(size):
             assert(results[i] != None)
@@ -125,9 +123,9 @@ class SolverEvaluator():
             with open(self.resPath, 'w') as f:
                 writer = csv.writer(f)
                 # write header
-                writer.writerow(['id', 'path', 'solved', 'time'])
+                writer.writerow(['id', 'path', 'solved', 'time', 'result'])
                 for i in range(len(self.benchmarkLst)):
-                    writer.writerow([i, self.benchmarkLst[i], results[i][0], results[i][1]])
+                    writer.writerow([i, self.benchmarkLst[i], results[i][0], results[i][1], results[i][2]])
         solved = solvedNum(results)
         par2 = parN(results, 2, self.timeout)
         par10 = parN(results, 10, self.timeout)
