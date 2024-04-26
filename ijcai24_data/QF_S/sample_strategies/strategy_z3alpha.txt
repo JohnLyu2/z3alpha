@@ -1,0 +1,1 @@
+(if (> num-exprs 44) (or-else (try-for (then (using-params simplify :elim_and true :blast_distinct true :local_ctx true) ext_strToRegex ctx-simplify ext_strSimplify smt) 8000) (then solve-eqs elim-uncnstr arr)) (then ext_strToRegex (using-params simplify :elim_and true :blast_distinct true :local_ctx true) ext_str solve-eqs ext_strToWE ctx-simplify smt))

@@ -1,0 +1,1 @@
+(or-else (try-for (or-else (try-for (then (using-params nla2bv :nla2bv_max_bv_size 4) simplify bit-blast sat) 8000) (then (using-params nla2bv :nla2bv_max_bv_size 16) simplify bit-blast simplify smt)) 8000) (using-params qfnra-nlsat :inline_vars false :factor false :seed 300))
