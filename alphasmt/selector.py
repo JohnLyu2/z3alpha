@@ -29,7 +29,7 @@ def linear_strategy_select(max_selected, result_database, timeout):
     assert (max_selected <= len(result_database))
     selected_strat = []
     best_res = [(False, None)] * len(result_database[list(result_database.keys())[0]])
-    for _ in range(max_selected):
+    for i in range(max_selected):
         best_strat = None
         best_value = parNReward(best_res, N, timeout)
         for strat in result_database:
@@ -45,7 +45,7 @@ def linear_strategy_select(max_selected, result_database, timeout):
             break
         selected_strat.append(best_strat)
         best_res, beat_num = virtual_add_strategy(best_res, result_database[best_strat])
-        print(f"select strategy {best_strat}, improve on {beat_num} instances,  new par10: {best_value}")
+        print(f"Select {i}'th strategy: {best_strat}\nimprove on {beat_num} instances,  new par10: {best_value:.5f}\n")
     return selected_strat
 
 def convert_strats_to_act_lists(s1_strat_lst):
