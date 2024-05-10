@@ -41,8 +41,8 @@ class SolverRunner(threading.Thread):
 
     def run(self):
         self.time_before = time.time()
-        cmd = f"{self.solver_path} {self.new_file_name}"
-        # z3_cmd = 'z3 -smt2 %s -st' % self.new_file_name
+        safe_path = shlex.quote(self.new_file_name)
+        cmd = f"{self.solver_path} {safe_path}"
         self.p = subprocess.Popen(shlex.split(cmd), stdout=subprocess.PIPE)
         self.p.wait()
         self.time_after = time.time()
