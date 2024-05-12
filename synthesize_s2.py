@@ -18,7 +18,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('json_config', type=str, help='The experiment configuration file in json')
     parser.add_argument('--no_caching', action='store_false', default = True, help='cache results are provided; no need to caching s1 strats')
-    parser.add_argument('--benchlst4cahce', action='store_true', default = False, help='bench list is provided for caching')
+    parser.add_argument('--benchlst4cahce', action='store_true', default = False, help='bench list is provided for caching') # this argument states you can read a benchlist from ln_res and cache for the benchmarks in this list; don't remember when it will be useful
     parser.add_argument('--no_syn', action='store_false', default = True, help='does not need to perform s2 synthesize')
     configJsonPath = parser.parse_args()
     config = json.load(open(configJsonPath.json_config, 'r'))
