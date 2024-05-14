@@ -166,13 +166,16 @@ def stage2_synthesize(results, bench_lst, config, stream_logger, log_folder):
 
     run2 = MCTS_RUN(2, s2config, bench_lst, logic, z3path, VALUE_TYPE, log_folder, tmp_folder=tmp_folder)
     run2.start()
-    best_s2 = run2.getBestStrat()
-    finalStratPath = os.path.join(log_folder, 'final_strategy.txt')
-    with open(finalStratPath, 'w') as f:
-        f.write(best_s2)
-    stream_logger.info(f"Final Strategy saved to: {finalStratPath}")
+    best3_s2 = run2.getBest3Strats()
+
+    for i in range(3):
+        order = i + 1
+        stratPath = os.path.join(log_folder, f"final_strategy{order}.txt")
+        with open(stratPath, 'w') as f:
+            f.write(best3_s2[i])
+        stream_logger.info(f"No {order} final Strategy saved to: {stratPath}")
 
     s2endTime = time.time()
     s2time = s2endTime - s2startTime
     stream_logger.info(f"Stage 2 MCTS Time: {s2time:.0f}")
-    return best_s2, s2time
+    return best3_s2, s2time
