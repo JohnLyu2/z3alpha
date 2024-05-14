@@ -1,6 +1,6 @@
 Z3alpha synthesizes efficient Z3 strategies tailored to your problem set! See our IJCAI'24 paper [Layered and Staged Monte Carlo Tree Search for SMT Strategy Synthesis](https://arxiv.org/abs/2401.17159) for technical details. 
 
-Our tool is built on top of Z3 SMT solver (https://github.com/Z3Prover/z3). Currently we support Z3 4.12.2.
+Our tool is built on top of Z3 SMT solver (https://github.com/Z3Prover/z3). We test our tool with Z3 4.12.2.
 
 # Prerequisites
 

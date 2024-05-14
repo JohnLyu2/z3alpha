@@ -92,7 +92,7 @@ class SolverEvaluator():
     def getBenchmarkSize(self):
         return len(self.benchmarkLst)
 
-    # now returns a list of solving time for each instance; if not solved, return None
+    # now returns a list of (solved, timeTask, resTask) for each instance
     def getResLst(self, strat_str):
         size = self.getBenchmarkSize()
         results = [None] * size

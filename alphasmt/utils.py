@@ -54,9 +54,9 @@ def read_strat_res_from_csv(csv_path):
             for res in row[1:]:
                 stime = float(res)
                 if stime < 0:
-                    res_lst.append((False, -stime))
+                    res_lst.append((False, -stime, 'na'))
                 else:
-                    res_lst.append((True, stime))
+                    res_lst.append((True, stime, 'na'))
             results.append((strat, res_lst))
     return results, bench_lst
 

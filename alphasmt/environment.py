@@ -41,7 +41,7 @@ class StrategyGame():
             params = None
             self.step(action, params)
 
-    # every entry in the resLst is (solved, time)
+    # every entry in the resLst is (solved, time, res)
     def getS1ResLst(self, database):
         stratStr = str(self)
         if stratStr in database:  # does not account for nondeterministism now
@@ -61,7 +61,7 @@ class StrategyGame():
         solved = False
         time_used = 0
         for strat, st_timeout in ln_strats:
-            cache_res, cache_time = database[tuple(strat)][benchID]
+            cache_solved, cache_time, _ = database[tuple(strat)][benchID]
             if st_timeout < cache_time:
                 time_remain -= st_timeout
                 time_used += st_timeout
@@ -69,7 +69,7 @@ class StrategyGame():
                 time_remain = 0
                 time_used += time_remain
             else:
-                if cache_res == True:
+                if cache_solved == True:
                     solved = True
                     time_used += cache_time
                     break
