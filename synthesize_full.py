@@ -23,8 +23,11 @@ def main():
     os.makedirs(log_folder)
     selected_strats, s1_time = stage1_synthesize(config, log, log_folder)
     res_dict, bench_lst, cache_time = cache4stage2(selected_strats, config, log, log_folder)
-    bst_strat, s2mcts_time = stage2_synthesize(res_dict, bench_lst, config, log, log_folder)
-    log.info(f"Best strategy found: {bst_strat}")
+    bst_strats, s2mcts_time = stage2_synthesize(res_dict, bench_lst, config, log, log_folder)
+    order = 1
+    for bst_strat in bst_strats:
+        log.info(f"Best strategy {order}: {bst_strat}")
+        order += 1
     log.info(f"S1 time: {s1_time:.0f}, S2 Cache time: {cache_time:.0f}, S2 MCTS time: {s2mcts_time:.0f}, Total time: {s1_time + cache_time + s2mcts_time:.0f}")
 
 if __name__ == "__main__":

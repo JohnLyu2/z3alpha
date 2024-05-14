@@ -127,10 +127,10 @@ class MCTS_RUN():
         self.batchSize = batch_size
         if self.stage == 1:
             self.c_ucb = config['c_ucb']
-            self.resDatabase = {}
+            self.resS1Database = {}
         else:
             self.c_ucb = None
-            self.resDatabase = config['s2dict']['res_cache']
+            self.resS1Database = config['s2dict']['res_cache']
         self.sim_log = logging.getLogger(f"s{self.stage}mcts")
         self.sim_log.propagate = False
         self.sim_log.setLevel(logging.INFO)
@@ -140,7 +140,8 @@ class MCTS_RUN():
         if not root: root = MCTSNode(self.logic, self.isMean, self.sim_log, self.c_ucb, self.is_log)
         self.root = root
         self.bestReward = -1
-        self.bestStrat = None
+        self.topStrategies = [None, None, None]
+        self.topRewards = [-1, -1, -1]
 
     def _uct(self, childNode, parentNode, action):
         valueScore = childNode.reward + self.discount * childNode.valueEst
@@ -213,7 +214,7 @@ class MCTS_RUN():
         if self.env.isTerminal():
             if self.is_log:
                 self.sim_log.info("Terminal Strategy: no rollout")
-            value = self.env.getValue(self.resDatabase, self.valueType)
+            value = self.env.getValue(self.resS1Database, self.valueType)
         else:
             actions = self.env.legalActions()
             # now reward is always 0 at each step
@@ -221,14 +222,21 @@ class MCTS_RUN():
             self._rollout()
             if self.is_log:
                 self.sim_log.info(f"Rollout Strategy: {self.env}")
-            value = self.env.getValue(self.resDatabase, self.valueType)
-        if value > self.bestReward:
-            self.bestReward = value
-            self.bestStrat = str(self.env)
-            log.info(f"At sim {self.num_sim}, new best reward found: {value:.5f}")
+            value = self.env.getValue(self.resS1Database, self.valueType)
+        self._updateTopStrategies(value, str(self.env))
         if self.is_log:
             self.sim_log.info(f"Final Return: {value}\n")
         self._backup(searchPath, value)
+
+    def _updateTopStrategies(self, value, stratetgy):
+        for i in range(3):
+            if value > self.topRewards[i]:
+                if i == 0: log.info(f"At sim {self.num_sim}, new best reward found: {value:.5f}")
+                self.topRewards.insert(i, value)
+                self.topRewards.pop()
+                self.topStrategies.insert(i, stratetgy)
+                self.topStrategies.pop()
+                break
 
     def start(self):
         for i in range(self.numSimulations):
@@ -239,16 +247,19 @@ class MCTS_RUN():
                 self.sim_log.info(f"Simulation {i} starts")
             self._oneSimulation()
 
-    def bestNStrategies(self, n):
-        if n > len(self.resDatabase):
-            n = len(self.resDatabase)
-        return sorted(self.resDatabase, key=self.resDatabase.get, reverse=True)[:n]
+    # def bestNS1Strategies(self, n):
+    #     if n > len(self.resS1Database):
+    #         n = len(self.resS1Database)
+    #     return sorted(self.resS1Database, key=self.resS1Database.get, reverse=True)[:n]
 
     def getStrategyStat(self, strat):
-        return self.resDatabase[strat]
+        return self.resS1Database[strat]
     
     def getResDict(self):
-        return self.resDatabase
+        return self.resS1Database
     
     def getBestStrat(self):
-        return self.bestStrat
+        return self.topStrategies[0]
+    
+    def getBest3Strats(self):
+        return self.topStrategies

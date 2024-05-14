@@ -51,8 +51,11 @@ def main():
         assert(len(bench_lst) > 0)
         log.info(f"s2syn: read {len(res_lst)} strategies from {ln_strat_file}")
     
-    bst_strat, s2mcts_time = stage2_synthesize(res_lst, bench_lst, config, log, log_folder)
-    log.info(f"Best strategy found: {bst_strat}")
+    bst_strats, s2mcts_time = stage2_synthesize(res_lst, bench_lst, config, log, log_folder)
+    order = 1
+    for bst_strat in bst_strats:
+        log.info(f"Best strategy {order}: {bst_strat}")
+        order += 1
     log.info(f"S2: Cache time: {cache_time:.0f}, MCTS time: {s2mcts_time:.0f}, Total time: {cache_time + s2mcts_time:.0f}")
 
 
