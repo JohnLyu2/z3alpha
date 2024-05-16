@@ -1,0 +1,23 @@
+{
+  "logic": "QF_NIA",
+  "batch_size": 47,
+  "s1config": {
+    "bench_dirs": ["/home/z52lu/z3alpha/smt24_bench/qfnia/s1"],
+    "sim_num": 800,
+    "timeout": 24,
+    "c_uct": 0.5,
+    "c_ucb": 0.2,
+    "is_log": true
+  },
+  "s2config": {
+    "ln_res": "/home/z52lu/z3alpha/experiments/results/out-2024-05-13_21-39-16_qfnia_cache/ln_res.csv",
+    "bench_dirs": ["/home/z52lu/z3alpha/smt24_bench/qfnia/s2-24s"],
+    "sim_num": 500000,
+    "timeout": 24,
+    "c_uct": 0.6,
+    "is_log": false
+  },
+  "ln_strat_num": 12,
+  "temp_folder": "/tmp/qfnia",
+  "random_seed": 0
+}

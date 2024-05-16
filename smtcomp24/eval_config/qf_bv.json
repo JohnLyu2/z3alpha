@@ -1,0 +1,13 @@
+{
+  "solvers": {
+    "z3": "z3"
+  },
+  "strat_files": {
+    "z3": null
+  },
+  "timeout": 120,
+  "batch_size": 47,
+  "res_dir": "/home/z52lu/z3alpha/smtcomp24/results/QF_BV-120",
+  "test_dir": "/home/z52lu/scratch/smtlib24/non-incremental/QF_BV",
+  "tmp_dir": "/tmp/qfbv"
+}

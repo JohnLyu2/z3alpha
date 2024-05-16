@@ -1,0 +1,14 @@
+{
+  "solvers": {
+    "cvc5": "/home/z52lu/cvc5-Linux-static/bin/cvc5",
+    "z3": "z3"
+  },
+  "strat_files": {
+    "z3": null
+  },
+  "timeout": 300,
+  "batch_size": 47,
+  "res_dir": "/home/z52lu/z3alpha/smtcomp24/results/QF_IDL",
+  "test_dir": "/home/z52lu/projects/def-vganesh/z52lu/smtlib24/non-incremental/QF_IDL",
+  "tmp_dir": "/tmp/qfidl"
+}
