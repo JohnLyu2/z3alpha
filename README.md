@@ -1,6 +1,6 @@
 Z3alpha synthesizes efficient Z3 strategies tailored to your problem set! See our IJCAI'24 paper [Layered and Staged Monte Carlo Tree Search for SMT Strategy Synthesis](https://arxiv.org/abs/2401.17159) for technical details. 
 
-Our tool is built on top of Z3 SMT solver (https://github.com/Z3Prover/z3). We test our tool with Z3 4.12.2.
+Our tool is built on top of Z3 SMT solver (https://github.com/Z3Prover/z3). The experiments in our IJCAI'24 paper are based on Z3 4.12.2.
 
 # Prerequisites
 
@@ -39,7 +39,7 @@ $ python ./synthesize_full.py experiments/syn_configs/sample.json
 After this command terminates, the synthesized strategy is saved to a result directory under `experiments/results/`, along with the logs (if enabled). The result directory is named as `out-<starting time:%Y-%m-%d_%H-%M-%S>`.
 
 # IJCAI-24 Experiment Data
-We have included all experimental result data in `ijcai24_data/`. For each experiment, there is a subfolder (e.g., `ijcai24_data/QF_BV/core/`) containing all competing solvers' testing statistics and sample Z3alpha and FastSMT synthesized strategies. The experiments were conducted on a high-performance CentOS 7 cluster equipped with Intel E5-2683 v4 (Broadwell) processors running at 2.10 GHz, accompanied by 75 gigabytes of memory.
+We have included all experimental result data in `ijcai24_data/`. For each experiment, there is a subfolder (e.g., `ijcai24_data/QF_BV/core/`) containing all competing solvers' testing statistics and sample Z3alpha and FastSMT synthesized strategies. The experiments were conducted on a high-performance CentOS 7 cluster equipped with Intel E5-2683 v4 (Broadwell) processors running at 2.10 GHz.
 
 # Reproduce IJCAI-24 Experiments
 
@@ -49,20 +49,23 @@ Navigate to the `benchmarks/` directory and run the corresponding benchmark down
 ```bash
 $ ./download_fastsmt_benchmarks.sh
 ```
+Note: the previous script for downloading SMT-LIB benchmarks from the official GitLab is not working now due to the SMT-LIB organizers changing the storage location of the SMT-LIB benchmarks from GitLab to Zenodo. We will update the downloading script soon.
 
 ### Z3alpha Strategy Synthesis
 
-We provide the configuration JSON file for each experiment in `experiments/syn_configs/`. When under the repository root, run the `synthesize_full.py` script with the corresponding configuration file to start the synthesis. For example, to synthesize a strategy for *leipzig*, run:
+We provide sample configuration JSON files for the experiments in `experiments/syn_configs/`. When under the repository root, run the `synthesize_full.py` script with the corresponding configuration file to start the synthesis. For example, to synthesize a strategy for *leipzig*, run:
 
 ```bash
 $ python ./synthesize_full.py experiments/syn_configs/leipzig.json
 ```
 
+Before running the script, ensure to adjust the JSON configuration file to match your computer's specifications.
+
 ### Competing Solvers
 
 **FastSMT**
 
-For installation and operation of FastSMT, please refer to the guidance available in the [FastSMT GitHub repository](https://fastsmt.ethz.ch/). Minor modifications to FastSMT are made to facilitate its compatibility with Z3 4.12.2. We have also updated the tactic and parameter canadidates for each tested SMT logic.
+For installation and operation of FastSMT, please refer to the guidance available in the [FastSMT GitHub repository](https://fastsmt.ethz.ch/). In our IJCAI experiemnts, minor modifications to FastSMT are made to facilitate its compatibility with Z3 4.12.2. We have also updated the tactic and parameter canadidates for each tested SMT logic.
 
 **CVC5**
 
@@ -70,7 +73,7 @@ Please check the [CVC5 webpage](https://cvc5.github.io/) for installation and op
 
 ### Evaluation
 
-We provide the script `scripts/exp_tester.py` for evaluating solvers and strategies. Configuration files for evaluating our synthesized strategies are provided in `experiments/eva_configs/`. For example, to evaluate all solvers on the *leipzig* test, run:
+We provide the script `scripts/exp_tester.py` for evaluating solvers and strategies. Sample configuration files for evaluating our synthesized strategies are provided in `experiments/eva_configs/`. For example, to evaluate all solvers on the *leipzig* test, run:
 
 ```bash
 $ python scripts/exp_tester.py experiments/eva_configs/leipzig.json
