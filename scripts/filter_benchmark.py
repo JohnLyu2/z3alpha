@@ -3,11 +3,11 @@ import csv
 import subprocess
 from pathlib import Path
 
-BENCH_DIR = "/home/z52lu/projects/def-vganesh/z52lu/smtlib24/non-incremental/QF_NIA"
-DICT_PATH = "/home/z52lu/z3alpha/smtcomp24/results/QF_NIA/z3.csv"
+BENCH_DIR = "/home/z52lu/projects/def-vganesh/z52lu/smtlib24/non-incremental/QF_LRA"
+DICT_PATH = "/home/z52lu/z3alpha/smtcomp24/results/QF_LRA/z3.csv"
 CREATE_SET = True
-TARGET_DIR = "/home/z52lu/z3alpha/smt24_bench/qfnia/gt16"
-THESHOLD = 16
+TARGET_DIR = "/home/z52lu/z3alpha/smt24_bench/qflra/gt10"
+THESHOLD = 10
 
 
 
@@ -46,7 +46,7 @@ def main():
                 target_file = target_dir / f"f{file_name_counter}.smt2"
                 target_file.symlink_to(file_path)
                 file_name_counter += 1
-            print(f"file_name_counter" links were created!)
+        print(f"{file_name_counter} links were created!")
 
 if __name__ == "__main__":
     main()
