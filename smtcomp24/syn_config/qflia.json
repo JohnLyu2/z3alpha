@@ -10,12 +10,12 @@
     "is_log": true
   },
   "s2config": {
-    "bench_dirs": ["benchmarks/qflia_exp/train1",
-                  "benchmarks/qflia_exp/train2"],
-    "sim_num": 300000,
-    "timeout": 10,
+    "ln_res": "/home/z52lu/z3alpha/experiments/results/out-2024-05-06_12-28-06_qflia_s1/ln_strat_candidates.csv",
+    "bench_dirs": ["/home/z52lu/z3alpha/smt24_bench/qflia/s2"],
+    "sim_num": 500000,
+    "timeout": 300,
     "c_uct": 0.6,
-    "is_log": true
+    "is_log": false
   },
   "ln_strat_num": 20,
   "temp_folder": "/tmp/qflia",

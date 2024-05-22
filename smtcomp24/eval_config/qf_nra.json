@@ -3,10 +3,10 @@
     "z3": "z3"
   },
   "strat_files": {
-    "z3": null
+    "z3alpha": "/home/z52lu/z3alpha/experiments/results/out-2024-05-21_06-55-11_qfnra_s2_300/final_strategy1.txt"
   },
   "timeout": 300,
-  "batch_size": 45,
+  "batch_size": 47,
   "res_dir": "/home/z52lu/z3alpha/smtcomp24/results/QF_NRA",
   "test_dir": "/home/z52lu/projects/def-vganesh/z52lu/smtlib24/non-incremental/QF_NRA",
   "tmp_dir": "/tmp/qfnra"

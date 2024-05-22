@@ -3,7 +3,7 @@
     "z3": "z3"
   },
   "strat_files": {
-    "z3": null
+    "z3alpha0520": "/home/z52lu/z3alpha/experiments/results/out-2024-05-20_06-55-12_qfnia_s2_300/final_strategy1.txt"
   },
   "timeout": 300,
   "batch_size": 47,

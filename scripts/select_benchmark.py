@@ -1,9 +1,9 @@
 import random
 from pathlib import Path
 
-SOURCE_DIR = "/home/z52lu/z3alpha/smt24_bench/qfnia/gt16"
-TARGET_DIR = "/home/z52lu/z3alpha/smt24_bench/qfnia/s2-24s"
-NUM = 3760
+SOURCE_DIR = "/home/z52lu/z3alpha/smt24_bench/qfbv/gt25"
+TARGET_DIR = "/home/z52lu/z3alpha/smt24_bench/qfbv/s2"
+NUM = 564
 
 def main():
     """
