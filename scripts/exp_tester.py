@@ -38,7 +38,7 @@ def main():
         else:
             test_solvers[solver] = (solver_path, None)
 
-    test_lst = [str(p) for p in sorted(list(pathlib.Path(test_dir).rglob(f"*.smt2")))]
+    test_lst = sorted(str(p.resolve()) for p in pathlib.Path(test_dir).rglob("*.smt2"))
     res_csv = os.path.join(res_dir, "res.csv")
     with open(res_csv, 'w') as f:
         csvwriter = csv.writer(f)
