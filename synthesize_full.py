@@ -17,7 +17,7 @@ def main():
     parser.add_argument('json_config', type=str, help='The experiment configuration file in json')
     configJsonPath = parser.parse_args()
     config = json.load(open(configJsonPath.json_config, 'r'))
-    num_strat = config['ln_strat_num']
+    # num_strat = config['ln_strat_num']
     log_folder = f"experiments/results/out-{datetime.datetime.now():%Y-%m-%d_%H-%M-%S}/"
     assert(not os.path.exists(log_folder))
     os.makedirs(log_folder)

@@ -82,7 +82,8 @@ def stage1_synthesize(config, stream_logger, log_folder):
     run1.start()
     s1_res_dict = run1.getResDict()
 
-    selected_strat = linear_strategy_select(num_ln_strat, s1_res_dict, s1config["timeout"])
+    selected_strat, ln_select_logs = linear_strategy_select(num_ln_strat, s1_res_dict, s1config["timeout"])
+    stream_logger.info(ln_select_logs)
     lnStratCandidatsPath = os.path.join(log_folder,'ln_strat_candidates.csv')
     with open(lnStratCandidatsPath, 'w') as f:
         # write one strategy per line as a csv file
