@@ -64,7 +64,7 @@ class SolverRunner(threading.Thread):
 
         # this error format may not be the same with solvers other than z3
         if res.startswith('(error'):
-            log.warn(f"Error occured when solver: {self.solver_path}\n strategy: {self.strategy}\ninstance: {self.smt_file}\nMessage: {res}")
+            log.warn(f"\nError occured when solver: {self.solver_path}\n strategy: {self.strategy}\ninstance: {self.smt_file}\nMessage: {res}\n")
             return self.id, "error", runtime, self.smt_file
 
         # rlimit = None
@@ -111,6 +111,7 @@ class SolverEvaluator():
                 id, resTask, timeTask, pathTask = task.collect()
                 solved = True if (resTask == 'sat' or resTask == 'unsat') else False
                 results[id] = (solved, timeTask, resTask)
+                print(f"{id}: {results[id]}")
         # assert no entries in results is still -1
         for i in range(size):
             assert(results[i] != None)
