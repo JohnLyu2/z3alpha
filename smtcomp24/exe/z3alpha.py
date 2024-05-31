@@ -48,7 +48,7 @@ def main():
     result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
 
     # Print the standard output and standard error
-    print(result.stdout)
+    print(result.stdout, end="")
 
 if __name__ == "__main__":
     main()
