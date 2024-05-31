@@ -1,6 +1,6 @@
 {
   "solvers": {
-    "z3": "z3"
+    "cvc5": "/home/z52lu/cvc5-Linux-static/bin/cvc5"
   },
   "strat_files": {
     "z3alpha_lnqfnia": "/home/z52lu/z3alpha/smtcomp24/strat/qfnia/ln_qfnia.txt"

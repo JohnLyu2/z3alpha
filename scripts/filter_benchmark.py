@@ -3,11 +3,11 @@ import csv
 import subprocess
 from pathlib import Path
 
-BENCH_DIR = "/home/z52lu/projects/def-vganesh/z52lu/smtlib24/non-incremental/QF_LRA"
-DICT_PATH = "/home/z52lu/z3alpha/smtcomp24/results/QF_LRA/z3.csv"
+BENCH_DIR = "/home/z52lu/scratch/smtlib24/non-incremental/QF_BV"
+DICT_PATH = "/home/z52lu/z3alpha/smtcomp24/results/QF_BV-120/z3.csv"
 CREATE_SET = True
-TARGET_DIR = "/home/z52lu/z3alpha/smt24_bench/qflra/gt10"
-THESHOLD = 10
+TARGET_DIR = "/home/z52lu/z3alpha/smt24_bench/qfbv/test_gt3"
+THESHOLD = 3
 
 
 
