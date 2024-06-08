@@ -1,5 +1,5 @@
 {
-  "logic": "QF_NIA",
+  "logic": "default",
   "batch_size": 2,
   "s1config": {
     "bench_dirs": ["benchmarks/small"],
