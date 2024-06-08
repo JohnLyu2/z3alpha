@@ -260,7 +260,9 @@ class PreprocessTactic(ASTNode):
 
     def legalActions(self, rollout = False):
         actions = [i for i in range(20,25)]
-        if self.logic == "QF_BV":
+        if self.logic == "default":
+            return actions
+        elif self.logic == "QF_BV":
             return actions + [i for i in range(25,30)]
         elif self.logic == "QF_NIA":
             return actions + [i for i in range(32,35)]
@@ -309,7 +311,9 @@ class SolverTactic(ASTNode):
 
     def legalActions(self, rollout = False):
         actions = [10]
-        if self.logic == "QF_BV":
+        if self.logic == "default":
+            return actions
+        elif self.logic == "QF_BV":
             return actions + [13]
         elif self.logic == "QF_NIA":
             return actions + [11, 14]
