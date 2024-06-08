@@ -11,7 +11,7 @@ BASIC_PARAMS = {
         "elim_and": ["true","false"], # z3-qfbv z3-qfnia z3-qfnra-nlsat z3-qflia z3-qflra fast-qfnia fast-qfbv fast-qfnra
         "blast_distinct": ["true","false"], # z3-qfbv z3-qfnia z3-qfnra-nlsat z3-qflia z3-qflra fast-qfnia fast-qfbv fast-qfnra
         "local_ctx": ["true","false"], # z3-qfbv z3-qfnia z3-qflia fast-qfnia fast-qfbv fast-qfnra
-        
+        "pull_cheap_ite": ["true","false"]
     },
     # "propagate-values"
     # 21: {
@@ -45,11 +45,12 @@ BASIC_PARAMS = {
 # for now, MCTS_run just has one unchanged Logic setting; include all relevant (even after conversion) parameters for each logic
 def create_params_dict(logic):
     params = copy.deepcopy(BASIC_PARAMS)
-    if logic == "QF_LIA":
+    if logic == "default":
+        pass
+    elif logic == "QF_LIA":
         # "simplify"
         params[20]["som"] = ["true","false"] # z3-qfbv z3-qfnia z3-qflia z3-qflra fast-qfnia fast-qfbv fast-qfnra
         params[20]["flat"] = ["true","false"] # z3-qfbv z3-qfnia z3-qflia fast-qfnia fast-qfbv fast-qfnra
-        params[20]["pull_cheap_ite"] = ["true","false"] # z3-qfbv z3-qfnia z3-qflia fast-qfbv
         params[20]["push_ite_arith"] = ["true","false"]
         params[20]["hoist_ite"] = ["true","false"]
         params[20]["arith_lhs"] = ["true","false"]
@@ -63,7 +64,6 @@ def create_params_dict(logic):
         params[20]["flat"] = ["true","false"]
         params[20]["hi_div0"] = ["true","false"] # z3-qfnia fast-qfnia fast-qfnra
         params[20]["hoist_mul"] = ["true","false"] # z3-qfbv z3-qfnia fast-qfnia fast-qfbv fast-qfnra
-        params[20]["pull_cheap_ite"] = ["true","false"]
         # for qfbv
         params[20]["push_ite_bv"] = ["true","false"]
         # "propagate-values"
@@ -77,7 +77,6 @@ def create_params_dict(logic):
         params[20]["hoist_mul"] = ["true","false"]
         # for qfbv
         params[20]["push_ite_bv"] = ["true","false"]
-        params[20]["pull_cheap_ite"] = ["true","false"]
         # "propagate-values"
         params[21] = {}
         params[21]["push_ite_bv"] = ["true","false"]
@@ -87,7 +86,7 @@ def create_params_dict(logic):
         params[20]["flat"] = ["true","false"]
         params[20]["push_ite_bv"] = ["true","false"] # z3-qfbv fast-qfbv
         params[20]["hoist_mul"] = ["true","false"]
-        params[20]["pull_cheap_ite"] = ["true","false"]
+
         # "propagate-values"
         params[21] = {}
         params[21]["push_ite_bv"] = ["true","false"]
