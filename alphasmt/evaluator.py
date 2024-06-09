@@ -111,7 +111,7 @@ class SolverEvaluator():
                 id, resTask, timeTask, pathTask = task.collect()
                 solved = True if (resTask == 'sat' or resTask == 'unsat') else False
                 results[id] = (solved, timeTask, resTask)
-                print(f"{id}: {results[id]}")
+                # print(f"{id}: {results[id]}")
         # assert no entries in results is still -1
         for i in range(size):
             assert(results[i] != None)

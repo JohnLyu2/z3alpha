@@ -4,4 +4,5 @@
 
 # Project specific
 experiments/results/
-smt24_bench
+smt24_bench/
+smtcomp24/cc_scripts/

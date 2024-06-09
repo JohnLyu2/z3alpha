@@ -1,13 +1,15 @@
 {
   "solvers": {
-    "z3": "z3"
+    "z3": "z3",
+    "cvc5": "/home/z52lu/cvc5-Linux"
   },
   "strat_files": {
+    "z3alpha0608": "/home/z52lu/z3alpha/experiments/results/out-2024-06-07_11-16-52_qfs_s2/final_strategy1.txt",
     "z3": null
   },
   "timeout": 300,
-  "batch_size": 47,
+  "batch_size": 31,
   "res_dir": "/home/z52lu/z3alpha/smtcomp24/results/QF_S",
-  "test_dir": "/home/z52lu/projects/def-vganesh/z52lu/smtlib24/non-incremental/QF_S",
+  "test_dir": "/home/z52lu/z3alpha/smt24_bench/qfs/testing",
   "tmp_dir": "/tmp/qfs"
 }
