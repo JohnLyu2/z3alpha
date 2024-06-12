@@ -1,9 +1,9 @@
 import csv
 
-TARGET_CSV = "/Users/zhengyanglu/Desktop/z3alpha/smtcomp24/results/QF_AX/z3.csv"
+TARGET_CSV = "/home/z52lu/z3alpha/smtcomp24/results/QF_SNIA/z3str.csv"
 
 COMPARE_CSV_LST = [
-    "/Users/zhengyanglu/Desktop/z3alpha/smtcomp24/results/QF_AX/cvc5.csv"
+    "/home/z52lu/z3alpha/smtcomp24/results/QF_SNIA/cvc5.csv"
 ]
 
 # return the substring after "non-incremental/"

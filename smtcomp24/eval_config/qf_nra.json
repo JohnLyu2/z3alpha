@@ -1,6 +1,6 @@
 {
   "solvers": {
-    "z3": "z3"
+    "cvc5": "/home/z52lu/cvc5-Linux-static/bin/cvc5"
   },
   "strat_files": {
     "z3alpha": "/home/z52lu/z3alpha/experiments/results/out-2024-05-21_06-55-11_qfnra_s2_300/final_strategy1.txt"
