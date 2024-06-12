@@ -21,19 +21,25 @@ def rewrite_smt2_with_strat(smt2_str, strat):
     return new_smt2_str
 
 def main():
+    script_path = os.path.realpath(__file__)
+    z3alpha_dir = os.path.dirname(script_path)
     if len(sys.argv) != 2:
-        print("Usage: python z3alpha.py <path_to_smt2_file>")
+        print(f"Usage: {script_path} <smt2_path>")
         return
     
     smt2_path = sys.argv[1]
     with open(smt2_path, 'r') as f:
         smt2_str = f.read()
 
-    solver_path = "./z3bin/z3"
+    solver_path = os.path.join(z3alpha_dir, "z3bin", "z3")
 
     logic = read_smtlib_logic(smt2_str)
+    if logic in ["QF_S", "QF_SLIA", "QF_SNIA"]:
+        solver_path = os.path.join(z3alpha_dir, "z3bin", "z3str")
+
     if logic and (logic in logic_strategy):
-        strat_path = logic_strategy[logic]
+        strat_filename = logic_strategy[logic]
+        strat_path = os.path.join(z3alpha_dir, "strats", strat_filename)
         # check whether strat_path exists
         if os.path.exists(strat_path):
             with open(strat_path, 'r') as f:
