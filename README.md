@@ -1,6 +1,12 @@
-Z3alpha synthesizes efficient Z3 strategies tailored to your problem set! See our IJCAI'24 paper [Layered and Staged Monte Carlo Tree Search for SMT Strategy Synthesis](https://arxiv.org/abs/2401.17159) for technical details. 
+**Z3alpha** synthesizes efficient Z3 strategies tailored to your problem set! See our IJCAI'24 paper [Layered and Staged Monte Carlo Tree Search for SMT Strategy Synthesis](https://arxiv.org/abs/2401.17159) for technical details. 
 
-Our tool is built on top of Z3 SMT solver (https://github.com/Z3Prover/z3). The experiments in our IJCAI'24 paper are based on Z3 4.12.2.
+Our tool is built on top of Z3 SMT solver (https://github.com/Z3Prover/z3). 
+
+# SMT-COMP'24
+Z3alpha entered SMT-COMP 2024 (Single Query Track) as a derived solver. It won [multiple awards](https://smt-comp.github.io/2024/results/results-single-query/) across various divisions and logics, including sequential- & parllel-perofrmance awards in QF_NonLinearIntArith and QF_NonLinearRealArith!
+
+See our submitted solver along with synthesized strategies in 'smtcomp24/'. Note that the executables in 'smtcomp24/z3bin/' are compiled for the [competition evnvironment](https://smt-comp.github.io/2024/specs/).
+
 
 # Prerequisites
 
@@ -42,6 +48,8 @@ After this command terminates, the synthesized strategy is saved to a result dir
 We have included all experimental result data in `ijcai24_data/`. For each experiment, there is a subfolder (e.g., `ijcai24_data/QF_BV/core/`) containing all competing solvers' testing statistics and sample Z3alpha and FastSMT synthesized strategies. The experiments were conducted on a high-performance CentOS 7 cluster equipped with Intel E5-2683 v4 (Broadwell) processors running at 2.10 GHz.
 
 # Reproduce IJCAI-24 Experiments
+
+The experiments in our IJCAI'24 paper are based on Z3 4.12.2.
 
 ### Benchmark Download
 Navigate to the `benchmarks/` directory and run the corresponding benchmark downloading script for each experiment. For example, to download the original FastSMT benchmarks for the experiments in Section 5.3, run:
