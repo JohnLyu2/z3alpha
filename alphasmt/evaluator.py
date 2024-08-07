@@ -64,7 +64,7 @@ class SolverRunner(threading.Thread):
 
         # this error format may not be the same with solvers other than z3
         if res.startswith('(error'):
-            log.warn(f"Error occured when solver: {self.solver_path}\n strategy: {self.strategy}\ninstance: {self.smt_file}\nMessage: {res}")
+            log.warn(f"Error occurred when solver: {self.solver_path}\n strategy: {self.strategy}\ninstance: {self.smt_file}\nMessage: {res}")
             return self.id, "error", runtime, self.smt_file
 
         # rlimit = None

@@ -34,9 +34,9 @@ If no errors occur, Z3Py is ready for use.
 
 # A Synthesis Example
 
-Here, we provide an example of synthesizing a tailored Z3 strategy for a toy benchmark set `benchmarks/small`. The `synthesize_full.py` script performs the staged MCTS, which takes a configuraiton JSON file as an argument. The configuration file specifies settings such as the MCTS simulation number, training datasets, timeouts, etc. The configuraiton file this toy example is provied at `experiments/syn_configs/sample.json`. 
+Here, we provide an example of synthesizing a tailored Z3 strategy for a toy benchmark set `benchmarks/small`. The `synthesize_full.py` script performs the staged MCTS, which takes a configuration JSON file as an argument. The configuration file specifies settings such as the MCTS simulation number, training datasets, timeouts, etc. The configuration file this toy example is provided at `experiments/syn_configs/sample.json`. 
 
-The command for this toy exmaple is as follows:
+The command for this toy example is as follows:
 
 ```bash
 $ python ./synthesize_full.py experiments/syn_configs/sample.json

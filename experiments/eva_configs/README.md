@@ -10,7 +10,7 @@
 
 **"res_dir"**: the directory where the results are saved
 
-**"test_dir"**: the test instance set direcotry
+**"test_dir"**: the test instance set directory
 
-**"tmp_dir"**: the temp file direcotry
+**"tmp_dir"**: the temp file directory
 

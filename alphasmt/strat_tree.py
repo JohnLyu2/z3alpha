@@ -232,7 +232,7 @@ class PreprocessTactic(ASTNode):
             27: "aig",
             28: "reduce-bv-size",
             29: "ackermannize_bv",
-            # 30: "bit-blast", # require simplifcation beforehand; otherwise report error
+            # 30: "bit-blast", # require simplification beforehand; otherwise report error
             # 32 - 34 are QF_NIA only
             32: "lia2card",
             33: "card2bv",

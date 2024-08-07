@@ -8,7 +8,7 @@
 
 **"s2config"**: configurations for the stage-2 MCTS
 
-**"bench_dirs"**: list all training set directorys (will recursively include all instances in the listed directories as training instances)
+**"bench_dirs"**: list all training set directories (will recursively include all instances in the listed directories as training instances)
 
 **"sim_num"**: number of MCTS simulations
 
@@ -22,6 +22,6 @@
 
 **"ln_strat_num"**: number of linear strategies to be selected after the Stage-1 MCTS
 
-**"temp_folder"**: the temp file direcotry
+**"temp_folder"**: the temp file directory
 
 **"random_seed"**: the random seed for rollout
