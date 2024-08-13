@@ -1,6 +1,6 @@
 **Z3alpha** synthesizes efficient Z3 strategies tailored to your problem set! See our IJCAI'24 paper [Layered and Staged Monte Carlo Tree Search for SMT Strategy Synthesis](https://arxiv.org/abs/2401.17159) for technical details. 
 
-Our tool is built on top of Z3 SMT solver (https://github.com/Z3Prover/z3). 
+Our tool is built on top of the [Z3 SMT solver](https://github.com/Z3Prover/z3). 
 
 ## SMT-COMP'24
 Z3alpha entered SMT-COMP 2024 (Single Query Track) as a derived solver. It won [multiple awards](https://smt-comp.github.io/2024/results/results-single-query/) across various divisions and logics, including sequential- & parllel-perofrmance awards in QF_NonLinearIntArith and QF_NonLinearRealArith!
