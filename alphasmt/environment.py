@@ -1,5 +1,5 @@
 import random
-from alphasmt.strat_tree import StrategyAST
+from alphasmt.z3_strat_tree import StrategyAST
 from alphasmt.evaluator import SolverEvaluator
 from alphasmt.utils import solvedNumReward, parNReward
 

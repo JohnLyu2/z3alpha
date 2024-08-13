@@ -14,18 +14,23 @@ log_handler = logging.StreamHandler()
 log_handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(message)s'))
 log.addHandler(log_handler)
 
-class SolverRunner(threading.Thread):
-    """ Runner which executes (a single strategy) on a single formula by calling a solver in shell"""
-    def __init__(self, solver_path, smt_file, timeout, id, strategy=None, tmp_dir="/tmp/"):
+class SingleSolverRunner(threading.Thread):
+    """
+    A SingleSolverRunner which executes a single solver on a single formula (shell command)
+    If the solver is Z3 and a strategy is provided, it will rewrite the smt2 file with the strategy
+    """
+    def __init__(self, solver, solver_path, smt_file, timeout, id, options="", z3strategy=None, tmp_dir="/tmp/"):
         threading.Thread.__init__(self)
+        self.solver = solver
         self.solver_path = solver_path
         self.smt_file = smt_file
         self.timeout = timeout  # used only for output
-        self.strategy = strategy
+        self.z3strategy = z3strategy
+        self.options_str = options
         self.id = id
         self.tmpDir = tmp_dir
 
-        if self.strategy is not None:
+        if solver == "z3" and self.z3strategy:
             if not os.path.exists(self.tmpDir): os.makedirs(self.tmpDir)
             self.new_file_name = os.path.join(self.tmpDir, f"tmp_{id}.smt2")
             self.tmp_file = open(self.new_file_name, 'w')
@@ -33,7 +38,7 @@ class SolverRunner(threading.Thread):
                 for line in f:
                     new_line = line
                     if 'check-sat' in line:
-                        new_line = f"(check-sat-using {strategy})\n"
+                        new_line = f"(check-sat-using {self.z3strategy})\n"
                     self.tmp_file.write(new_line)
             self.tmp_file.close()
         else:
@@ -42,7 +47,7 @@ class SolverRunner(threading.Thread):
     def run(self):
         self.time_before = time.time()
         safe_path = shlex.quote(self.new_file_name)
-        cmd = f"{self.solver_path} {safe_path}"
+        cmd = f"{self.solver_path} {self.options_str} {safe_path}"
         self.p = subprocess.Popen(shlex.split(cmd), stdout=subprocess.PIPE)
         self.p.wait()
         self.time_after = time.time()
@@ -77,8 +82,12 @@ class SolverRunner(threading.Thread):
 
         return self.id, res, runtime, self.smt_file
 
-class SolverEvaluator():
-    def __init__(self, solver_path, benchmark_lst, timeout, batch_size, tmp_dir="/tmp/", is_write_res=False, res_path=None):
+class SingleSolverEvaluator():
+    """
+    A SingleSolverEvaluator which executes a single solver on a list of formulas
+    """
+    def __init__(self, solver, solver_path, benchmark_lst, timeout, batch_size, tmp_dir="/tmp/", is_write_res=False, res_path=None):
+        self.solver = solver
         self.solverPath = solver_path
         self.benchmarkLst = benchmark_lst
         assert (self.getBenchmarkSize() > 0)
@@ -93,7 +102,7 @@ class SolverEvaluator():
         return len(self.benchmarkLst)
 
     # now returns a list of (solved, timeTask, resTask) for each instance
-    def getResLst(self, strat_str):
+    def getResLst(self, options_str, strat_str):
         size = self.getBenchmarkSize()
         results = [None] * size
         for i in range(0, size, self.batchSize):
@@ -101,7 +110,7 @@ class SolverEvaluator():
             threads = []
             for id in batch_instance_ids:
                 smtfile = self.benchmarkLst[id]
-                runnerThread = SolverRunner(self.solverPath, smtfile, self.timeout, id, strat_str, self.tmpDir)
+                runnerThread = SingleSolverRunner(self.solverPath, smtfile, self.timeout, id, options=options_str, z3strategy=strat_str, tmp_dir=self.tmpDir)
                 runnerThread.start()
                 threads.append(runnerThread)
             time_start = time.time()

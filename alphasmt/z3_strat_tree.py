@@ -16,7 +16,7 @@ class ASTNode():
     def isTactic(self):
         return False
 
-    # make change this to unify with the way in S2Strategy
+    # make change this to unify with the way in S2Z3Strategy
     def applyRule(self, action, params):
         assert (self.isLeaf())
         assert (action in self.legalActions())
@@ -76,8 +76,8 @@ class TimeOutNode0(ASTNode):
         a_value = int(action[1:])
         branchingNode = TimeOutNode1(a_value)
         # currently no branching after timeout tryout
-        tryout_strat = S2Strategy(a_value, self.s2dict, MAX_IF_DEPTH)
-        default_strat = S2Strategy(self.remain_time - a_value, self.s2dict, MAX_IF_DEPTH)
+        tryout_strat = S2Z3Strategy(a_value, self.s2dict, MAX_IF_DEPTH)
+        default_strat = S2Z3Strategy(self.remain_time - a_value, self.s2dict, MAX_IF_DEPTH)
         self.parent.replaceChild(branchingNode, self.pos)
         branchingNode.addChildren([tryout_strat, default_strat])
 
@@ -164,8 +164,8 @@ class ProbeNode(ASTNode):
         probe_name = self.action_dict[action]
         pred_node = PredicateNode(probe_name, self.probe_stats)
         self.parent.replaceChild(pred_node, self.pos)
-        left_strat = S2Strategy(self.timeout, self.s2dict, self.if_depth)
-        right_strat = S2Strategy(self.timeout, self.s2dict, self.if_depth)
+        left_strat = S2Z3Strategy(self.timeout, self.s2dict, self.if_depth)
+        right_strat = S2Z3Strategy(self.timeout, self.s2dict, self.if_depth)
         pred_node.addChildren([left_strat, right_strat])
 
 class TacticNode(ASTNode):
@@ -337,20 +337,20 @@ class SolverTactic(ASTNode):
         selected = TacticNode(tactic_name, params, action)
         self.parent.replaceChild(selected, self.pos)
 
-class S1Strategy(ASTNode):
+class S1Z3Strategy(ASTNode):
     def __init__(self, logic):
         super().__init__()
         self.logic = logic
         self.action_dict = {
-            0: self.applySolverRule,  # <S1Strategy> := <SolverTactic>
-            1: self.applyThenRule,  # <S1Strategy> := (then <PreprocessTactic> <S1Strategy>)
-            5: self.applyNla2BVRule,  # <S1Strategy>(QF_NIA/QF_NRA) := (then nla2bv <S1Strategy>(QF_BV))
-            7: self.applyBitBlastRule,  # <S1Strategy>(BV) := (then simplify bit-blast <S1Strategy>(SAT))
-            8: self.applyPb2BvRule # <S1Strategy>(QF_LIA) := (then pb2bv <S1Strategy>(QF_BV))
+            0: self.applySolverRule,  # <S1Z3Strategy> := <SolverTactic>
+            1: self.applyThenRule,  # <S1Z3Strategy> := (then <PreprocessTactic> <S1Z3Strategy>)
+            5: self.applyNla2BVRule,  # <S1Z3Strategy>(QF_NIA/QF_NRA) := (then nla2bv <S1Z3Strategy>(QF_BV))
+            7: self.applyBitBlastRule,  # <S1Z3Strategy>(BV) := (then simplify bit-blast <S1Z3Strategy>(SAT))
+            8: self.applyPb2BvRule # <S1Z3Strategy>(QF_LIA) := (then pb2bv <S1Z3Strategy>(QF_BV))
         }
 
     def __str__(self):
-        return f"<S1Strategy>({self.logic})"
+        return f"<S1Z3Strategy>({self.logic})"
 
     def isTerminal(self):
         return False
@@ -374,18 +374,18 @@ class S1Strategy(ASTNode):
         assert self.parent
         preprocessor = PreprocessTactic(self.logic)
         self.parent.replaceChild(preprocessor, self.pos)
-        preprocessor.addChildren([S1Strategy(self.logic)])
+        preprocessor.addChildren([S1Z3Strategy(self.logic)])
 
     def applyNla2BVRule(self, params):
         nla2bv_node = TacticNode("nla2bv", params)
         self.parent.replaceChild(nla2bv_node, self.pos)
-        qf_bv_strat = S1Strategy("QF_BV")
+        qf_bv_strat = S1Z3Strategy("QF_BV")
         nla2bv_node.addChildren([qf_bv_strat])
 
     def applyPb2BvRule(self, params):
         pb2bv_node = TacticNode("pb2bv", params)
         self.parent.replaceChild(pb2bv_node, self.pos)
-        qf_bv_strat = S1Strategy("QF_BV")
+        qf_bv_strat = S1Z3Strategy("QF_BV")
         pb2bv_node.addChildren([qf_bv_strat])
 
     def applyBitBlastRule(self, params):
@@ -393,9 +393,9 @@ class S1Strategy(ASTNode):
         bit_blast_node = TacticNode("bit-blast", params)
         self.parent.replaceChild(simplify_node, self.pos)
         simplify_node.addChildren([bit_blast_node])
-        bit_blast_node.addChildren([S1Strategy("SAT")])
+        bit_blast_node.addChildren([S1Z3Strategy("SAT")])
 
-class S2Strategy(ASTNode):
+class S2Z3Strategy(ASTNode):
     def __init__(self, timeout, s2dict, if_depth):
         super().__init__()
         self.timeout = timeout
@@ -411,7 +411,7 @@ class S2Strategy(ASTNode):
         # self.probe_records = probe_records
 
     def __str__(self):
-        return f"<S2Strategy>"
+        return f"<S2Z3Strategy>"
 
     def isTerminal(self):
         return False
@@ -444,7 +444,7 @@ class S2Strategy(ASTNode):
         tactic, tac_params = self.preprocess_action_dict[action]
         tac_node = TacticNode(tactic, tac_params, action)
         self.parent.replaceChild(tac_node, self.pos)
-        s2strat = S2Strategy(self.timeout, self.s2dict, MAX_IF_DEPTH)
+        s2strat = S2Z3Strategy(self.timeout, self.s2dict, MAX_IF_DEPTH)
         tac_node.addChildren([s2strat])
 
     def applyTimeoutRule(self):
@@ -474,11 +474,11 @@ class StrategyAST():
         self.timeout = timeout
         self.root = Root()
         if stage == 1:
-            self.root.addChildren([S1Strategy(logic)])
+            self.root.addChildren([S1Z3Strategy(logic)])
         else:
             assert s2config
             s2dict = s2config['s2dict']
-            self.root.addChildren([S2Strategy(timeout, s2dict, if_depth = 0)])
+            self.root.addChildren([S2Z3Strategy(timeout, s2dict, if_depth = 0)])
     def __str__(self):
         return str(self.root)
 

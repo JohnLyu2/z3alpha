@@ -10,7 +10,7 @@ from alphasmt.mcts import MCTS_RUN
 from alphasmt.selector import * 
 from alphasmt.utils import calculatePercentile, write_strat_res_to_csv
 
-from alphasmt.strat_tree import PERCENTILES
+from alphasmt.z3_strat_tree import PERCENTILES
 VALUE_TYPE = 'par10' # hard code for now
 
 def createBenchmarkList(benchmark_directories, timeout, batchSize, tmp_folder, z3path, is_sorted):
