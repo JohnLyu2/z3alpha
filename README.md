@@ -2,13 +2,13 @@
 
 Our tool is built on top of Z3 SMT solver (https://github.com/Z3Prover/z3). 
 
-# SMT-COMP'24
+## SMT-COMP'24
 Z3alpha entered SMT-COMP 2024 (Single Query Track) as a derived solver. It won [multiple awards](https://smt-comp.github.io/2024/results/results-single-query/) across various divisions and logics, including sequential- & parllel-perofrmance awards in QF_NonLinearIntArith and QF_NonLinearRealArith!
 
 See our submitted solver along with synthesized strategies in 'smtcomp24/'. Note that the executables in 'smtcomp24/z3bin/' are compiled for the [competition evnvironment](https://smt-comp.github.io/2024/specs/).
 
 
-# Prerequisites
+## Prerequisites
 
 The only environmental prerequisites are Z3 and its Python binding (Z3Py). After installing Z3 from the [Z3 GitHub repository](https://github.com/Z3Prover/z3), verify the setup:
 
@@ -32,7 +32,7 @@ except ImportError:
 ```
 If no errors occur, Z3Py is ready for use.
 
-# A Synthesis Example
+## A Synthesis Example
 
 Here, we provide an example of synthesizing a tailored Z3 strategy for a toy benchmark set `benchmarks/small`. The `synthesize_full.py` script performs the staged MCTS, which takes a configuration JSON file as an argument. The configuration file specifies settings such as the MCTS simulation number, training datasets, timeouts, etc. The configuration file this toy example is provided at `experiments/syn_configs/sample.json`. 
 
@@ -44,10 +44,10 @@ $ python ./synthesize_full.py experiments/syn_configs/sample.json
 
 After this command terminates, the synthesized strategy is saved to a result directory under `experiments/results/`, along with the logs (if enabled). The result directory is named as `out-<starting time:%Y-%m-%d_%H-%M-%S>`.
 
-# IJCAI-24 Experiment Data
+## IJCAI-24 Experiment Data
 We have included all experimental result data in `ijcai24_data/`. For each experiment, there is a subfolder (e.g., `ijcai24_data/QF_BV/core/`) containing all competing solvers' testing statistics and sample Z3alpha and FastSMT synthesized strategies. The experiments were conducted on a high-performance CentOS 7 cluster equipped with Intel E5-2683 v4 (Broadwell) processors running at 2.10 GHz.
 
-# Reproduce IJCAI-24 Experiments
+## Reproduce IJCAI-24 Experiments
 
 The experiments in our IJCAI'24 paper are based on Z3 4.12.2.
 
@@ -75,9 +75,9 @@ Before running the script, ensure to adjust the JSON configuration file to match
 
 For installation and operation of FastSMT, please refer to the guidance available in the [FastSMT GitHub repository](https://fastsmt.ethz.ch/). In our IJCAI experiemnts, minor modifications to FastSMT are made to facilitate its compatibility with Z3 4.12.2. We have also updated the tactic and parameter canadidates for each tested SMT logic.
 
-**CVC5**
+**cvc5**
 
-Please check the [CVC5 webpage](https://cvc5.github.io/) for installation and operation instructions. We use CVC5-1.0.5 as one baseline solver in our experiments. 
+Please check the [cvc5 webpage](https://cvc5.github.io/) for installation and operation instructions. We use CVC5-1.0.5 as one baseline solver in our experiments. 
 
 ### Evaluation
 
@@ -88,3 +88,21 @@ $ python scripts/exp_tester.py experiments/eva_configs/leipzig.json
 ```
 
 The evaluation outcomes are saved in the directory specified by the `res_dir` entry in the configuration JSON file.
+
+### Citing this Work
+```bibtex
+@inproceedings{ijcai2024p211,
+  title     = {Layered and Staged Monte Carlo Tree Search for SMT Strategy Synthesis},
+  author    = {Lu, Zhengyang and Siemer, Stefan and Jha, Piyush and Day, Joel and Manea, Florin and Ganesh, Vijay},
+  booktitle = {Proceedings of the Thirty-Third International Joint Conference on
+               Artificial Intelligence, {IJCAI-24}},
+  publisher = {International Joint Conferences on Artificial Intelligence Organization},
+  editor    = {Kate Larson},
+  pages     = {1907--1915},
+  year      = {2024},
+  month     = {8},
+  note      = {Main Track},
+  doi       = {10.24963/ijcai.2024/211},
+  url       = {https://doi.org/10.24963/ijcai.2024/211},
+}
+
