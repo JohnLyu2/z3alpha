@@ -89,6 +89,9 @@ $ python scripts/exp_tester.py experiments/eva_configs/leipzig.json
 
 The evaluation outcomes are saved in the directory specified by the `res_dir` entry in the configuration JSON file.
 
+## License
+Z3alpha is licensed under the [Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0).
+
 ### Citing this Work
 ```bibtex
 @inproceedings{ijcai2024p211,
