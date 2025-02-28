@@ -8,7 +8,7 @@ from z3 import *
 from alphasmt.evaluator import SolverEvaluator
 from alphasmt.mcts import MCTS_RUN
 from alphasmt.selector import * 
-from alphasmt.utils import calculatePercentile, write_strat_res_to_csv
+from alphasmt.utils import calculatePercentile, write_strat_res_to_csv, write_strat_res_to_csv_long_format
 
 from alphasmt.strat_tree import PERCENTILES
 VALUE_TYPE = 'par10' # hard code for now
@@ -120,7 +120,8 @@ def cache4stage2(selected_strat, config, stream_logger, log_folder, benchlst = N
         strat_res = s2evaluator.getResLst(strat)
         s2_res_lst.append((strat, strat_res))
     ln_res_csv = os.path.join(log_folder, "ln_res.csv")
-    write_strat_res_to_csv(s2_res_lst, ln_res_csv, s2benchLst)
+    #originally write_strat_res_to_csv(), changed to adapt to the format required by MachSMT
+    write_strat_res_to_csv_long_format(s2_res_lst, ln_res_csv, s2benchLst)
     stream_logger.info(f"Cached results saved to {ln_res_csv}")
     endTime = time.time()
     cacheTime = endTime - startTime
