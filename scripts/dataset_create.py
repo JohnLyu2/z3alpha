@@ -3,13 +3,15 @@ import os
 import random
 import shutil
 import pathlib
+from pathlib import Path
 
 def create_dir(target_dir, files):
     counter = 0
+    target_dir = Path(target_dir)
     for source_filepath in files:
-        # file = pathlib.Path(source_filepath).name
-        target_filepath = os.path.join(target_dir, f"benchmark{counter}.smt2")
-        os.symlink(source_filepath, target_filepath)
+        source_path = Path(source_filepath).resolve()  # Get absolute path
+        target_filepath = target_dir / f"benchmark{counter}.smt2"
+        target_filepath.symlink_to(source_path)
         counter += 1
 
 def main():
@@ -22,11 +24,11 @@ def main():
 
     random.seed(args.seed)
 
-    benchmark_dir = args.benchmark_dir
-    assert os.path.exists(benchmark_dir), 'The specified benchmark folder does not exist!'
+    benchmark_dir = Path(args.benchmark_dir)
+    assert benchmark_dir.exists(), 'The specified benchmark folder does not exist!'
     
     all_files = []
-    for file in sorted(list(pathlib.Path(benchmark_dir).rglob("*.smt2"))):
+    for file in sorted(benchmark_dir.rglob("*.smt2")):
         all_files.append(str(file))
     all_file_size = len(all_files)
     random.shuffle(all_files)
@@ -35,16 +37,16 @@ def main():
     assert train_size + valid_size <= all_file_size, 'Sum of train&valid sizes should be smaller than the total smt2 file size'
     test_size = all_file_size - train_size - valid_size
 
-    dataset_dir = args.dataset_dir
-    assert(not os.path.exists(dataset_dir))
-    os.mkdir(dataset_dir)
-    train_dir = os.path.join(dataset_dir, 'train1')
-    valid_dir = os.path.join(dataset_dir, 'train2')
-    test_dir = os.path.join(dataset_dir, 'test')
+    dataset_dir = Path(args.dataset_dir)
+    assert not dataset_dir.exists()
+    dataset_dir.mkdir()
+    train_dir = dataset_dir / 'train1'
+    valid_dir = dataset_dir / 'train2'
+    test_dir = dataset_dir / 'test'
 
-    os.mkdir(train_dir)
-    os.mkdir(valid_dir)
-    os.mkdir(test_dir)
+    train_dir.mkdir()
+    valid_dir.mkdir()
+    test_dir.mkdir()
 
     create_dir(train_dir, all_files[:train_size])
     create_dir(valid_dir, all_files[train_size:train_size+valid_size])
