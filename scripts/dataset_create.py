@@ -1,8 +1,6 @@
 import argparse
-import os
 import random
 import shutil
-import pathlib
 from pathlib import Path
 
 def create_dir(target_dir, files):
