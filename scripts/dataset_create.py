@@ -36,8 +36,7 @@ def main():
     test_size = all_file_size - train_size - valid_size
 
     dataset_dir = Path(args.dataset_dir)
-    assert not dataset_dir.exists()
-    dataset_dir.mkdir()
+    dataset_dir.mkdir(parents=True, exist_ok=True)
     train_dir = dataset_dir / 'train1'
     valid_dir = dataset_dir / 'train2'
     test_dir = dataset_dir / 'test'
