@@ -11,6 +11,6 @@
   "timeout": 10,
   "batch_size": 30,
   "res_dir": "eva_results/",
-  "test_dir": "benchmarks/qflra_exp/test",
+  "test_dir": "benchmarks/QF_LRA/test",
   "tmp_dir": "/tmp/"
 }
