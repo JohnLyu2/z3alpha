@@ -131,11 +131,17 @@ class MCTS_RUN():
         else:
             self.c_ucb = None
             self.resS1Database = config['s2dict']['res_cache']
+        
+        # Setup logging only if self.is_log is True
         self.sim_log = logging.getLogger(f"s{self.stage}mcts")
         self.sim_log.propagate = False
-        self.sim_log.setLevel(logging.INFO)
-        simlog_handler = logging.FileHandler(f"{log_folder}/s{self.stage}mcts.log")
-        self.sim_log.addHandler(simlog_handler)
+        if self.is_log:
+            self.sim_log.setLevel(logging.INFO)
+            simlog_handler = logging.FileHandler(f"{log_folder}/s{self.stage}mcts.log")
+            self.sim_log.addHandler(simlog_handler)
+        else:
+            self.sim_log.setLevel(logging.ERROR)  # Set to ERROR to prevent any logging
+        
         self.tmpFolder = tmp_folder
         if not root: root = MCTSNode(self.logic, self.isMean, self.sim_log, self.c_ucb, self.is_log)
         self.root = root
