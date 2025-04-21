@@ -2,7 +2,7 @@
   "logic": "QF_LIA",
   "batch_size": 50,
   "s1config": {
-    "bench_dirs": ["benchmarks/qflia_exp/train1"],
+    "bench_dirs": ["./benchmarks/QF_LIA/train1"],
     "sim_num": 800,
     "timeout": 10,
     "c_uct": 0.5,
@@ -10,8 +10,8 @@
     "is_log": false
   },
   "s2config": {
-    "bench_dirs": ["benchmarks/qflia_exp/train1",
-                  "benchmarks/qflia_exp/train2"],
+    "bench_dirs": ["./benchmarks/QF_LIA/train1",
+                  "./benchmarks/QF_LIA/train2"],
     "sim_num": 300000,
     "timeout": 10,
     "c_uct": 0.6,
