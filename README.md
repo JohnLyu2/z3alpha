@@ -3,9 +3,7 @@
 Our tool is built on top of the [Z3 SMT solver](https://github.com/Z3Prover/z3). 
 
 ## SMT-COMP'24
-Z3alpha entered SMT-COMP 2024 (Single Query Track) as a derived solver. It won [multiple awards](https://smt-comp.github.io/2024/results/results-single-query/) across various divisions and logics, including sequential- & parllel-perofrmance awards in QF_NonLinearIntArith and QF_NonLinearRealArith!
-
-See our submitted solver along with synthesized strategies in 'smtcomp24/'. Note that the executables in 'smtcomp24/z3bin/' are compiled for the [competition evnvironment](https://smt-comp.github.io/2024/specs/).
+As a derived solver, Z3alpha entered SMT-COMP 2024 (Single Query Track)  and won [some awards](https://smt-comp.github.io/2024/results/results-single-query/). See our submitted solver along with synthesized strategies in `smtcomp24/`. Note that the executables in `smtcomp24/z3bin/` are compiled for the [competition evnvironment](https://smt-comp.github.io/2024/specs/).
 
 
 ## Prerequisites
