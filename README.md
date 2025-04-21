@@ -2,9 +2,6 @@
 
 Our tool is built on top of the [Z3 SMT solver](https://github.com/Z3Prover/z3). 
 
-## SMT-COMP'24
-As a derived solver, Z3alpha entered [SMT-COMP 2024 (Single Query Track)](https://smt-comp.github.io/2024/results/results-single-query/)  and won [some awards](https://drive.google.com/file/d/1dEeJFfzjJz4vp-mU5XiGnR-hHJdsU1QZ/view?usp=sharing). See our submitted solver along with synthesized strategies in `smtcomp24/`. Note that the executables in `smtcomp24/z3bin/` are compiled for the [competition evnvironment](https://smt-comp.github.io/2024/specs/).
-
 
 ## Prerequisites
 
@@ -55,7 +52,6 @@ Navigate to the `benchmarks/` directory and run the corresponding benchmark down
 ```bash
 $ ./download_fastsmt_benchmarks.sh
 ```
-Note: the previous script for downloading SMT-LIB benchmarks from the official GitLab is not working now due to the SMT-LIB organizers changing the storage location of the SMT-LIB benchmarks from GitLab to Zenodo. We will update the downloading script soon.
 
 ### Z3alpha Strategy Synthesis
 
@@ -86,6 +82,9 @@ $ python scripts/exp_tester.py experiments/eva_configs/leipzig.json
 ```
 
 The evaluation outcomes are saved in the directory specified by the `res_dir` entry in the configuration JSON file.
+
+## SMT-COMP'24
+As a derived solver, Z3alpha entered [SMT-COMP 2024 (Single Query Track)](https://smt-comp.github.io/2024/results/results-single-query/)  and won [some awards](https://drive.google.com/file/d/1dEeJFfzjJz4vp-mU5XiGnR-hHJdsU1QZ/view?usp=sharing). See our submitted solver along with synthesized strategies in `smtcomp24/`. Note that the executables in `smtcomp24/z3bin/` are compiled for the [competition evnvironment](https://smt-comp.github.io/2024/specs/).
 
 ## License
 Z3alpha is licensed under the [Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0).
