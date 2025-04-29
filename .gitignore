@@ -4,3 +4,20 @@
 
 # Project specific
 experiments/results/
+
+#Jiahao Chen
+# Ignore JHC directories anywhere in the repository
+#JHC/
+#**/JHC/
+
+SMAC3/
+benchmarks/
+lib
+results/
+temp.py
+pytorch_env/
+temp/
+
+
+experiments/eva_configs/JHC/
+experiments/syn_configs/JHC/
