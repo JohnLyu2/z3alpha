@@ -1,0 +1,9 @@
+# Ignore everything by default
+/*
+
+# But do not ignore these directories
+!download_scripts/
+!samples/
+
+# Do not ignore .gitignore itself
+!.gitignore 

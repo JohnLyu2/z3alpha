@@ -1,0 +1,16 @@
+{
+  "solvers": {
+    "z3": "z3",
+    "cvc5": "cvc5"
+  },
+  "strat_files": {
+    "z3alpha": "data/ijcai24/results/QF_BV/Sage2_1min/sample_strategies/strategy_z3alpha.txt",
+    "fastsmt": "data/ijcai24/results/QF_BV/Sage2_1min/sample_strategies/strategy_fastsmt.txt",
+    "z3": null
+  },
+  "timeout": 60,
+  "batch_size": 30,
+  "res_dir": "eval_results/Sage2_1min",
+  "test_dir": "data/ijcai24/benchmarks/fastsmt_benchmarks/sage2/test",
+  "tmp_dir": "/tmp/"
+}

@@ -1,0 +1,15 @@
+{
+  "solvers": {
+    "z3": "z3"
+  },
+  "strat_files": {
+    "z3alpha": "data/ijcai24/results/QF_NIA/leipzig/sample_strategies/strategy_z3alpha.txt",
+    "fastsmt": "data/ijcai24/results/QF_NIA/leipzig/sample_strategies/strategy_fastsmt.txt",
+    "z3": null
+  },
+  "timeout": 1,
+  "batch_size": 5,
+  "res_dir": "eval_results/leipzig_s",
+  "test_dir": "data/ijcai24/benchmarks/fastsmt_benchmarks/qf_nia/leipzig/test",
+  "tmp_dir": "/tmp/"
+}

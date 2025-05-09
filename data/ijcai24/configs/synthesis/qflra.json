@@ -1,0 +1,27 @@
+{
+  "logic": "QF_LRA",
+  "batch_size": 50,
+  "s1config": {
+    "bench_dirs": [
+      "data/ijcai24/benchmarks/QF_LRA/train1"
+    ],
+    "sim_num": 800,
+    "timeout": 10,
+    "c_uct": 0.5,
+    "c_ucb": 0.2,
+    "is_log": false
+  },
+  "s2config": {
+    "bench_dirs": [
+      "data/ijcai24/benchmarks/QF_LRA/train1",
+      "data/ijcai24/benchmarks/QF_LRA/train2"
+    ],
+    "sim_num": 300000,
+    "timeout": 10,
+    "c_uct": 0.6,
+    "is_log": false
+  },
+  "ln_strat_num": 20,
+  "temp_folder": "/tmp/",
+  "random_seed": 0
+}

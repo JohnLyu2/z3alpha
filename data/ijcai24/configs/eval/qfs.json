@@ -1,0 +1,16 @@
+{
+  "solvers": {
+    "z3": "z3",
+    "z3str4": "z3 smt.string_solver=z3str3 smt.str.tactic=3probe",
+    "cvc5": "cvc5"
+  },
+  "strat_files": {
+    "z3alpha": "data/ijcai24/results/QF_S/sample_strategies/strategy_z3alpha.txt",
+    "z3": null
+  },
+  "timeout": 10,
+  "batch_size": 30,
+  "res_dir": "eval_results/qfs",
+  "test_dir": "./benchmarks/QF_S/test",
+  "tmp_dir": "/tmp/"
+}
