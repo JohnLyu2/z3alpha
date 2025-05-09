@@ -29,65 +29,59 @@ If no errors occur, Z3Py is ready for use.
 
 ## A Synthesis Example
 
-Here, we provide an example of synthesizing a tailored Z3 strategy for a toy benchmark set `benchmarks/small`. The `synthesize_full.py` script performs the staged MCTS, which takes a configuration JSON file as an argument. The configuration file specifies settings such as the MCTS simulation number, training datasets, timeouts, etc. The configuration file for this toy example is provided at `experiments/syn_configs/sample.json`. 
+Here, we provide an example of synthesizing a tailored Z3 strategy for a toy benchmark set `data/ijcai24/benchmarks/samples/`. The `synthesize_full.py` script performs the staged MCTS, which takes a configuration JSON file as an argument. The configuration file specifies settings such as the MCTS simulation number, training datasets, timeouts, etc. The configuration file for this toy example is provided at `data/ijcai24/configs/synthesis/sample.json`. 
 
 The command for this toy example is as follows:
 
 ```bash
-$ python ./synthesize_full.py experiments/syn_configs/sample.json
+python ./synthesize_full.py data/ijcai24/configs/synthesis/sample.json
 ```
 
 After this command terminates, the synthesized strategy is saved to a result directory under `experiments/results/`, along with the logs (if enabled). The result directory is named as `out-<starting time:%Y-%m-%d_%H-%M-%S>`.
 
-## IJCAI-24 Experiment Data
-We have included all experimental result data in `ijcai24_data/`. For each experiment, there is a subfolder (e.g., `ijcai24_data/QF_BV/core/`) containing all competing solvers' testing statistics and sample Z3alpha and FastSMT synthesized strategies. The experiments were conducted on a high-performance CentOS 7 cluster equipped with Intel E5-2683 v4 (Broadwell) processors running at 2.10 GHz.
+## IJCAI-24 Reproduction
 
-## Reproduce IJCAI-24 Experiments
+### Benchmarks
 
-The experiments in our IJCAI'24 paper are based on Z3 4.12.2.
-
-### Benchmark Download
-Navigate to the `benchmarks/` directory and run the corresponding benchmark downloading script for each experiment. For example, to download the original FastSMT benchmarks for the experiments in Section 5.3, run:
+The scripts in `data/ijcai24/benchmarks/download_scripts/` will download all benchmark sets used in the paper into the `data/ijcai24/benchmarks/` directory. For example, to download the original FastSMT benchmarks for the experiments in Section 5.3, run:
 
 ```bash
-$ ./download_fastsmt_benchmarks.sh
+./data/ijcai24/benchmarks/download_scripts/download_fastsmt_benchmarks.sh
 ```
 
 ### Z3alpha Strategy Synthesis
 
-We provide sample configuration JSON files for the experiments in `experiments/syn_configs/`. When under the repository root, run the `synthesize_full.py` script with the corresponding configuration file to start the synthesis. For example, to synthesize a strategy for *leipzig*, run:
+We provide sample configuration JSON files for the experiments in `data/ijcai24/configs/synthesis/`. When under the repository root, run the `synthesize_full.py` script with the corresponding configuration file to start the synthesis. For example, to synthesize a strategy for *leipzig*, run:
 
 ```bash
-$ python ./synthesize_full.py experiments/syn_configs/leipzig.json
+python ./synthesize_full.py data/ijcai24/configs/synthesis/leipzig.json
 ```
 
 Before running the script, ensure to adjust the JSON configuration file to match your computer's specifications.
 
-### Competing Solvers
-
-**FastSMT**
-
-For installation and operation of FastSMT, please refer to the guidance available in the [FastSMT GitHub repository](https://fastsmt.ethz.ch/). In our IJCAI experiemnts, minor modifications to FastSMT are made to facilitate its compatibility with Z3 4.12.2. We have also updated the tactic and parameter canadidates for each tested SMT logic.
-
-**cvc5**
-
-Please check the [cvc5 webpage](https://cvc5.github.io/) for installation and operation instructions. We use CVC5-1.0.5 as one baseline solver in our experiments. 
-
 ### Evaluation
 
-We provide the script `scripts/exp_tester.py` for evaluating solvers and strategies. Sample configuration files for evaluating our synthesized strategies are provided in `experiments/eva_configs/`. For example, to evaluate all solvers on the *leipzig* test, run:
+We provide the script `scripts/exp_tester.py` for evaluating solvers and strategies. Sample configuration files for evaluating our synthesized strategies are provided in `data/ijcai24/configs/eval`. For example, to evaluate all solvers on the *leipzig* test, run:
 
 ```bash
-$ python scripts/exp_tester.py experiments/eva_configs/leipzig.json
+python scripts/exp_tester.py data/ijcai24/configs/eval/leipzig.json
 ```
 
 The evaluation outcomes are saved in the directory specified by the `res_dir` entry in the configuration JSON file.
+
+
+### Results
+
+All experimental result data are included in `ijcai24_data/`. For each experiment, there is a subfolder (e.g., `ijcai24_data/QF_BV/core/`) containing all competing solvers' evaluation statistics and sample strategies synthesized by Z3alpha and FastSMT.
+
+
 
 ## SMT-COMP'24
 As a derived solver, Z3alpha entered [SMT-COMP 2024 (Single Query Track)](https://smt-comp.github.io/2024/results/results-single-query/)  and won [some awards](https://drive.google.com/file/d/1dEeJFfzjJz4vp-mU5XiGnR-hHJdsU1QZ/view?usp=sharing). See our submitted solver along with synthesized strategies in `smtcomp24/`. Note that the executables in `smtcomp24/z3bin/` are compiled for the [competition evnvironment](https://smt-comp.github.io/2024/specs/).
 
 ## License
 Z3alpha is licensed under the [Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0).
+
 
 ### Citing this Work
 ```bibtex
