@@ -21,23 +21,26 @@ logic_strategy = {
     "QF_NIA": "qfnia900.txt",
     "QF_NRA": "qfnra900.txt",
     "QF_S": "qfs900.txt",
-    "QF_SLIA": "qfslia900.txt"
+    "QF_SLIA": "qfslia900.txt",
 }
 
+
 def read_smtlib_logic(smt2_str):
-    for line in smt2_str.split('\n'):
-        if line.startswith('(set-logic'):
+    for line in smt2_str.split("\n"):
+        if line.startswith("(set-logic"):
             return line.split()[1][:-1]
     return None
 
+
 def rewrite_smt2_with_strat(smt2_str, strat):
     new_smt2_str = ""
-    for line in smt2_str.split('\n'):
+    for line in smt2_str.split("\n"):
         if "check-sat" in line:
             new_smt2_str += f"(check-sat-using {strat})\n"
         else:
             new_smt2_str += line + "\n"
     return new_smt2_str
+
 
 def main():
     script_path = os.path.realpath(__file__)
@@ -45,9 +48,9 @@ def main():
     if len(sys.argv) != 2:
         print(f"Usage: {script_path} <smt2_path>")
         return
-    
+
     smt2_path = sys.argv[1]
-    with open(smt2_path, 'r') as f:
+    with open(smt2_path, "r") as f:
         smt2_str = f.read()
 
     solver_path = os.path.join(z3alpha_dir, "z3bin", "z3")
@@ -61,13 +64,13 @@ def main():
         strat_path = os.path.join(z3alpha_dir, "strats", strat_filename)
         # check whether strat_path exists
         if os.path.exists(strat_path):
-            with open(strat_path, 'r') as f:
+            with open(strat_path, "r") as f:
                 strat = f.read()
             smt2_str = rewrite_smt2_with_strat(smt2_str, strat)
 
     # write into a new smt2 file in tmp
     new_smt2_path = "/tmp/rw_instance.smt2"
-    with open(new_smt2_path, 'w') as f:
+    with open(new_smt2_path, "w") as f:
         f.write(smt2_str)
 
     # run z3 with the new smt2 file
@@ -76,6 +79,7 @@ def main():
 
     # Print the standard output and standard error
     print(result.stdout, end="")
+
 
 if __name__ == "__main__":
     main()

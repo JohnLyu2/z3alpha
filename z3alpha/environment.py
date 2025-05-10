@@ -3,8 +3,11 @@ from z3alpha.strat_tree import StrategyAST
 from z3alpha.evaluator import SolverEvaluator
 from z3alpha.utils import solvedNumReward, parNReward
 
-class StrategyGame():
-    def __init__(self, stage, training_lst, logic, timeout, sconfig, batch_size, tmp_dir, z3path):
+
+class StrategyGame:
+    def __init__(
+        self, stage, training_lst, logic, timeout, sconfig, batch_size, tmp_dir, z3path
+    ):
         self.stage = stage
         self.benchmarks = training_lst
         if stage == 1:
@@ -12,7 +15,9 @@ class StrategyGame():
         else:
             self.stratAST = StrategyAST(2, logic, timeout, sconfig)
             self.probe_records = sconfig["s2dict"]["probe_records"]
-        self.simulator = SolverEvaluator(z3path, training_lst, timeout, batch_size, tmp_dir) # shallow copy for clone
+        self.simulator = SolverEvaluator(
+            z3path, training_lst, timeout, batch_size, tmp_dir
+        )  # shallow copy for clone
         self.timeout = timeout
 
     def __str__(self) -> str:
@@ -27,16 +32,16 @@ class StrategyGame():
     # def getRemainTime(self):
     #     return self.stratAST.getRemainTime()
 
-    def legalActions(self, rollout = False):
+    def legalActions(self, rollout=False):
         return self.stratAST.legalActions(rollout)
 
     def step(self, action, params):
         self.stratAST.applyRule(action, params)
 
     def rollout(self):
-        assert(not self.isTerminal())
-        while not self.isTerminal():            
-            actions = self.legalActions(rollout = True)
+        assert not self.isTerminal()
+        while not self.isTerminal():
+            actions = self.legalActions(rollout=True)
             action = random.choice(actions)
             params = None
             self.step(action, params)
@@ -79,28 +84,30 @@ class StrategyGame():
             if time_used >= timeout:
                 break
         return solved, time_used
-        
+
     def getS2ResLst(self, database):
         res_lst = []
         for benchID in range(len(self.benchmarks)):
             # later add bench-specific ln strats
             ln_strats = self._get_linear_strategies(benchID)
-            res_tuple = StrategyGame.solve_with_cache(benchID, ln_strats, database, self.timeout)
+            res_tuple = StrategyGame.solve_with_cache(
+                benchID, ln_strats, database, self.timeout
+            )
             res_lst.append(res_tuple)
         return res_lst
-        
+
     # return a total reward of [0,1] according to the reward type
     def getValue(self, database, reward_type):
-        assert (self.isTerminal())
+        assert self.isTerminal()
         if self.stage == 1:
             resLst = self.getS1ResLst(database)
         else:
             resLst = self.getS2ResLst(database)
-        if reward_type == '#solved':
+        if reward_type == "#solved":
             return solvedNumReward(resLst)
-        elif reward_type == 'par2':
+        elif reward_type == "par2":
             return parNReward(resLst, 2, self.timeout)
-        elif reward_type == 'par10':
+        elif reward_type == "par10":
             return parNReward(resLst, 10, self.timeout)
         else:
             raise Exception(f"Unknown value type {reward_type}")
