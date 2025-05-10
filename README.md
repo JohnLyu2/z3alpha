@@ -5,27 +5,35 @@ Our tool is built on top of the [Z3 SMT solver](https://github.com/Z3Prover/z3).
 
 ## Prerequisites
 
-The only environmental prerequisites are Z3 and its Python binding (Z3Py). After installing Z3 from the [Z3 GitHub repository](https://github.com/Z3Prover/z3), verify the setup:
+Z3alpha requires both the Z3 SMT solver and its Python bindings:
 
-**Z3 Executable**
+1. **Z3 Command-line Tool**
+   - Install Z3 from the [Z3 GitHub repository](https://github.com/Z3Prover/z3)
+   - Verify installation by running:
+     ```bash
+     z3 -h
+     ```
+   - If you don't see the help message, add Z3 to your system's PATH
 
-Open a terminal and run:
-  ```bash
-  z3 -h
-  ```
+2. **Z3 Python Bindings**
+   - Install via pip:
+     ```bash
+     pip install z3-solver
+     ```
+   - Verify installation:
+     ```python
+     try:
+         import z3
+     except ImportError:
+         raise Exception("Z3 Python binding not found.")
+     ```
 
-If you see the help message, Z3 is installed correctly. If not, add Z3 to your system's PATH.
+## Installation
 
-**Z3Py**
-
-In a Python environment, check the Z3 Python binding (Z3Py):
-```python
-try:
-    import z3
-except ImportError:
-    raise Exception("Z3 Python binding not found.")
+Install Z3alpha:
+```bash
+pip install -e .
 ```
-If no errors occur, Z3Py is ready for use.
 
 ## A Synthesis Example
 

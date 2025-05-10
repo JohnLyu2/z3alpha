@@ -5,8 +5,8 @@ import csv
 import datetime
 import os
 
-from z3alpha.synthesize import cache4stage2, stage2_synthesize
-from z3alpha.utils import read_strat_res_from_csv
+from ..synthesize import cache4stage2, stage2_synthesize
+from ..utils import read_strat_res_from_csv
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
