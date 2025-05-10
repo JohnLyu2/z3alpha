@@ -5,12 +5,12 @@ import os
 import pathlib
 from z3 import *
 
-from alphasmt.evaluator import SolverEvaluator
-from alphasmt.mcts import MCTS_RUN
-from alphasmt.selector import * 
-from alphasmt.utils import calculatePercentile, write_strat_res_to_csv
+from z3alpha.evaluator import SolverEvaluator
+from z3alpha.mcts import MCTS_RUN
+from z3alpha.selector import * 
+from z3alpha.utils import calculatePercentile, write_strat_res_to_csv
 
-from alphasmt.strat_tree import PERCENTILES
+from z3alpha.strat_tree import PERCENTILES
 VALUE_TYPE = 'par10' # hard code for now
 
 def createBenchmarkList(benchmark_directories, timeout, batchSize, tmp_folder, z3path, is_sorted):

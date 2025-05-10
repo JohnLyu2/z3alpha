@@ -1,5 +1,5 @@
-from alphasmt.utils import parNReward
-from alphasmt.parser import s1_strat_parse, SOLVER_TACTICS, PREPROCESS_TACTICS
+from z3alpha.utils import parNReward
+from z3alpha.parser import s1_strat_parse, SOLVER_TACTICS, PREPROCESS_TACTICS
 
 # no incentive for early termination if not solved for now
 # return True if res2 is better than res1

@@ -1,7 +1,7 @@
 import random
-from alphasmt.strat_tree import StrategyAST
-from alphasmt.evaluator import SolverEvaluator
-from alphasmt.utils import solvedNumReward, parNReward
+from z3alpha.strat_tree import StrategyAST
+from z3alpha.evaluator import SolverEvaluator
+from z3alpha.utils import solvedNumReward, parNReward
 
 class StrategyGame():
     def __init__(self, stage, training_lst, logic, timeout, sconfig, batch_size, tmp_dir, z3path):

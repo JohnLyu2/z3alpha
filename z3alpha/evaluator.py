@@ -6,7 +6,7 @@ import time
 import logging
 import csv
 
-from alphasmt.utils import solvedNum, parN
+from z3alpha.utils import solvedNum, parN
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)

@@ -7,7 +7,7 @@ import json
 sys.path.append('./')
 sys.path.append('../')
 
-from alphasmt.evaluator import SolverEvaluator
+from z3alpha.evaluator import SolverEvaluator
 
 def main():
     parser = argparse.ArgumentParser()

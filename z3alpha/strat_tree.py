@@ -1,5 +1,5 @@
 import copy
-from alphasmt.selector import search_next_action
+from z3alpha.selector import search_next_action
 
 MAX_IF_DEPTH = 3 
 TIMEOUTS = ["v2", "v8", "v32", "v128", "v512"] # in seconds

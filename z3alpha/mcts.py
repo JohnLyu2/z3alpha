@@ -1,8 +1,8 @@
 import logging
 import math
 import copy
-from alphasmt.environment import StrategyGame
-from alphasmt.params import create_params_dict
+from z3alpha.environment import StrategyGame
+from z3alpha.params import create_params_dict
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
