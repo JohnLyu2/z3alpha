@@ -10,7 +10,7 @@
   },
   "timeout": 60,
   "batch_size": 30,
-  "res_dir": "eval_results/Sage2_1min",
+  "res_dir": "experiments/evaluation/Sage2_1min",
   "test_dir": "data/ijcai24/benchmarks/fastsmt_benchmarks/sage2/test",
   "tmp_dir": "/tmp/"
 }

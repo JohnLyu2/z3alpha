@@ -28,7 +28,7 @@ def main():
     is_cache_benchlst = configJsonPath.benchlst4cahce
     is_syn = configJsonPath.no_syn
     assert is_cache or is_syn, "no caching and no synthesize; nothing to do"
-    log_folder = f"experiments/results/out-{datetime.datetime.now():%Y-%m-%d_%H-%M-%S}/"
+    log_folder = f"experiments/synthesis/out-{datetime.datetime.now():%Y-%m-%d_%H-%M-%S}/"
     assert(not os.path.exists(log_folder))
     os.makedirs(log_folder)
     ln_strat_file = s2config['ln_res']

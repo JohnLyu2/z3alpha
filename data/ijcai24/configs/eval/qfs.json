@@ -10,7 +10,7 @@
   },
   "timeout": 10,
   "batch_size": 30,
-  "res_dir": "eval_results/qfs",
+  "res_dir": "experiments/evaluation/qfs",
   "test_dir": "./benchmarks/QF_S/test",
   "tmp_dir": "/tmp/"
 }

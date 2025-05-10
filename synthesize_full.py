@@ -18,7 +18,7 @@ def main():
     configJsonPath = parser.parse_args()
     config = json.load(open(configJsonPath.json_config, 'r'))
     # num_strat = config['ln_strat_num']
-    log_folder = f"experiments/results/out-{datetime.datetime.now():%Y-%m-%d_%H-%M-%S}/"
+    log_folder = f"experiments/synthesis/out-{datetime.datetime.now():%Y-%m-%d_%H-%M-%S}/"
     assert(not os.path.exists(log_folder))
     os.makedirs(log_folder)
     selected_strats, s1_time = stage1_synthesize(config, log, log_folder)

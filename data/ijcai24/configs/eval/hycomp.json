@@ -10,7 +10,7 @@
   },
   "timeout": 10,
   "batch_size": 30,
-  "res_dir": "eval_results/hycomp",
+  "res_dir": "experiments/evaluation/hycomp",
   "test_dir": "data/ijcai24/benchmarks/fastsmt_benchmarks/qf_nra/hycomp/test",
   "tmp_dir": "/tmp/"
 }
