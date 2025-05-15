@@ -1,4 +1,0 @@
-strat
-(using-params qfnra-nlsat :inline_vars false :factor false :seed 100)
-(then (using-params nla2bv :nla2bv_max_bv_size 32) simplify bit-blast smt)
-(then card2bv qfnra-nlsat)

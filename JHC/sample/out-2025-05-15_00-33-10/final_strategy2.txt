@@ -1,1 +1,0 @@
-(or-else (try-for (then card2bv qfnra-nlsat) 2000) (then (using-params nla2bv :nla2bv_max_bv_size 32) simplify bit-blast smt))
