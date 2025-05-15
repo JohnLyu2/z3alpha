@@ -15,7 +15,7 @@ make dev
 
 in a virtual environment. 
 
-If does not work (WARNING: The user site-packages directory is disabled), try
+If does not work, try
 
 ```bash
 pip install -e .
