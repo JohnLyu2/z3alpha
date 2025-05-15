@@ -14,6 +14,12 @@ make dev
 
 in a virtual environment. 
 
+If does not work (WARNING: The user site-packages directory is disabled), try
+
+```bash
+pip install -e .
+```
+
 Make sure Machsmt module points to the source code, not in the site-packages directory, so the changes in the code  will take effect without having to reinstall.
 
 Check with:
