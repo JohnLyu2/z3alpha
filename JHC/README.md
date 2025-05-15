@@ -1,7 +1,8 @@
 Running the Sample Script
 
 ```bash
-./scripts/run_MachSMT_sample.sh
+./scripts/run_MachZ3alpha_sample.sh
+
 ```
 
 Results saved in experiments folder

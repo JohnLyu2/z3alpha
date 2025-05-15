@@ -7,8 +7,8 @@
 #SBATCH --mem=32G                       # Memory pool for all cores
 #SBATCH --account=def-vganesh
 #SBATCH --qos=normal
-#SBATCH --output=/home/jchen688/projects/def-vganesh/jchen688/github/z3alpha/JHC/experiments/slurm-%j.out       # Redirect stdout to JHC/slurm-<jobid>.out
-#SBATCH --error=/home/jchen688/projects/def-vganesh/jchen688/github/z3alpha/JHC/experiments/slurm-%j.err        # Redirect stderr to JHC/slurm-<jobid>.err
+#SBATCH --output=JHC/experiments/slurm-%j.out       # Redirect stdout to JHC/slurm-<jobid>.out
+#SBATCH --error=JHC/experiments/slurm-%j.err        # Redirect stderr to JHC/slurm-<jobid>.err
 
 # Print some information about the job
 echo "Job ID: $SLURM_JOB_ID"
@@ -17,6 +17,6 @@ echo "Start time: $(date)"
 
 # Run script
 
-python JHC/run_MachSMT.py --config JHC/config/sample_config.json
+python JHC/run_MachZ3alpha.py --config JHC/config/MachZ3alpha/sample_config.json
 
 echo "End time: $(date)"
