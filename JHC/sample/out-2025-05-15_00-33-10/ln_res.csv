@@ -1,0 +1,16 @@
+benchmark,solver,score
+/lustre06/project/6001884/jchen688/github/z3alpha/data/ijcai24/benchmarks/samples/4.smt2,Z3_strat_0,10
+/lustre06/project/6001884/jchen688/github/z3alpha/data/ijcai24/benchmarks/samples/1.smt2,Z3_strat_0,10
+/lustre06/project/6001884/jchen688/github/z3alpha/data/ijcai24/benchmarks/samples/3.smt2,Z3_strat_0,0.016705989837646484
+/lustre06/project/6001884/jchen688/github/z3alpha/data/ijcai24/benchmarks/samples/2.smt2,Z3_strat_0,0.01488637924194336
+/lustre06/project/6001884/jchen688/github/z3alpha/data/ijcai24/benchmarks/samples/0.smt2,Z3_strat_0,0.011766672134399414
+/lustre06/project/6001884/jchen688/github/z3alpha/data/ijcai24/benchmarks/samples/4.smt2,Z3_strat_1,0.9247462749481201
+/lustre06/project/6001884/jchen688/github/z3alpha/data/ijcai24/benchmarks/samples/1.smt2,Z3_strat_1,10
+/lustre06/project/6001884/jchen688/github/z3alpha/data/ijcai24/benchmarks/samples/3.smt2,Z3_strat_1,10
+/lustre06/project/6001884/jchen688/github/z3alpha/data/ijcai24/benchmarks/samples/2.smt2,Z3_strat_1,0.03190422058105469
+/lustre06/project/6001884/jchen688/github/z3alpha/data/ijcai24/benchmarks/samples/0.smt2,Z3_strat_1,0.022751331329345703
+/lustre06/project/6001884/jchen688/github/z3alpha/data/ijcai24/benchmarks/samples/4.smt2,Z3_strat_2,10
+/lustre06/project/6001884/jchen688/github/z3alpha/data/ijcai24/benchmarks/samples/1.smt2,Z3_strat_2,10
+/lustre06/project/6001884/jchen688/github/z3alpha/data/ijcai24/benchmarks/samples/3.smt2,Z3_strat_2,0.017088651657104492
+/lustre06/project/6001884/jchen688/github/z3alpha/data/ijcai24/benchmarks/samples/2.smt2,Z3_strat_2,0.012448787689208984
+/lustre06/project/6001884/jchen688/github/z3alpha/data/ijcai24/benchmarks/samples/0.smt2,Z3_strat_2,0.012159585952758789
