@@ -5,3 +5,19 @@ Running the Sample Script
 ```
 
 Results saved in experiments folder
+
+When setting up MachSMT, use 
+
+```bash
+make dev
+```
+
+in a virtual environment. 
+
+Make sure Machsmt module points to the source code, not in the site-packages directory, so the changes in the code  will take effect without having to reinstall.
+
+Check with:
+
+```bash
+python -c "import machsmt; print(machsmt.__file__)"
+```
