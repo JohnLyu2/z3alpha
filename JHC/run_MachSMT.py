@@ -66,35 +66,55 @@ def load_config(config_file):
     with open(config_file, 'r') as f:
         return json.load(f)
 
-def evaluate_strategy_on_benchmark(
+def evaluate_benchmarks_in_parallel(
     solver_path: str,
-    benchmark_path: str, 
-    strategy: str,
+    benchmarks_with_strategies_and_indices: list,  # List of (benchmark_path, strategy, original_index) tuples
     timeout: int = 300,
-    tmp_dir: str = "/tmp/"
+    tmp_dir: str = "/tmp/",
+    batch_size: int = 4
 ):
     """
-    Evaluates a Z3 strategy on a single benchmark instance using proper thread handling.
+    Evaluates multiple benchmarks in parallel, each with its own strategy.
+    
+    Args:
+        solver_path: Path to the Z3 solver
+        benchmarks_with_strategies_and_indices: List of (benchmark_path, strategy, original_index) tuples
+        timeout: Timeout in seconds
+        tmp_dir: Directory for temporary files
+        batch_size: Number of benchmarks to evaluate in parallel
+        
+    Returns:
+        Dictionary mapping original indices to (solved, runtime, result) tuples
     """
-    try:
-        # Create thread
-        runnerThread = SolverRunner(solver_path, benchmark_path, timeout, 0, strategy, tmp_dir)
-        runnerThread.start()
+    results = {}
+    
+    # Process benchmarks in batches
+    for i in range(0, len(benchmarks_with_strategies_and_indices), batch_size):
+        # Get current batch
+        batch_end = min(i + batch_size, len(benchmarks_with_strategies_and_indices))
+        current_batch = benchmarks_with_strategies_and_indices[i:batch_end]
+        threads = []
         
-        # Time the execution
+        print(f"Processing batch {i//batch_size + 1}/{(len(benchmarks_with_strategies_and_indices) + batch_size - 1)//batch_size}")
+        
+        # Start a thread for each benchmark-strategy pair in the batch
+        for batch_idx, (benchmark_path, strategy, original_idx) in enumerate(current_batch):
+            runnerThread = SolverRunner(
+                solver_path, benchmark_path, timeout, original_idx, strategy, tmp_dir
+            )
+            runnerThread.start()
+            threads.append((runnerThread, original_idx))
+        
+        # Wait for all threads in this batch to complete
         time_start = time.time()
-        time_left = max(0, timeout - (time.time() - time_start))
-        runnerThread.join(time_left)
-        
-        # Collect results
-        id, resTask, timeTask, pathTask = runnerThread.collect()
-        solved = True if (resTask == 'sat' or resTask == 'unsat') else False
-        
-        return solved, timeTask, resTask
-        
-    except Exception as e:
-        print(f"Error in evaluate_strategy_on_benchmark: {e}")
-        return False, timeout, "error"
+        for thread, original_idx in threads:
+            time_left = max(0, timeout - (time.time() - time_start))
+            thread.join(time_left)
+            idx, resTask, timeTask, pathTask = thread.collect()
+            solved = True if (resTask == "sat" or resTask == "unsat") else False
+            results[original_idx] = (solved, timeTask, resTask)
+    
+    return results
 
 def load_strategy_mapping(mapping_file):
     """Load the strategy mapping from CSV file."""
@@ -166,6 +186,7 @@ def main():
     timeout = int(config.get('settings', {}).get('timeout', 300))
     tmp_dir = config.get('paths', {}).get('tmp_dir', '/tmp/')
     num_benchmarks = int(config.get('settings', {}).get('num_benchmarks', -1))
+    batch_size = int(config.get('settings', {}).get('batch_size', 4))
 
     training_file = config.get('paths', {}).get('training_file')
     test_res_file = config.get('paths', {}).get('test_res_file')
@@ -190,6 +211,7 @@ def main():
     print(f"Using Z3 path: {z3_path}")
     print(f"Test result file: {test_res_file}")
     print(f"Timeout: {timeout} seconds")
+    print(f"Using batch size of {batch_size} for parallel evaluation")
     
     # Load strategy mapping
     strategy_mapping = load_strategy_mapping(mapping_file)
@@ -267,13 +289,18 @@ def main():
     if len(default_strategy) == 0: 
         default_strategy = None
     
-    # Lists to store results for both approaches
-    machsmt_results = []
-    default_results = []
+    # Lists to store benchmark information and results
+    benchmark_info = []  # (benchmark_path, selected_solver, machsmt_strategy)
+    machsmt_results = []  # (solved, runtime, result) for each benchmark
+    default_results = []  # (solved, runtime, result) for each benchmark
+    
+    # Lists for benchmarks that need evaluation
+    machsmt_evaluations = []  # (benchmark_path, strategy, index)
+    default_evaluations = []  # (benchmark_path, strategy, index)
 
     # Process each benchmark
-    for i, benchmark_path in enumerate(selected_benchmarks, 1):
-        print(f"\n{i}/{num_benchmarks} Processing {benchmark_path}: ")
+    for i, benchmark_path in enumerate(selected_benchmarks):
+        print(f"Processing {i+1}/{len(selected_benchmarks)}: {benchmark_path}")
         
         try:
             # Create and parse benchmark
@@ -281,76 +308,107 @@ def main():
             benchmark.parse()
             
             # Get MachSMT predictions
-            predictions, scores = prediction_model.predict([benchmark], include_predictions=True, selector = machsmt_selector)
+            predictions, scores = prediction_model.predict([benchmark], include_predictions=True, selector=machsmt_selector)
             selected_solver = predictions[0].get_name()
             
-            score = get_score(test_results, benchmark_path, selected_solver)
-
             # Get the corresponding strategy
             machsmt_strategy = strategy_mapping.get(selected_solver, "Strategy not found")
             
             if machsmt_strategy == "Strategy not found":
                 print(f"Warning: No strategy found for solver {selected_solver}")
                 continue
-
-            if score: 
-                runtime_machsmt = min(timeout, score) 
-                solved_machsmt = False if runtime_machsmt >= timeout else True 
-                result_machsmt = "No recorded"
-            else: 
+            
+            # Store benchmark info
+            benchmark_info.append((benchmark_path, selected_solver, machsmt_strategy))
+            
+            # Check if we have cached results
+            score = get_score(test_results, benchmark_path, selected_solver)
+            if score:
+                # Use cached results
+                runtime_machsmt = min(timeout, score)
+                solved_machsmt = False if runtime_machsmt >= timeout else True
+                machsmt_results.append((solved_machsmt, runtime_machsmt, "From cache"))
+            else:
+                # Need to evaluate
+                machsmt_evaluations.append((benchmark_path, machsmt_strategy, len(machsmt_results)))
+                machsmt_results.append(None)  # Placeholder to be filled later
+            
+            # If we're also running default strategy
+            if run_z3alpha_strat:
+                default_evaluations.append((benchmark_path, default_strategy, len(default_results)))
+                default_results.append(None)  # Placeholder
+            else:
+                default_results.append((False, 0.00, "Not executed"))
                 
-                # Evaluate MachSMT strategy
-                solved_machsmt, runtime_machsmt, result_machsmt = evaluate_strategy_on_benchmark(
-                    solver_path=z3_path,
-                    benchmark_path=benchmark_path,
-                    strategy=machsmt_strategy,
-                    timeout=timeout,
-                    tmp_dir=tmp_dir
-                )
-                            
-            # Store results for metrics calculation
-            machsmt_results.append((solved_machsmt, runtime_machsmt, result_machsmt))
-            if run_z3alpha_strat: 
-                # Evaluate default strategy
-                solved_default, runtime_default, result_default = evaluate_strategy_on_benchmark(
-                    solver_path=z3_path,
-                    benchmark_path=benchmark_path,
-                    strategy=default_strategy,
-                    timeout=timeout,
-                    tmp_dir=tmp_dir
-                )
-                default_results.append((solved_default, runtime_default, result_default))
-            else: 
-                solved_default, runtime_default, result_default = False, 0.00, "Not executed"
-
-            # Save results to file
-            with open(output_file, 'a') as f:
-                f.write(f"\n{i}/{num_benchmarks} Processing {benchmark_path}: ")
-                f.write(f"Benchmark: {benchmark_path}\n")
-                f.write("\nMachSMT Strategy:\n")
-                f.write(f"Selected solver: {selected_solver}\n")
-                f.write(f"Strategy: {machsmt_strategy}\n")
-                f.write(f"Solved: {solved_machsmt}\n")
-                f.write(f"Runtime: {runtime_machsmt:.2f}s\n")
-                f.write(f"Result: {result_machsmt}\n")
-                f.write("\nDefault Strategy:\n")
-                f.write(f"Strategy: {default_strategy}\n")
-                f.write(f"Solved: {solved_default}\n")
-                f.write(f"Runtime: {runtime_default:.2f}s\n")
-                f.write(f"Result: {result_default}\n")
-                f.write("---\n")
-                                    
         except Exception as e:
             print(f"Error processing benchmark {benchmark_path}: {str(e)}")
             continue
     
-    # Calculate metrics for both approaches
+    # Run MachSMT evaluations in parallel
+    if machsmt_evaluations:
+        print(f"Running {len(machsmt_evaluations)} MachSMT evaluations in parallel...")
+        machsmt_eval_results = evaluate_benchmarks_in_parallel(
+            solver_path=z3_path,
+            benchmarks_with_strategies_and_indices=machsmt_evaluations,
+            timeout=timeout,
+            tmp_dir=tmp_dir,
+            batch_size=batch_size
+        )
+        
+        # Update the results with the evaluation results
+        for idx, result in machsmt_eval_results.items():
+            machsmt_results[idx] = result
+    
+    # Run default strategy evaluations in parallel
+    if run_z3alpha_strat and default_evaluations:
+        print(f"Running {len(default_evaluations)} default strategy evaluations in parallel...")
+        default_eval_results = evaluate_benchmarks_in_parallel(
+            solver_path=z3_path,
+            benchmarks_with_strategies_and_indices=default_evaluations,
+            timeout=timeout,
+            tmp_dir=tmp_dir,
+            batch_size=batch_size
+        )
+        
+        # Update the results with the evaluation results
+        for idx, result in default_eval_results.items():
+            default_results[idx] = result
+    
+    # Verify all results are present
+    assert all(result is not None for result in machsmt_results)
+    assert all(result is not None for result in default_results)
+    
+    # Write results to output file
+    for i, ((benchmark_path, selected_solver, machsmt_strategy), machsmt_result, default_result) in enumerate(
+        zip(benchmark_info, machsmt_results, default_results), 1
+    ):
+        solved_machsmt, runtime_machsmt, result_machsmt = machsmt_result
+        solved_default, runtime_default, result_default = default_result
+        
+        with open(output_file, 'a') as f:
+            f.write(f"\n{i}/{len(benchmark_info)} Processing {benchmark_path}: ")
+            f.write(f"Benchmark: {benchmark_path}\n")
+            f.write("\nMachSMT Strategy:\n")
+            f.write(f"Selected solver: {selected_solver}\n")
+            f.write(f"Strategy: {machsmt_strategy}\n")
+            f.write(f"Solved: {solved_machsmt}\n")
+            f.write(f"Runtime: {runtime_machsmt:.2f}s\n")
+            f.write(f"Result: {result_machsmt}\n")
+            f.write("\nDefault Strategy:\n")
+            f.write(f"Strategy: {default_strategy}\n")
+            f.write(f"Solved: {solved_default}\n")
+            f.write(f"Runtime: {runtime_default:.2f}s\n")
+            f.write(f"Result: {result_default}\n")
+            f.write("---\n")
+    
+    # Calculate metrics
     par2_machsmt, solving_rate_machsmt = calculate_metrics(machsmt_results, timeout)
-    if run_z3alpha_strat: 
+    if run_z3alpha_strat:
         par2_default, solving_rate_default = calculate_metrics(default_results, timeout)
-    else: 
-        par2_default, solving_rate_default = 0.00, 0.00 
+    else:
+        par2_default, solving_rate_default = 0.00, 0.00
 
+    print("\nSummary of results:")
     print(f"Model Training Time: {model_training_time:.2f}s")
 
     print("\nOverall Performance Metrics:")
