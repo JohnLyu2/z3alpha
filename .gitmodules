@@ -1,0 +1,3 @@
+[submodule "MachSMT"]
+	path = MachSMT
+	url = https://github.com/JHCuc3m/MachSMT.git
