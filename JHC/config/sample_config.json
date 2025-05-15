@@ -1,0 +1,17 @@
+{
+  "paths": {
+    "tmp_dir": "/tmp/",
+    "benchmark_dir": "/home/jchen688/projects/def-vganesh/jchen688/github/z3alpha/data/ijcai24/benchmarks/samples",
+    "output_dir": "/home/jchen688/projects/def-vganesh/jchen688/github/z3alpha/JHC/experiments",
+    "training_file": "/home/jchen688/projects/def-vganesh/jchen688/github/z3alpha/JHC/sample/out-2025-05-15_00-33-10/ln_res.csv",
+    "mapping_file": "/home/jchen688/projects/def-vganesh/jchen688/github/z3alpha/JHC/sample/out-2025-05-15_00-33-10/strat_mapping.csv",
+    "default_strat": "/home/jchen688/projects/def-vganesh/jchen688/github/z3alpha/JHC/sample/out-2025-05-15_00-33-10/final_strategy1.txt", 
+    "test_res_file": ""
+  },
+  "settings": {
+    "timeout": 10,
+    "num_benchmarks": -1,
+    "run_z3alpha_strat": false, 
+    "selector": "EHMLogic"
+  }
+}
