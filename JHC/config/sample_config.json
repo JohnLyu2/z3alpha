@@ -12,6 +12,7 @@
     "timeout": 10,
     "num_benchmarks": -1,
     "run_z3alpha_strat": false, 
-    "selector": "EHMLogic"
+    "selector": "EHMLogic", 
+    "batch_size": 5
   }
 }
