@@ -4,7 +4,7 @@ import json
 import datetime
 import os
 
-from ..synthesize import *
+from z3alpha.synthesize import *
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
