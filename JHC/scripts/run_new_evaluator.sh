@@ -14,6 +14,9 @@ echo "Job ID: $SLURM_JOB_ID"
 echo "Node: $SLURM_JOB_NODELIST"
 echo "Start time: $(date)"
 
+# Add parent directory to PYTHONPATH
+export PYTHONPATH="/lustre06/project/6001884/jchen688/github/z3alpha:$PYTHONPATH"
+
 # Create monitoring directories
 MONITOR_DIR="JHC/experiments/monitoring_$SLURM_JOB_ID"
 mkdir -p $MONITOR_DIR
