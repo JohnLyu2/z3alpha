@@ -3,9 +3,16 @@
 Our tool is built on top of the [Z3 SMT solver](https://github.com/Z3Prover/z3). 
 
 
-## Prerequisites
+## Setup
 
-Z3alpha requires both the Z3 SMT solver and its Python bindings:
+We recommend using a Python virtual environment:
+
+```bash
+python -m venv venv
+source venv/bin/activate  # Unix/macOS
+```
+
+Install Z3alpha and its dependencies:
 
 1. **Z3 Command-line Tool**
    - Install Z3 from the [Z3 GitHub repository](https://github.com/Z3Prover/z3)
@@ -28,24 +35,22 @@ Z3alpha requires both the Z3 SMT solver and its Python bindings:
          raise Exception("Z3 Python binding not found.")
      ```
 
-## Installation
-
-Install Z3alpha:
-```bash
-pip install -e .
-```
+3. **Install Z3alpha**
+   ```bash
+   pip install -e .
+   ```
 
 ## A Synthesis Example
 
-Here, we provide an example of synthesizing a tailored Z3 strategy for a toy benchmark set `data/ijcai24/benchmarks/samples/`. The `synthesize_full.py` script performs the staged MCTS, which takes a configuration JSON file as an argument. The configuration file specifies settings such as the MCTS simulation number, training datasets, timeouts, etc. The configuration file for this toy example is provided at `data/ijcai24/configs/synthesis/sample.json`. 
+Here, we provide an example of synthesizing a tailored Z3 strategy for a toy benchmark set `data/ijcai24/benchmarks/samples/`. The `z3alpha/scripts/synthesize_full.py` script performs the staged MCTS, which takes a configuration JSON file as an argument. The configuration file specifies settings such as the MCTS simulation number, training datasets, timeouts, etc. The configuration file for this toy example is provided at `data/ijcai24/configs/synthesis/sample.json`. 
 
 The command for this toy example is as follows:
 
 ```bash
-python ./synthesize_full.py data/ijcai24/configs/synthesis/sample.json
+python ./z3alpha/scripts/synthesize_full.py data/ijcai24/configs/synthesis/sample.json
 ```
 
-After this command terminates, the synthesized strategy is saved to a result directory under `experiments/results/`, along with the logs (if enabled). The result directory is named as `out-<starting time:%Y-%m-%d_%H-%M-%S>`.
+After this command terminates, the synthesized strategy is saved to a result directory under `experiments/synthesis/`, along with the logs (if enabled). The result directory is named as `out-<starting time:%Y-%m-%d_%H-%M-%S>`.
 
 ## IJCAI-24 Reproduction
 
@@ -59,10 +64,10 @@ The scripts in `data/ijcai24/benchmarks/download_scripts/` will download all ben
 
 ### Z3alpha Strategy Synthesis
 
-We provide sample configuration JSON files for the experiments in `data/ijcai24/configs/synthesis/`. When under the repository root, run the `synthesize_full.py` script with the corresponding configuration file to start the synthesis. For example, to synthesize a strategy for *leipzig*, run:
+We provide sample configuration JSON files for the experiments in `data/ijcai24/configs/synthesis/`. When under the repository root, run the `z3alpha/scripts/synthesize_full.py` script with the corresponding configuration file to start the synthesis. For example, to synthesize a strategy for *leipzig*, run:
 
 ```bash
-python ./synthesize_full.py data/ijcai24/configs/synthesis/leipzig.json
+python ./z3alpha/scripts/synthesize_full.py data/ijcai24/configs/synthesis/leipzig.json
 ```
 
 Before running the script, ensure to adjust the JSON configuration file to match your computer's specifications.
@@ -80,7 +85,7 @@ The evaluation outcomes are saved in the directory specified by the `res_dir` en
 
 ### Results
 
-All experimental result data are included in `ijcai24_data/`. For each experiment, there is a subfolder (e.g., `ijcai24_data/QF_BV/core/`) containing all competing solvers' evaluation statistics and sample strategies synthesized by Z3alpha and FastSMT.
+All experimental result data are included in `data/ijcai24/`. For each experiment, there is a subfolder (e.g., `data/ijcai24/results/QF_BV/core/`) containing all competing solvers' evaluation statistics and sample strategies synthesized by Z3alpha and FastSMT.
 
 
 
