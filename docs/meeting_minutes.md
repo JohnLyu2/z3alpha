@@ -18,3 +18,10 @@
 #### Paul
 * Look into tactic/parameter pools for some interesting logics
 
+
+## Jun 5, 2025
+### Agenda
+* (John) I was invited by Joel to make a presentation about Z3alpha at [MOSCA](https://mosca2025.github.io/).
+  I want make this talk more focusing on strings, especially what tactics and parameters work better on
+  what families, etc, and maybe incorporate a bit about our recent progress on parallel and ML theory.
+  We can discuss what are be done in this ~2 months and about potential future publication.
