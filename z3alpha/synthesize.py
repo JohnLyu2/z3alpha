@@ -140,6 +140,15 @@ def stage1_synthesize(config, stream_logger, log_folder):
     stream_logger.info(f"Stage 1 Time: {s1time:.0f}")
     return selected_strat, s1time
 
+def parallel_linear_strategies(ln_strat_lst):
+    assert len(ln_strat_lst) > 0, "No linear strategies provided"
+    if len(ln_strat_lst) == 1:
+        return ln_strat_lst[0]
+    parallel_strats = "(par-or"
+    for strat in ln_strat_lst:
+        parallel_strats += f" {strat}"
+    parallel_strats += ")"
+    return parallel_strats
 
 def cache4stage2(selected_strat, config, stream_logger, log_folder, benchlst=None):
     startTime = time.time()
