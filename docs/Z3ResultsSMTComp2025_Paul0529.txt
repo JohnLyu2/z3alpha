@@ -1,0 +1,177 @@
+QF_ABVFP: Solved 18119/18129 in 574.15s
+
+UFFPDTNIRA: Solved 757/795 in 392.70s
+
+QF_NIA: Solved 14819/25452 in 134869.06s: qfnia 
+  
+ABVFP: Solved 60/60 in 1.86s
+  
+QF_BVFPLRA: Solved 177/177 in 3.73s
+  
+QF_S: Solved 20983/22172 in 15870.65s
+
+QF_UFDTLIA: Solved 36/76 in 487.72s
+  
+BV: Solved 5568/6185 in 7003.25s
+
+QF_UF: Solved 7481/7503 in 1494.63s
+
+QF_AX: Solved 551/551 in 30.12s
+
+AUFLIA: Solved 2595/3327 in 7703.14s
+
+UFBVDTNIRA: Solved 776/1259 in 4865.29s
+  
+AUFBVFP: Solved 57/57 in 1.95s
+
+QF_UFLRA: Solved 1261/1284 in 519.02s
+  
+UFDTLIRA: Solved 7039/7749 in 7412.48s
+  
+FPLRA: Solved 41/41 in 0.90s
+
+QF_SNIA: Solved 70/70 in 2.15s
+
+NIA: Solved 208/257 in 606.99s
+  
+UFBVDTLIA: Solved 24/24 in 0.98s
+  
+QF_BVFP: Solved 17059/17250 in 3646.58s
+  
+ANIA: Solved 62/78 in 167.91s
+  
+AUFNIRA: Solved 1029/1480 in 4571.56s
+  
+QF_UFNIA: Solved 563/806 in 2680.31s
+  
+UF: Solved 2714/7590 in 49396.43s
+  
+AUFLIRA: Solved 19583/20011 in 5249.94s
+  
+QF_RDL: Solved 173/255 in 1077.92s
+  
+ABVFPLRA: Solved 77/77 in 1.27s
+  
+QF_DT: Solved 8161/8700 in 5795.51s
+  
+BVFP: Solved 208/208 in 4.54s
+  
+QF_LIA: Solved 10835/13306 in 32463.44s
+  
+UFNIA: Solved 5876/13532 in 78894.37s
+  
+AUFDTLIRA: Solved 10033/11043 in 10659.10s
+ 
+QF_UFBV: Solved 1496/2539 in 12109.67s
+
+LIA: Solved 429/536 in 1104.34s
+  
+QF_ABV: Solved 14669/15148 in 6641.65s
+  
+QF_FP: Solved 40172/40406 in 3488.16s
+
+QF_NIRA: Solved 2/3 in 12.66s
+  
+AUFBV: Solved 339/1523 in 12594.35s
+  
+QF_AUFLIA: Solved 1303/1303 in 48.28s
+  
+QF_UFDT: Solved 3/203 in 2000.07s
+  
+QF_UFNRA: Solved 50/58 in 160.29s
+  
+UFDTLIA: Solved 1250/1583 in 3627.92s
+  
+ABV: Solved 4681/4975 in 3459.35s
+  
+QF_UFIDL: Solved 492/628 in 1772.12s
+  
+QF_BV: Solved 39454/46191 in 89410.60s
+  
+QF_AUFNIA: Solved 17/17 in 13.82s
+  
+QF_FPLRA: Solved 12/59 in 514.81s
+  
+QF_AUFBVFP: Solved 1/1 in 0.02s
+ 
+QF_UFFP: Solved 2/2 in 0.05s
+  
+UFIDL: Solved 57/68 in 111.50s
+  
+QF_ALIA: Solved 117/176 in 760.25s
+  
+UFLRA: Solved 12/15 in 33.20s
+  
+UFDTNIRA: Solved 3950/4424 in 5011.17s
+  
+FP: Solved 1769/2669 in 10581.86s
+  
+UFNIRA: Solved 121/266 in 1481.42s
+  
+AUFBVDTNIA: Solved 239/552 in 3141.75s
+  
+LRA: Solved 2022/2439 in 5605.57s
+  
+QF_LRA: Solved 1205/1753 in 6293.24s
+  
+QF_UFDTLIRA: Solved 146/146 in 4.21s
+  
+UFBVFP: Solved 2/2 in 0.03s
+  
+QF_UFLIA: Solved 602/659 in 698.99s
+  
+AUFFPDTNIRA: Solved 90/166 in 762.54s
+  
+QF_LIRA: Solved 5/7 in 26.54s
+  
+QF_AUFBV: Solved 42/75 in 358.19s
+  
+AUFDTLIA: Solved 740/795 in 571.92s
+  
+QF_SLIA: Solved 75635/84411 in 110287.79s
+  
+QF_ANIA: Solved 61/157 in 1005.90s
+
+ALIA: Solved 3015/3098 in 1025.45s
+
+UFBVDT: Solved 0/1 in 10.00s
+
+BVFPLRA: Solved 266/266 in 8.21s
+
+UFDT: Solved 1851/4569 in 27576.25s
+
+AUFDTNIRA: Solved 1269/1567 in 3068.37s
+
+QF_UFFPDTNIRA: Solved 154/154 in 3.28s
+
+UFBVFPDTNIRA: Solved 1/89 in 880.03s
+
+AUFBVFPDTNIRA: Solved 4/117 in 1130.19s
+
+QF_UFDTNIA: Solved 33/80 in 553.68s
+
+UFBV: Solved 136/193 in 650.27s
+
+QF_ABVFPLRA: Solved 74/74 in 2.04s
+
+AUFNIA: Solved 0/3 in 30.00s
+
+AUFBVDTNIRA: Solved 2671/5041 in 24692.18s
+
+QF_IDL: Solved 1611/2528 in 10994.46s
+
+QF_UFBVDT: Solved 10/76 in 673.39s
+
+AUFBVDTLIA: Solved 502/1683 in 11889.15s
+
+UFBVLIA: Solved 1/208 in 2070.21s
+
+NRA: Solved 3810/3819 in 182.85s
+
+UFDTNIA: Solved 955/1010 in 1185.65s
+
+UFBVDTNIA: Solved 157/157 in 9.91s
+
+UFLIA: Solved 7165/10128 in 30430.72s
+
+QF_NRA: Solved 10449/12154 in 18655.56s
