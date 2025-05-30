@@ -1,4 +1,9 @@
 import csv
+import logging
+import subprocess
+import sys
+
+logger = logging.getLogger(__name__)
 
 
 def solvedNum(resLst):
@@ -66,3 +71,18 @@ def read_strat_res_from_csv(csv_path):
                     res_lst.append((True, stime, "na"))
             results.append((strat, res_lst))
     return results, bench_lst
+
+
+def check_z3_version(z3path):
+    try:
+        result = subprocess.run([z3path, "--version"], capture_output=True, text=True)
+        if result.returncode != 0:
+            logger.error(f"Failed to get Z3 version. Error: {result.stderr}")
+            sys.exit(1)
+        
+        version = result.stdout.strip()
+        logger.info(f"Using Z3 version: {version}")
+        return version
+    except Exception as e:
+        logger.error(f"Error checking Z3 version: {str(e)}")
+        sys.exit(1)
