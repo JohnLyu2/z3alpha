@@ -27,6 +27,7 @@ class ResourceMonitor:
         self.monitoring = False
         self.monitor_thread = None
         self.process_data = []
+        self._process_objs = {}  # Persist Process objects per PID
         
         if self.monitor_output_dir:
             os.makedirs(self.monitor_output_dir, exist_ok=True)
@@ -59,9 +60,12 @@ class ResourceMonitor:
                 for proc in psutil.process_iter(['pid', 'name', 'cpu_percent', 'memory_info', 'cmdline']):
                     try:
                         if proc.info['name'] in ['z3', 'z3-4.8.8'] or any('z3' in str(arg) for arg in proc.info['cmdline'] or []):
-                            # Get detailed process info
-                            process = psutil.Process(proc.info['pid'])
-                            cpu_percent = process.cpu_percent()
+                            pid = proc.info['pid']
+                            # Reuse Process object if possible
+                            if pid not in self._process_objs:
+                                self._process_objs[pid] = psutil.Process(pid)
+                            process = self._process_objs[pid]
+                            cpu_percent = process.cpu_percent(interval=None)  # Use None for non-blocking
                             memory_mb = process.memory_info().rss / (1024 * 1024)
                             
                             try:
@@ -71,7 +75,7 @@ class ResourceMonitor:
                             
                             process_info = {
                                 'timestamp': current_time,
-                                'pid': proc.info['pid'],
+                                'pid': pid,
                                 'cpu_percent': cpu_percent,
                                 'memory_mb': round(memory_mb, 2),
                                 'cpu_affinity': cpu_affinity,
@@ -83,9 +87,9 @@ class ResourceMonitor:
                             
                             # Log high resource usage
                             if cpu_percent > 90:
-                                log.warning(f"High CPU usage: PID {proc.info['pid']} using {cpu_percent:.1f}% CPU")
+                                log.warning(f"High CPU usage: PID {pid} using {cpu_percent:.1f}% CPU")
                             if memory_mb > 500:  # > 500MB
-                                log.warning(f"High memory usage: PID {proc.info['pid']} using {memory_mb:.1f} MB")
+                                log.warning(f"High memory usage: PID {pid} using {memory_mb:.1f} MB")
                     
                     except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
                         continue
@@ -93,7 +97,7 @@ class ResourceMonitor:
             except Exception as e:
                 log.error(f"Error in monitoring loop: {e}")
             
-            time.sleep(2)  # Monitor every 2 seconds
+            time.sleep(3)  # Monitor every 3 seconds
     
     def _save_monitoring_data(self):
         """Save collected monitoring data"""
@@ -166,7 +170,7 @@ def log_resource_usage(pid, task_id, duration):
         
         while time.time() - start_time < duration:
             try:
-                cpu_percent = process.cpu_percent()
+                cpu_percent = process.cpu_percent(interval=1)
                 memory_mb = process.memory_info().rss / (1024 * 1024)
                 cpu_affinity = process.cpu_affinity()
                 
