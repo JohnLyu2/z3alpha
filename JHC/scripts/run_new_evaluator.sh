@@ -29,6 +29,7 @@ python z3alpha/new_evaluator.py \
   --timeout 10 \
   --output JHC/experiments/results_$SLURM_JOB_ID.csv \
   --debug \
+  --strategy "(then simplify smt)" \
   --monitor-output $MONITOR_DIR
 
 echo "End time: $(date)"

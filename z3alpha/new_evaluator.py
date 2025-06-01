@@ -619,7 +619,7 @@ if __name__ == "__main__":
     parser.add_argument('--benchmark-dir', type=str, default=None, help='Directory containing SMT2 benchmark files')
     parser.add_argument('--benchmark-files', type=str, nargs='+', default=None, help='List of SMT2 benchmark files')
     parser.add_argument('--output', type=str, default='results.csv', help='Output CSV file for results')
-    parser.add_argument('--strategy', type=str, default='(then simplify smt)', help='Z3 solving strategy')
+    parser.add_argument('--strategy', type=str, default=None, help='Z3 solving strategy')
     parser.add_argument('--prefer-slurm', action='store_true', default=True, help='Prioritize Slurm-allocated resources')
     parser.add_argument('--no-slurm', dest='prefer_slurm', action='store_false', help='Use system resources even in Slurm')
     parser.add_argument('--max-cpus', type=int, default=None, help='Manually set maximum CPUs to use')
