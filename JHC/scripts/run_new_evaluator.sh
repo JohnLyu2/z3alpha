@@ -24,7 +24,7 @@ mkdir -p $MONITOR_DIR
 # Run the script with your benchmarks
 python z3alpha/new_evaluator.py \
   --solver z3 \
-  --batch-size 5 \
+  --cpus-per-task 4 \
   --benchmark-dir data/ijcai24/benchmarks/samples \
   --timeout 10 \
   --output JHC/experiments/results_$SLURM_JOB_ID.csv \

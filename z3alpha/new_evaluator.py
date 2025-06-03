@@ -199,21 +199,21 @@ def run_solver(
             initial_affinity = process.cpu_affinity()
             log.info(f"Task {id}: Initial CPU affinity: {initial_affinity}")
             
-            if cpu_limit >= len(current_affinity):
-                log.debug(f"Process {id} using all assigned CPUs: {current_affinity}")
-            elif len(current_affinity) <= 1:
+            if cpu_limit >= len(initial_affinity):
+                log.debug(f"Process {id} using all assigned CPUs: {initial_affinity}")
+            elif len(initial_affinity) <= 1:
                 log.debug(f"Process {id} has only one CPU available, skipping affinity setting")
             else:
                 # Distribute CPUs evenly across processes
-                start_idx = (id * cpu_limit) % len(current_affinity)
+                start_idx = (id * cpu_limit) % len(initial_affinity)
                 end_idx = start_idx + cpu_limit
                 
                 # Handle wraparound if needed
-                if end_idx <= len(current_affinity):
-                    new_affinity = current_affinity[start_idx:end_idx]
+                if end_idx <= len(initial_affinity):
+                    new_affinity = initial_affinity[start_idx:end_idx]
                 else:
                     # Wraparound case
-                    new_affinity = current_affinity[start_idx:] + current_affinity[:end_idx - len(current_affinity)]
+                    new_affinity = initial_affinity[start_idx:] + initial_affinity[:end_idx - len(initial_affinity)]
                 
                 try:
                     process.cpu_affinity(new_affinity)
@@ -330,13 +330,11 @@ class SolverEvaluator:
         solver_path,
         benchmark_lst,
         timeout,
-        batch_size,
+        cpus_per_task,  # Changed: now required parameter
         tmp_dir="/tmp/",
         is_write_res=False,
         res_path=None,
-        cpus_per_task=None,
         memory_per_task=None,
-        max_parallel_tasks=None,
         prefer_slurm_resources=True,
         disable_cpu_affinity=False,
         monitor_output_dir=None
@@ -364,7 +362,7 @@ class SolverEvaluator:
         self.total_cpus = os.cpu_count()
         log.info(f"Total system CPUs: {self.total_cpus}")
         
-        # Resource allocation logic (keeping your existing logic)
+        # Resource allocation logic - NEW APPROACH
         if self.prefer_slurm_resources and self.slurm_cpus is not None:
             log.info(f"Using Slurm-allocated resources: {self.slurm_cpus} CPUs")
             self.available_cpus = self.slurm_cpus
@@ -373,23 +371,40 @@ class SolverEvaluator:
             
         log.info(f"Will use {self.available_cpus} CPUs for calculation")
         
-        self.batchSize = max_parallel_tasks if max_parallel_tasks else batch_size
+        # NEW LOGIC: Calculate batch size based on available CPUs and CPUs per task
+        self.cpusPerTask = cpus_per_task
         
-        if self.batchSize > self.available_cpus:
-            log.warning(f"Batch size ({self.batchSize}) > available CPUs ({self.available_cpus})")
-            log.warning(f"Reducing batch size to {self.available_cpus}")
-            self.batchSize = self.available_cpus
+        # Calculate maximum possible parallel tasks based on CPU constraints
+        max_parallel_tasks_by_cpu = self.available_cpus // self.cpusPerTask
         
-        if cpus_per_task is None:
-            self.cpusPerTask = max(1, self.available_cpus // self.batchSize)
-        else:
-            self.cpusPerTask = cpus_per_task
+        if max_parallel_tasks_by_cpu == 0:
+            log.error(f"Cannot allocate {self.cpusPerTask} CPUs per task with only {self.available_cpus} available CPUs")
+            raise ValueError(f"Insufficient CPUs: need at least {self.cpusPerTask} CPUs but only have {self.available_cpus}")
         
-        spare_cpus = self.available_cpus - (self.cpusPerTask * self.batchSize)
+        # IMPORTANT: Limit parallel tasks to number of benchmarks to avoid wasting resources
+        num_benchmarks = self.getBenchmarkSize()
+        max_parallel_tasks = min(max_parallel_tasks_by_cpu, num_benchmarks)
+        
+        if max_parallel_tasks < max_parallel_tasks_by_cpu:
+            log.info(f"Limiting parallel tasks to {max_parallel_tasks} (number of benchmarks) instead of {max_parallel_tasks_by_cpu} (CPU-based limit)")
+            log.info(f"This will leave {(max_parallel_tasks_by_cpu - max_parallel_tasks) * self.cpusPerTask} CPUs unused")
+        
+        self.batchSize = max_parallel_tasks
+        self.maxParallelTasks = self.batchSize
+        
+        # Calculate unused CPUs - now accounts for benchmark limit
+        total_used_cpus = self.cpusPerTask * self.batchSize
+        spare_cpus = self.available_cpus - total_used_cpus
+        
         if spare_cpus > 0:
-            log.warning(f"Spare CPUs: {spare_cpus} (using {self.cpusPerTask} × {self.batchSize} = {self.cpusPerTask * self.batchSize})")
+            if max_parallel_tasks < max_parallel_tasks_by_cpu:
+                log.info(f"Spare CPUs due to benchmark limit: {spare_cpus} (could use {max_parallel_tasks_by_cpu} processes but only need {max_parallel_tasks})")
+            else:
+                log.warning(f"Spare CPUs due to CPU allocation: {spare_cpus} (using {self.cpusPerTask} × {self.batchSize} = {total_used_cpus})")
+        else:
+            log.info(f"Using all available CPUs efficiently: {total_used_cpus}/{self.available_cpus}")
         
-        # Memory allocation
+        # Memory allocation - NEW LOGIC: Split available memory equally among ACTUAL parallel processes
         total_memory = None
         if self.prefer_slurm_resources and self.slurm_mem is not None:
             total_memory = self.slurm_mem
@@ -402,12 +417,13 @@ class SolverEvaluator:
                 log.warning("Could not detect system memory")
                 
         if memory_per_task is None and total_memory is not None:
+            # Split memory equally among ACTUAL parallel processes (not theoretical max)
             self.memoryPerTask = total_memory // self.batchSize
-            log.info(f"Calculated memory per task: {self.memoryPerTask} MB")
+            log.info(f"Auto-calculated memory per task: {self.memoryPerTask} MB ({total_memory} MB / {self.batchSize} actual processes)")
         else:
             self.memoryPerTask = memory_per_task
-        
-        self.maxParallelTasks = self.batchSize
+            if memory_per_task:
+                log.info(f"Using specified memory per task: {self.memoryPerTask} MB")
         
         # Validation
         self.validate_resource_allocation()
@@ -448,7 +464,7 @@ class SolverEvaluator:
         # Efficiency warnings
         cpu_efficiency = total_used_cpus / (self.slurm_cpus or self.total_cpus)
         if cpu_efficiency < 0.8:
-            log.warning(f"⚠️  Low CPU efficiency: {cpu_efficiency*100:.1f}% - consider reducing batch size")
+            log.warning(f"⚠️  Low CPU efficiency: {cpu_efficiency*100:.1f}% - consider adjusting CPUs per task")
         
         log.info("=" * 50)
 
@@ -615,14 +631,15 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run SMT benchmarks with enhanced resource monitoring')
     parser.add_argument('--solver', type=str, default='z3', help='Path to SMT solver executable')
     parser.add_argument('--timeout', type=int, default=600, help='Timeout in seconds for each benchmark')
-    parser.add_argument('--batch-size', type=int, default=4, help='Number of parallel tasks')
+    parser.add_argument('--cpus-per-task', type=int, required=True, help='Number of CPUs to use per process')
+    parser.add_argument('--auto-optimize-cpus', action='store_true', help='Automatically increase CPUs per task to use all available CPUs when there are fewer benchmarks')
     parser.add_argument('--benchmark-dir', type=str, default=None, help='Directory containing SMT2 benchmark files')
     parser.add_argument('--benchmark-files', type=str, nargs='+', default=None, help='List of SMT2 benchmark files')
     parser.add_argument('--output', type=str, default='results.csv', help='Output CSV file for results')
     parser.add_argument('--strategy', type=str, default=None, help='Z3 solving strategy')
     parser.add_argument('--prefer-slurm', action='store_true', default=True, help='Prioritize Slurm-allocated resources')
     parser.add_argument('--no-slurm', dest='prefer_slurm', action='store_false', help='Use system resources even in Slurm')
-    parser.add_argument('--max-cpus', type=int, default=None, help='Manually set maximum CPUs to use')
+    parser.add_argument('--memory-per-task', type=int, default=None, help='Memory limit per task in MB (auto-calculated if not specified)')
     parser.add_argument('--disable-cpu-affinity', action='store_true', help='Disable CPU affinity setting')
     parser.add_argument('--debug', action='store_true', help='Enable debug logging')
     parser.add_argument('--monitor-output', type=str, default=None, help='Directory for monitoring output files')
@@ -674,24 +691,43 @@ if __name__ == "__main__":
         print("Error: No benchmark files found")
         sys.exit(1)
     
-    """
-    # Limit benchmarks for testing if there are too many
-    if len(benchmark_lst) > 20 and args.timeout < 60:
-        print(f"Limiting to first 20 benchmarks for quick testing (found {len(benchmark_lst)})")
-        benchmark_lst = benchmark_lst[:20]
-    """
-    
     print(f"Will process {len(benchmark_lst)} benchmark files")
     
     # Get Slurm resources
     slurm_cpus, slurm_mem = get_slurm_resources()
     
-    # Override CPU count if specified
-    cpus_per_task = None
-    if args.max_cpus:
-        print(f"Manually limiting to {args.max_cpus} CPUs as specified by --max-cpus")
-        adjusted_batch_size = min(args.batch_size, args.max_cpus)
-        cpus_per_task = args.max_cpus // adjusted_batch_size
+    # Calculate batch size based on available CPUs and CPUs per task
+    available_cpus = slurm_cpus if (args.prefer_slurm and slurm_cpus) else os.cpu_count()
+    calculated_batch_size_by_cpu = available_cpus // args.cpus_per_task
+    
+    if calculated_batch_size_by_cpu == 0:
+        print(f"ERROR: Cannot allocate {args.cpus_per_task} CPUs per task with only {available_cpus} available CPUs")
+        print(f"Available CPUs: {available_cpus}")
+        print(f"CPUs per task: {args.cpus_per_task}")
+        print("Try reducing --cpus-per-task or use more CPUs")
+        sys.exit(1)
+    
+    # Limit to number of benchmarks
+    actual_batch_size = min(calculated_batch_size_by_cpu, len(benchmark_lst))
+    
+    # Auto-optimize CPU allocation if requested
+    final_cpus_per_task = args.cpus_per_task
+    if args.auto_optimize_cpus and actual_batch_size < calculated_batch_size_by_cpu:
+        # Try to use more CPUs per task to utilize spare resources
+        max_possible_cpus_per_task = available_cpus // len(benchmark_lst)
+        if max_possible_cpus_per_task > args.cpus_per_task:
+            final_cpus_per_task = max_possible_cpus_per_task
+            actual_batch_size = len(benchmark_lst)  # All benchmarks can run in parallel
+            print(f"Auto-optimization: Increasing CPUs per task from {args.cpus_per_task} to {final_cpus_per_task}")
+            print(f"This allows all {len(benchmark_lst)} benchmarks to run in parallel, using {final_cpus_per_task * actual_batch_size}/{available_cpus} CPUs")
+    
+    print(f"CPU-based batch size: {calculated_batch_size_by_cpu} (based on {available_cpus} CPUs ÷ {args.cpus_per_task} CPUs per task)")
+    print(f"Actual batch size: {actual_batch_size} (limited by {len(benchmark_lst)} benchmarks)")
+    
+    if actual_batch_size < calculated_batch_size_by_cpu and not args.auto_optimize_cpus:
+        unused_cpus = (calculated_batch_size_by_cpu - actual_batch_size) * args.cpus_per_task
+        print(f"Note: {unused_cpus} CPUs will be unused due to limited number of benchmarks")
+        print(f"Tip: Use --auto-optimize-cpus to automatically use more CPUs per task")
     
     # Create evaluator
     try:
@@ -699,12 +735,11 @@ if __name__ == "__main__":
             solver_path=args.solver,
             benchmark_lst=benchmark_lst,
             timeout=args.timeout,
-            batch_size=args.batch_size,
+            cpus_per_task=final_cpus_per_task,  # Use potentially optimized value
             tmp_dir="/tmp/",
             is_write_res=True,
             res_path=args.output,
-            cpus_per_task=cpus_per_task,
-            memory_per_task=None,
+            memory_per_task=args.memory_per_task,  # Can be None for auto-calculation
             prefer_slurm_resources=args.prefer_slurm,
             disable_cpu_affinity=args.disable_cpu_affinity,
             monitor_output_dir=args.monitor_output
@@ -720,9 +755,10 @@ if __name__ == "__main__":
     print(f"Solver: {args.solver}")
     print(f"Strategy: {args.strategy}")
     print(f"Timeout per benchmark: {args.timeout}s")
-    print(f"Batch size: {evaluator.batchSize}")
     print(f"CPUs per task: {evaluator.cpusPerTask}")
-    print(f"Memory per task: {evaluator.memoryPerTask or 'unlimited'}")
+    print(f"Batch size (auto-calculated): {evaluator.batchSize}")
+    print(f"Total parallel processes: {evaluator.maxParallelTasks}")
+    print(f"Memory per task: {evaluator.memoryPerTask or 'auto-calculated'} MB")
     print(f"CPU affinity: {'Disabled' if evaluator.disable_cpu_affinity else 'Enabled'}")
     print(f"Resource monitoring: {'Enabled' if args.monitor_output else 'Disabled'}")
     
@@ -730,6 +766,10 @@ if __name__ == "__main__":
         total_used = evaluator.cpusPerTask * evaluator.batchSize
         print(f"Slurm allocation: {slurm_cpus} CPUs, {slurm_mem} MB")
         print(f"Resource efficiency: {total_used}/{slurm_cpus} CPUs ({total_used/slurm_cpus*100:.1f}%)")
+        
+        spare_cpus = slurm_cpus - total_used
+        if spare_cpus > 0:
+            print(f"Unused CPUs: {spare_cpus}")
     
     print("=" * 60)
     
@@ -746,7 +786,7 @@ if __name__ == "__main__":
                 solver_path=args.solver,
                 benchmark_lst=test_benchmarks,
                 timeout=min(args.timeout, 30),  # Short timeout for testing
-                batch_size=min(args.batch_size, 2),
+                cpus_per_task=args.cpus_per_task,
                 tmp_dir="/tmp/",
                 is_write_res=False,
                 res_path=None,
