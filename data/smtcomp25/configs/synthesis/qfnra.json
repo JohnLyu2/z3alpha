@@ -1,0 +1,17 @@
+{
+  "logic": "QF_NRA",
+  "batch_size": 64,
+  "s1config": {
+    "bench_dirs": [
+      "data/smtcomp25/train_benchmarks/QF_NRA"
+    ],
+    "sim_num": 600,
+    "timeout": 30,
+    "c_uct": 0.5,
+    "c_ucb": 0.2,
+    "is_log": false
+  },
+  "ln_strat_num": 4,
+  "temp_folder": "/tmp/",
+  "random_seed": 0
+}

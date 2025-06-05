@@ -1,0 +1,13 @@
+{
+  "solvers": {
+    "z3": "z3"
+  },
+  "strat_files": {
+    "z3": null
+  },
+  "timeout": 180,
+  "batch_size": 64,
+  "res_dir": "/home/z52lu/z3alpha/data/smtcomp25/results/QF_NRA",
+  "test_dir": "/project/def-vganesh/z52lu/smtlib25/non-incremental/QF_NRA",
+  "tmp_dir": "/tmp/"
+}
