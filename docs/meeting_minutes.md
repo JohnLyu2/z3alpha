@@ -30,4 +30,6 @@
 * Paul's progress on logic-specific tactic/parameter (which code is used to run the evaluation and what is the time limit)
 * Let's look at all logics and decide how to proceed
 * New evaluator: Is the new logic/arguments implemented? Later merge with the exisiting evaluator.
+  * Memory requiement for each execution: take the minmum of core and memory requirement; can be optional, keep the same logic as now 
+* Jiahao found `par-or` may return unknown/error if one stratey in the portfolio returns so; and the setting for parallel may need to be explicitly turned on; will follow up.
 
