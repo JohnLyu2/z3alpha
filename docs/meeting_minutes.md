@@ -25,3 +25,9 @@
   I want make this talk more focusing on strings, especially what tactics and parameters work better on
   what families, etc, and maybe incorporate a bit about our recent progress on parallel and ML theory.
   We can discuss what are be done in this ~2 months and about potential future publication.
+* Go through the guideline
+* Let's each one try one logic to get familiar with the process
+* Paul's progress on logic-specific tactic/parameter (which code is used to run the evaluation and what is the time limit)
+* Let's look at all logics and decide how to proceed
+* New evaluator: Is the new logic/arguments implemented? Later merge with the exisiting evaluator.
+
