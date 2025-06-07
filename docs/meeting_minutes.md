@@ -31,5 +31,5 @@
 * Let's look at all logics and decide how to proceed
 * New evaluator: Is the new logic/arguments implemented? Later merge with the exisiting evaluator.
   * Memory requiement for each execution: take the minmum of core and memory requirement; can be optional, keep the same logic as now 
-* Jiahao found `par-or` may return unknown/error if one stratey in the portfolio returns so; and the setting for parallel may need to be explicitly turned on; will follow up.
+* [the posted [issue](https://github.com/Z3Prover/z3/issues/7674)] Jiahao found `par-or` may return unknown/error if one stratey in the portfolio returns so; and the setting for parallel may need to be explicitly turned on; will follow up.
 
