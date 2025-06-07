@@ -23,19 +23,21 @@ def main():
     )
     args = parser.parse_args()
 
+    config = json.load(open(args.json_config, "r"))
+    
+    # Use log_parent_dir if provided, otherwise use default experiments/synthesis
+    parent_dir = Path(config.get("log_parent_dir", "experiments/synthesis"))
+    log_folder = parent_dir / f"out-{datetime.datetime.now():%Y-%m-%d_%H-%M-%S}"
+    
+    assert not log_folder.exists()
+    log_folder.mkdir(parents=True)
+
     # Configure logging
     logging.basicConfig(
         level=getattr(logging, args.log_level),
         format="%(asctime)s:%(levelname)s:%(message)s",
         datefmt="%Y-%m-%d %H:%M:%S"
     )
-
-    config = json.load(open(args.json_config, "r"))
-    log_folder = Path(
-        f"experiments/synthesis/out-{datetime.datetime.now():%Y-%m-%d_%H-%M-%S}/"
-    )
-    assert not log_folder.exists()
-    log_folder.mkdir(parents=True)
 
     z3path = config["z3path"] if "z3path" in config else "z3"
     check_z3_version(z3path)
