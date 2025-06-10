@@ -146,7 +146,11 @@ def parallel_linear_strategies(ln_strat_lst):
         return ln_strat_lst[0]
     parallel_strats = "(par-or"
     for strat in ln_strat_lst:
-        parallel_strats += f" {strat}"
+        if strat.startswith('(') and strat.endswith(')'):
+            inner_strat = strat[1:-1]
+            parallel_strats += f"(then {inner_strat} fail-if-undecided)"
+        else:
+            parallel_strats += f"(then {strat} fail-if-undecided)"
     parallel_strats += ")"
     return parallel_strats
 
