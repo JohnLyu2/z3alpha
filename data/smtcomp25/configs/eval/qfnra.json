@@ -7,7 +7,7 @@
   },
   "timeout": 180,
   "batch_size": 64,
-  "res_dir": "/home/z52lu/z3alpha/data/smtcomp25/results/QF_NRA",
-  "test_dir": "/project/def-vganesh/z52lu/smtlib25/non-incremental/QF_NRA",
+  "res_dir": "data/smtcomp25/results/QF_NRA",
+  "test_dir": "smtlib25/non-incremental/QF_NRA",
   "tmp_dir": "/tmp/"
 }
