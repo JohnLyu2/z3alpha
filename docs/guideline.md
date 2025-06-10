@@ -116,5 +116,31 @@ The script saves the sysnthesis results (e.g., the resulting strategy) in a fold
 
 **Please also save the log printed to the terminal and move it to the result folder.** 
 
+### MultiProcess Strategy Evaluation
 
+To evaluate the performance of a synthesized parallel strategy on a benchmark set using the multiprocess evaluator, use the script `z3alpha/multiprocess_evaluator.py`.
 
+#### Example Usage
+
+```bash
+python z3alpha/multiprocess_evaluator.py \
+  --solver z3 \
+  --cpus-per-task 4 \
+  --memory-per-task 1024 \  # (Optional) Memory in MB per task
+  --benchmark-dir data/ijcai24/benchmarks/samples \
+  --timeout 30 \
+  --output path/to/output/results.csv \
+  --strategy "a string containing the strategy" \
+  --monitor-output path/to/output/monitor  # (Optional) Directory to store CPU and memory usage logs
+```
+
+#### Notes
+
+- **Memory Allocation**:  
+  If `--memory-per-task` is not specified, total available memory will be equally divided among tasks.
+
+- **Monitoring**:  
+  If `--monitor-output` is not specified, CPU and memory usage logs will not be generated.
+
+- **CPU Allocation**:  
+  Set `--cpus-per-task` equal to the number of parallel strategies used (e.g., 4 for SMTCOMP-25 format) to ensure each strategy runs on a dedicated core.
