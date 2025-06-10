@@ -90,7 +90,6 @@ def run_solver(
     else:
         new_file_name = smt_file
     
-    solver_path = solver_path
     # Run the solver
     time_before = time.time()
     safe_path = shlex.quote(new_file_name)
