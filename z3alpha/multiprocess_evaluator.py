@@ -90,7 +90,6 @@ def run_solver(
     else:
         new_file_name = smt_file
     
-    solver_path = solver_path + " parallel.enable=true" 
     # Run the solver
     time_before = time.time()
     safe_path = shlex.quote(new_file_name)
@@ -216,12 +215,11 @@ class SolverEvaluator:
         solver_path,
         benchmark_lst,
         timeout,
-        cpus_per_task,  # Changed: now required parameter
+        cpus_per_task,
         tmp_dir="/tmp/",
         is_write_res=False,
         res_path=None,
         memory_per_task=None,
-        prefer_slurm_resources=True,
         disable_cpu_affinity=False,
         monitor_output_dir=None
     ):
@@ -233,9 +231,7 @@ class SolverEvaluator:
         self.tmpDir = tmp_dir
         self.isWriteRes = is_write_res
         self.resPath = res_path
-        self.prefer_slurm_resources = prefer_slurm_resources
         self.disable_cpu_affinity = disable_cpu_affinity
-        self.monitor_output_dir = monitor_output_dir
         
         # Initialize resource monitor
         self.resource_monitor = ResourceMonitor(monitor_output_dir)
@@ -248,8 +244,8 @@ class SolverEvaluator:
         self.total_cpus = os.cpu_count()
         log.info(f"Total system CPUs: {self.total_cpus}")
         
-        # Resource allocation logic - NEW APPROACH
-        if self.prefer_slurm_resources and self.slurm_cpus is not None:
+        # Use Slurm resources if available, otherwise use system resources
+        if self.slurm_cpus is not None:
             log.info(f"Using Slurm-allocated resources: {self.slurm_cpus} CPUs")
             self.available_cpus = self.slurm_cpus
         else:
@@ -257,7 +253,7 @@ class SolverEvaluator:
             
         log.info(f"Will use {self.available_cpus} CPUs for calculation")
         
-        # NEW LOGIC: Calculate batch size based on available CPUs and CPUs per task
+        # Calculate batch size based on available CPUs and CPUs per task
         self.cpusPerTask = cpus_per_task
         
         # Calculate maximum possible parallel tasks based on CPU constraints
@@ -267,32 +263,9 @@ class SolverEvaluator:
             log.error(f"Cannot allocate {self.cpusPerTask} CPUs per task with only {self.available_cpus} available CPUs")
             raise ValueError(f"Insufficient CPUs: need at least {self.cpusPerTask} CPUs but only have {self.available_cpus}")
         
-        # IMPORTANT: Limit parallel tasks to number of benchmarks to avoid wasting resources
-        num_benchmarks = self.getBenchmarkSize()
-        max_parallel_tasks = min(max_parallel_tasks_by_cpu, num_benchmarks)
-        
-        if max_parallel_tasks < max_parallel_tasks_by_cpu:
-            log.info(f"Limiting parallel tasks to {max_parallel_tasks} (number of benchmarks) instead of {max_parallel_tasks_by_cpu} (CPU-based limit)")
-            log.info(f"This will leave {(max_parallel_tasks_by_cpu - max_parallel_tasks) * self.cpusPerTask} CPUs unused")
-        
-        self.batchSize = max_parallel_tasks
-        self.maxParallelTasks = self.batchSize
-        
-        # Calculate unused CPUs - now accounts for benchmark limit
-        total_used_cpus = self.cpusPerTask * self.batchSize
-        spare_cpus = self.available_cpus - total_used_cpus
-        
-        if spare_cpus > 0:
-            if max_parallel_tasks < max_parallel_tasks_by_cpu:
-                log.info(f"Spare CPUs due to benchmark limit: {spare_cpus} (could use {max_parallel_tasks_by_cpu} processes but only need {max_parallel_tasks})")
-            else:
-                log.warning(f"Spare CPUs due to CPU allocation: {spare_cpus} (using {self.cpusPerTask} × {self.batchSize} = {total_used_cpus})")
-        else:
-            log.info(f"Using all available CPUs efficiently: {total_used_cpus}/{self.available_cpus}")
-        
-        # Memory allocation - NEW LOGIC: Split available memory equally among ACTUAL parallel processes
+        # Get total available memory
         total_memory = None
-        if self.prefer_slurm_resources and self.slurm_mem is not None:
+        if self.slurm_mem is not None:
             total_memory = self.slurm_mem
             log.info(f"Using Slurm-allocated memory: {total_memory} MB")
         else:
@@ -301,15 +274,74 @@ class SolverEvaluator:
                 log.info(f"Total system memory: {total_memory} MB")
             except (ImportError, AttributeError):
                 log.warning("Could not detect system memory")
-                
-        if memory_per_task is None and total_memory is not None:
-            # Split memory equally among ACTUAL parallel processes (not theoretical max)
-            self.memoryPerTask = total_memory // self.batchSize
-            log.info(f"Auto-calculated memory per task: {self.memoryPerTask} MB ({total_memory} MB / {self.batchSize} actual processes)")
-        else:
+        
+        # Calculate memory constraints
+        max_parallel_tasks_by_memory = float('inf')  # No memory limit by default
+        
+        if memory_per_task is not None:
+            # User specified memory per task - this becomes a constraint
             self.memoryPerTask = memory_per_task
-            if memory_per_task:
-                log.info(f"Using specified memory per task: {self.memoryPerTask} MB")
+            if total_memory is not None:
+                max_parallel_tasks_by_memory = total_memory // self.memoryPerTask
+                log.info(f"Memory constraint: {total_memory} MB ÷ {self.memoryPerTask} MB/task = {max_parallel_tasks_by_memory} max parallel tasks")
+                
+                if max_parallel_tasks_by_memory == 0:
+                    log.error(f"Cannot allocate {self.memoryPerTask} MB per task with only {total_memory} MB available memory")
+                    raise ValueError(f"Insufficient memory: need at least {self.memoryPerTask} MB per task but only have {total_memory} MB total")
+            else:
+                log.warning(f"Using specified memory per task ({self.memoryPerTask} MB) but cannot verify against total memory")
+        else:
+            # Auto-calculate memory per task after determining batch size
+            self.memoryPerTask = None
+        
+        # Determine maximum parallel tasks considering BOTH CPU and memory constraints
+        num_benchmarks = self.getBenchmarkSize()
+        
+        # The actual limit is the minimum of: CPU limit, memory limit, and number of benchmarks
+        constraints = [max_parallel_tasks_by_cpu, num_benchmarks]
+        constraint_names = ["CPU", "benchmark count"]
+        
+        if max_parallel_tasks_by_memory != float('inf'):
+            constraints.append(max_parallel_tasks_by_memory)
+            constraint_names.append("memory")
+        
+        max_parallel_tasks = min(constraints)
+        limiting_factor_idx = constraints.index(max_parallel_tasks)
+        limiting_factor = constraint_names[limiting_factor_idx]
+        
+        log.info(f"Resource constraints:")
+        log.info(f"  - CPU constraint: {max_parallel_tasks_by_cpu} tasks ({self.available_cpus} CPUs ÷ {self.cpusPerTask} CPUs/task)")
+        if max_parallel_tasks_by_memory != float('inf'):
+            log.info(f"  - Memory constraint: {max_parallel_tasks_by_memory} tasks ({total_memory} MB ÷ {self.memoryPerTask} MB/task)")
+        log.info(f"  - Benchmark constraint: {num_benchmarks} tasks")
+        log.info(f"  - Limiting factor: {limiting_factor}")
+        log.info(f"  - Final batch size: {max_parallel_tasks} parallel tasks")
+        
+        self.batchSize = max_parallel_tasks
+        self.maxParallelTasks = self.batchSize
+        
+        # Auto-calculate memory per task if not specified
+        if self.memoryPerTask is None and total_memory is not None:
+            self.memoryPerTask = total_memory // self.batchSize
+            log.info(f"Auto-calculated memory per task: {self.memoryPerTask} MB ({total_memory} MB ÷ {self.batchSize} tasks)")
+        
+        # Calculate resource utilization
+        total_used_cpus = self.cpusPerTask * self.batchSize
+        spare_cpus = self.available_cpus - total_used_cpus
+        
+        if spare_cpus > 0:
+            reason = f"limited by {limiting_factor}"
+            log.info(f"Spare CPUs: {spare_cpus} ({reason})")
+        else:
+            log.info(f"Using all available CPUs efficiently: {total_used_cpus}/{self.available_cpus}")
+        
+        if self.memoryPerTask and total_memory:
+            total_used_memory = self.memoryPerTask * self.batchSize
+            spare_memory = total_memory - total_used_memory
+            if spare_memory > 0:
+                log.info(f"Spare memory: {spare_memory} MB")
+            else:
+                log.info(f"Using all available memory efficiently: {total_used_memory}/{total_memory} MB")
         
         # Validation
         self.validate_resource_allocation()
@@ -319,7 +351,7 @@ class SolverEvaluator:
             log.info(f"Memory per task: {self.memoryPerTask} MB")
 
     def validate_resource_allocation(self):
-        """Validate resource allocation against Slurm limits"""
+        """Validate resource allocation against system limits"""
         log.info("=" * 50)
         log.info("RESOURCE ALLOCATION VALIDATION")
         log.info("=" * 50)
@@ -331,26 +363,26 @@ class SolverEvaluator:
                 log.error(f"❌ CPU VIOLATION: Using {total_used_cpus} but Slurm allocated {self.slurm_cpus}")
                 raise ValueError("CPU allocation exceeds Slurm limits")
             else:
-                log.info(f"✅ CPU allocation OK: {total_used_cpus}/{self.slurm_cpus} (efficiency: {total_used_cpus/self.slurm_cpus*100:.1f}%)")
+                cpu_efficiency = total_used_cpus / self.slurm_cpus
+                log.info(f"✅ CPU allocation OK: {total_used_cpus}/{self.slurm_cpus} (efficiency: {cpu_efficiency*100:.1f}%)")
         else:
-            log.info(f"✅ CPU allocation: {total_used_cpus}/{self.total_cpus} system CPUs")
+            cpu_efficiency = total_used_cpus / self.total_cpus
+            log.info(f"✅ CPU allocation: {total_used_cpus}/{self.total_cpus} system CPUs (efficiency: {cpu_efficiency*100:.1f}%)")
         
         # Memory validation
         if self.memoryPerTask:
             total_used_mem = self.memoryPerTask * self.batchSize
-            if self.slurm_mem:
-                if total_used_mem > self.slurm_mem:
-                    log.error(f"❌ MEMORY VIOLATION: Using {total_used_mem}MB but Slurm allocated {self.slurm_mem}MB")
-                    raise ValueError("Memory allocation exceeds Slurm limits")
+            total_available_mem = self.slurm_mem or (psutil.virtual_memory().total // (1024 * 1024) if hasattr(psutil, 'virtual_memory') else None)
+            
+            if total_available_mem:
+                if total_used_mem > total_available_mem:
+                    log.error(f"❌ MEMORY VIOLATION: Using {total_used_mem}MB but only {total_available_mem}MB available")
+                    raise ValueError("Memory allocation exceeds available memory")
                 else:
-                    log.info(f"✅ Memory allocation OK: {total_used_mem}/{self.slurm_mem}MB (efficiency: {total_used_mem/self.slurm_mem*100:.1f}%)")
+                    mem_efficiency = total_used_mem / total_available_mem
+                    log.info(f"✅ Memory allocation OK: {total_used_mem}/{total_available_mem}MB (efficiency: {mem_efficiency*100:.1f}%)")
             else:
-                log.info(f"✅ Memory allocation: {total_used_mem}MB requested")
-        
-        # Efficiency warnings
-        cpu_efficiency = total_used_cpus / (self.slurm_cpus or self.total_cpus)
-        if cpu_efficiency < 0.8:
-            log.warning(f"⚠️  Low CPU efficiency: {cpu_efficiency*100:.1f}% - consider adjusting CPUs per task")
+                log.info(f"✅ Memory allocation: {total_used_mem}MB requested (cannot verify total)")
         
         log.info("=" * 50)
 
@@ -378,7 +410,7 @@ class SolverEvaluator:
                 batch_args = [
                     (self.benchmarkLst[idx], idx, self.solverPath, self.timeout, strat_str, 
                      self.tmpDir, 0 if self.disable_cpu_affinity else self.cpusPerTask, 
-                     self.memoryPerTask, True)  # Enable per-process monitoring
+                     self.memoryPerTask, True)
                     for idx in range(i, batch_end)
                 ]
                 
@@ -462,192 +494,47 @@ if __name__ == "__main__":
     log_handler.setFormatter(logging.Formatter("%(asctime)s:%(levelname)s:%(message)s"))
     log.addHandler(log_handler)
     
-    parser = argparse.ArgumentParser(description='Run SMT benchmarks with enhanced resource monitoring')
+    parser = argparse.ArgumentParser(description='Run SMT benchmarks')
     parser.add_argument('--solver', type=str, default='z3', help='Path to SMT solver executable')
     parser.add_argument('--timeout', type=int, default=600, help='Timeout in seconds for each benchmark')
     parser.add_argument('--cpus-per-task', type=int, required=True, help='Number of CPUs to use per process')
-    parser.add_argument('--auto-optimize-cpus', action='store_true', help='Automatically increase CPUs per task to use all available CPUs when there are fewer benchmarks')
-    parser.add_argument('--benchmark-dir', type=str, default=None, help='Directory containing SMT2 benchmark files')
-    parser.add_argument('--benchmark-files', type=str, nargs='+', default=None, help='List of SMT2 benchmark files')
+    parser.add_argument('--benchmark-dir', type=str, required=True, help='Directory containing SMT2 benchmark files')
     parser.add_argument('--output', type=str, default='results.csv', help='Output CSV file for results')
     parser.add_argument('--strategy', type=str, default=None, help='Z3 solving strategy')
-    parser.add_argument('--prefer-slurm', action='store_true', default=True, help='Prioritize Slurm-allocated resources')
-    parser.add_argument('--no-slurm', dest='prefer_slurm', action='store_false', help='Use system resources even in Slurm')
     parser.add_argument('--memory-per-task', type=int, default=None, help='Memory limit per task in MB (auto-calculated if not specified)')
     parser.add_argument('--disable-cpu-affinity', action='store_true', help='Disable CPU affinity setting')
-    parser.add_argument('--debug', action='store_true', help='Enable debug logging')
     parser.add_argument('--monitor-output', type=str, default=None, help='Directory for monitoring output files')
-    parser.add_argument('--validation-run', action='store_true', help='Run resource allocation validation tests')
 
     args = parser.parse_args()
     
-    if args.debug:
-        log.setLevel(logging.DEBUG)
-        log.debug("Debug logging enabled")
-    
-    # Print initial system state
-    print("=" * 60)
-    print("SYSTEM RESOURCE DETECTION")
-    print("=" * 60)
-    print(f"Python PID: {os.getpid()}")
-    print(f"System CPUs: {os.cpu_count()}")
-    
-    try:
-        mem_gb = psutil.virtual_memory().total / (1024**3)
-        print(f"System Memory: {mem_gb:.1f} GB")
-        print(f"Available Memory: {psutil.virtual_memory().available / (1024**3):.1f} GB")
-    except:
-        print("Could not detect system memory")
-    
-    # Check current process CPU affinity
-    try:
-        current_affinity = psutil.Process().cpu_affinity()
-        print(f"Current process CPU affinity: {current_affinity}")
-    except:
-        print("Could not detect current CPU affinity")
-    
-    print("=" * 60)
-    
-    # Determine benchmark files
-    benchmark_lst = []
-    if args.benchmark_dir:
-        benchmark_lst = glob.glob(f"{args.benchmark_dir}/*.smt2")
-        print(f"Found {len(benchmark_lst)} benchmark files in {args.benchmark_dir}")
-    elif args.benchmark_files:
-        benchmark_lst = args.benchmark_files
-        print(f"Using {len(benchmark_lst)} specified benchmark files")
-    else:
-        print("Error: No benchmark files specified")
-        print("Use --benchmark-dir or --benchmark-files")
-        sys.exit(1)
+    # Find benchmark files
+    benchmark_lst = glob.glob(f"{args.benchmark_dir}/*.smt2")
     
     if not benchmark_lst:
-        print("Error: No benchmark files found")
+        print(f"Error: No .smt2 files found in {args.benchmark_dir}")
         sys.exit(1)
     
-    print(f"Will process {len(benchmark_lst)} benchmark files")
+    print(f"Found {len(benchmark_lst)} benchmark files in {args.benchmark_dir}")
     
-    # Get Slurm resources
-    slurm_cpus, slurm_mem = get_slurm_resources()
-    
-    # Calculate batch size based on available CPUs and CPUs per task
-    available_cpus = slurm_cpus if (args.prefer_slurm and slurm_cpus) else os.cpu_count()
-    calculated_batch_size_by_cpu = available_cpus // args.cpus_per_task
-    
-    if calculated_batch_size_by_cpu == 0:
-        print(f"ERROR: Cannot allocate {args.cpus_per_task} CPUs per task with only {available_cpus} available CPUs")
-        print(f"Available CPUs: {available_cpus}")
-        print(f"CPUs per task: {args.cpus_per_task}")
-        print("Try reducing --cpus-per-task or use more CPUs")
-        sys.exit(1)
-    
-    # Limit to number of benchmarks
-    actual_batch_size = min(calculated_batch_size_by_cpu, len(benchmark_lst))
-    
-    # Auto-optimize CPU allocation if requested
-    final_cpus_per_task = args.cpus_per_task
-    if args.auto_optimize_cpus and actual_batch_size < calculated_batch_size_by_cpu:
-        # Try to use more CPUs per task to utilize spare resources
-        max_possible_cpus_per_task = available_cpus // len(benchmark_lst)
-        if max_possible_cpus_per_task > args.cpus_per_task:
-            final_cpus_per_task = max_possible_cpus_per_task
-            actual_batch_size = len(benchmark_lst)  # All benchmarks can run in parallel
-            print(f"Auto-optimization: Increasing CPUs per task from {args.cpus_per_task} to {final_cpus_per_task}")
-            print(f"This allows all {len(benchmark_lst)} benchmarks to run in parallel, using {final_cpus_per_task * actual_batch_size}/{available_cpus} CPUs")
-    
-    print(f"CPU-based batch size: {calculated_batch_size_by_cpu} (based on {available_cpus} CPUs ÷ {args.cpus_per_task} CPUs per task)")
-    print(f"Actual batch size: {actual_batch_size} (limited by {len(benchmark_lst)} benchmarks)")
-    
-    if actual_batch_size < calculated_batch_size_by_cpu and not args.auto_optimize_cpus:
-        unused_cpus = (calculated_batch_size_by_cpu - actual_batch_size) * args.cpus_per_task
-        print(f"Note: {unused_cpus} CPUs will be unused due to limited number of benchmarks")
-        print(f"Tip: Use --auto-optimize-cpus to automatically use more CPUs per task")
-    
-    # Create evaluator
+    # Create evaluator and run
     try:
         evaluator = SolverEvaluator(
             solver_path=args.solver,
             benchmark_lst=benchmark_lst,
             timeout=args.timeout,
-            cpus_per_task=final_cpus_per_task,  # Use potentially optimized value
+            cpus_per_task=args.cpus_per_task,
             tmp_dir="/tmp/",
             is_write_res=True,
             res_path=args.output,
-            memory_per_task=args.memory_per_task,  # Can be None for auto-calculation
-            prefer_slurm_resources=args.prefer_slurm,
+            memory_per_task=args.memory_per_task,
             disable_cpu_affinity=args.disable_cpu_affinity,
             monitor_output_dir=args.monitor_output
         )
-    except ValueError as e:
-        print(f"ERROR: Resource allocation validation failed: {e}")
-        sys.exit(1)
-    
-    # Print resource allocation summary
-    print("\n" + "=" * 60)
-    print("FINAL RESOURCE ALLOCATION")
-    print("=" * 60)
-    print(f"Solver: {args.solver}")
-    print(f"Strategy: {args.strategy}")
-    print(f"Timeout per benchmark: {args.timeout}s")
-    print(f"CPUs per task: {evaluator.cpusPerTask}")
-    print(f"Batch size (auto-calculated): {evaluator.batchSize}")
-    print(f"Total parallel processes: {evaluator.maxParallelTasks}")
-    print(f"Memory per task: {evaluator.memoryPerTask or 'auto-calculated'} MB")
-    print(f"CPU affinity: {'Disabled' if evaluator.disable_cpu_affinity else 'Enabled'}")
-    print(f"Resource monitoring: {'Enabled' if args.monitor_output else 'Disabled'}")
-    
-    if slurm_cpus:
-        total_used = evaluator.cpusPerTask * evaluator.batchSize
-        print(f"Slurm allocation: {slurm_cpus} CPUs, {slurm_mem} MB")
-        print(f"Resource efficiency: {total_used}/{slurm_cpus} CPUs ({total_used/slurm_cpus*100:.1f}%)")
         
-        spare_cpus = slurm_cpus - total_used
-        if spare_cpus > 0:
-            print(f"Unused CPUs: {spare_cpus}")
-    
-    print("=" * 60)
-    
-    # Run validation tests if requested
-    if args.validation_run:
-        print("\nRunning validation tests...")
-        
-        # Test 1: Quick benchmark run to verify everything works
-        if len(benchmark_lst) > 3:
-            test_benchmarks = benchmark_lst[:3]
-            print(f"Testing with {len(test_benchmarks)} benchmarks...")
-            
-            test_evaluator = SolverEvaluator(
-                solver_path=args.solver,
-                benchmark_lst=test_benchmarks,
-                timeout=min(args.timeout, 30),  # Short timeout for testing
-                cpus_per_task=args.cpus_per_task,
-                tmp_dir="/tmp/",
-                is_write_res=False,
-                res_path=None,
-                prefer_slurm_resources=args.prefer_slurm,
-                disable_cpu_affinity=args.disable_cpu_affinity,
-                monitor_output_dir=args.monitor_output
-            )
-            
-            test_results = test_evaluator.testing(args.strategy)
-            print(f"Validation test results: {test_results[0]} solved")
-            print("✅ Validation tests passed!")
-        
-        print("Validation complete. Exiting.")
-        sys.exit(0)
-    
-    # Run the full benchmark
-    print("\nStarting benchmark execution...")
-    start_time = time.time()
-    
-    try:
+        print(f"Running benchmarks with {evaluator.batchSize} parallel processes...")
         results = evaluator.testing(args.strategy)
-        end_time = time.time()
         
-        print("\n" + "=" * 60)
-        print("BENCHMARK EXECUTION COMPLETED")
-        print("=" * 60)
-        print(f"Total runtime: {end_time - start_time:.2f} seconds")
+        print(f"\nResults:")
         print(f"Solved: {results[0]}/{len(benchmark_lst)} ({results[0]/len(benchmark_lst)*100:.2f}%)")
         print(f"PAR2 score: {results[1]:.2f}")
         print(f"PAR10 score: {results[2]:.2f}")
@@ -656,13 +543,6 @@ if __name__ == "__main__":
         if args.monitor_output:
             print(f"Monitoring data saved to: {args.monitor_output}")
         
-        print("=" * 60)
-        
-    except KeyboardInterrupt:
-        print("\nBenchmark interrupted by user")
-        sys.exit(1)
     except Exception as e:
-        print(f"\nError during benchmark execution: {e}")
-        import traceback
-        traceback.print_exc()
+        print(f"Error: {e}")
         sys.exit(1)
