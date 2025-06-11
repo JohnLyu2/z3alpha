@@ -31,15 +31,9 @@ def main():
     )
 
     config = json.load(open(args.json_config, "r"))
-    
-    # Set up parent directory and create timestamped output folder
-    if "parent_log_dir" in config:
-        parent_dir = Path(config["parent_log_dir"])
-    else:
-        parent_dir = Path("experiments/synthesis")
-    
-    parent_dir.mkdir(parents=True, exist_ok=True)
-    log_folder = parent_dir / f"out-{datetime.datetime.now():%Y-%m-%d_%H-%M-%S}"
+    log_folder = Path(
+        f"experiments/synthesis/out-{datetime.datetime.now():%Y-%m-%d_%H-%M-%S}/"
+    )
     assert not log_folder.exists()
     log_folder.mkdir(parents=True)
 
