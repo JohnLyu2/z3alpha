@@ -140,17 +140,18 @@ def stage1_synthesize(config, stream_logger, log_folder):
     stream_logger.info(f"Stage 1 Time: {s1time:.0f}")
     return selected_strat, s1time
 
-def parallel_linear_strategies(ln_strat_lst):
+def add_fail_if_undecided(strat):
+    return f"(then {strat} fail-if-undecided)"
+
+def parallel_linear_strategies(ln_strat_lst, add_fail_if_undecided=True):
     assert len(ln_strat_lst) > 0, "No linear strategies provided"
     if len(ln_strat_lst) == 1:
         return ln_strat_lst[0]
     parallel_strats = "(par-or"
     for strat in ln_strat_lst:
-        if strat.startswith('(') and strat.endswith(')'):
-            inner_strat = strat[1:-1]
-            parallel_strats += f"(then {inner_strat} fail-if-undecided)"
-        else:
-            parallel_strats += f"(then {strat} fail-if-undecided)"
+        if add_fail_if_undecided:
+            strat = add_fail_if_undecided(strat)
+        parallel_strats += f" {strat}"
     parallel_strats += ")"
     return parallel_strats
 
