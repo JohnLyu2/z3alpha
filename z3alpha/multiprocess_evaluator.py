@@ -7,6 +7,7 @@ import logging
 import csv
 import psutil
 import threading
+from pathlib import Path
 from z3alpha.resource_monitor import ResourceMonitor, log_resource_usage
 from z3alpha.utils import solvedNum, parN
 
@@ -485,7 +486,6 @@ class SolverEvaluator:
 
 if __name__ == "__main__":
     import argparse
-    import glob
     import sys
     
     # Set up logging
@@ -507,11 +507,12 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     
-    # Find benchmark files
-    benchmark_lst = glob.glob(f"{args.benchmark_dir}/*.smt2")
+    # Find benchmark files recursively using Path
+    benchmark_dir = Path(args.benchmark_dir)
+    benchmark_lst = list(benchmark_dir.rglob("*.smt2"))
     
     if not benchmark_lst:
-        print(f"Error: No .smt2 files found in {args.benchmark_dir}")
+        print(f"Error: No .smt2 files found in {args.benchmark_dir} or its subdirectories")
         sys.exit(1)
     
     print(f"Found {len(benchmark_lst)} benchmark files in {args.benchmark_dir}")
