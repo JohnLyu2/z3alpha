@@ -143,13 +143,13 @@ def stage1_synthesize(config, stream_logger, log_folder):
 def add_fail_if_undecided(strat):
     return f"(then {strat} fail-if-undecided)"
 
-def parallel_linear_strategies(ln_strat_lst, add_fail_if_undecided=True):
+def parallel_linear_strategies(ln_strat_lst, fail_if_undecided=True):
     assert len(ln_strat_lst) > 0, "No linear strategies provided"
     if len(ln_strat_lst) == 1:
         return ln_strat_lst[0]
     parallel_strats = "(par-or"
     for strat in ln_strat_lst:
-        if add_fail_if_undecided:
+        if fail_if_undecided:
             strat = add_fail_if_undecided(strat)
         parallel_strats += f" {strat}"
     parallel_strats += ")"
