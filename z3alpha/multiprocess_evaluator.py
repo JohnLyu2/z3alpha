@@ -7,7 +7,7 @@ import logging
 import csv
 import psutil
 import threading
-from resource_monitor import ResourceMonitor, log_resource_usage
+from z3alpha.resource_monitor import ResourceMonitor, log_resource_usage
 from z3alpha.utils import solvedNum, parN
 
 log = logging.getLogger(__name__)
