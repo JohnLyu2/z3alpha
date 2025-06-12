@@ -500,13 +500,29 @@ if __name__ == "__main__":
     parser.add_argument('--cpus-per-task', type=int, required=True, help='Number of CPUs to use per process')
     parser.add_argument('--benchmark-dir', type=str, required=True, help='Directory containing SMT2 benchmark files')
     parser.add_argument('--output', type=str, default='results.csv', help='Output CSV file for results')
-    parser.add_argument('--strategy', type=str, default=None, help='Z3 solving strategy')
+    parser.add_argument('--strategy-path', type=str, default=None, help='Path to Z3 solving strategy file')
     parser.add_argument('--memory-per-task', type=int, default=None, help='Memory limit per task in MB (auto-calculated if not specified)')
     parser.add_argument('--disable-cpu-affinity', action='store_true', help='Disable CPU affinity setting')
     parser.add_argument('--monitor-output', type=str, default=None, help='Directory for monitoring output files')
 
     args = parser.parse_args()
-    
+
+    # Determine strategy to use
+    strategy = None
+
+    try:
+        with open(args.strategy_path, 'r') as f:
+            strategy = f.read().strip()
+        
+        if not strategy:
+            raise ValueError(f"Strategy file {args.strategy_path} is empty")
+        
+        log.info(f"Strategy loaded from {args.strategy_path}: {strategy[:100]}{'...' if len(strategy) > 100 else ''}")
+    except FileNotFoundError:
+        raise FileNotFoundError(f"Strategy file not found: {args.strategy_path}")
+    except Exception as e:
+        raise Exception(f"Error reading strategy file {args.strategy_path}: {e}")
+
     # Find benchmark files recursively using Path
     benchmark_dir = Path(args.benchmark_dir)
     benchmark_lst = list(benchmark_dir.rglob("*.smt2"))
@@ -533,7 +549,7 @@ if __name__ == "__main__":
         )
         
         print(f"Running benchmarks with {evaluator.batchSize} parallel processes...")
-        results = evaluator.testing(args.strategy)
+        results = evaluator.testing(strategy)
         
         print(f"\nResults:")
         print(f"Solved: {results[0]}/{len(benchmark_lst)} ({results[0]/len(benchmark_lst)*100:.2f}%)")
