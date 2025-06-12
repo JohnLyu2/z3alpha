@@ -130,7 +130,7 @@ python z3alpha/multiprocess_evaluator.py \
   --benchmark-dir data/ijcai24/benchmarks/samples \
   --timeout 30 \
   --output path/to/output/results.csv \
-  --strategy "a string containing the strategy" \
+  --strategy-path path/to/strategy.txt \
   --monitor-output path/to/output/monitor  # (Optional) Directory to store CPU and memory usage logs
 ```
 
