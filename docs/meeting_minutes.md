@@ -33,3 +33,9 @@
   * Memory requiement for each execution: take the minmum of core and memory requirement; can be optional, keep the same logic as now 
 * [the posted [issue](https://github.com/Z3Prover/z3/issues/7674)] Jiahao found `par-or` may return unknown/error if one stratey in the portfolio returns so; and the setting for parallel may need to be explicitly turned on; will follow up.
 
+## Jun 12, 2025
+
+* John: First solver submission
+* Paul: Will work on some logics, and look into the z3str3 tactic in z3 code
+* Jiahao: Make a new binary to execute Z3 strategies
+
