@@ -126,21 +126,13 @@ To evaluate the performance of a synthesized parallel strategy on a benchmark se
 python z3alpha/multiprocess_evaluator.py \
   --solver z3 \
   --cpus-per-task 4 \
-  --memory-per-task 1024 \  # (Optional) Memory in MB per task
   --benchmark-dir data/ijcai24/benchmarks/samples \
-  --timeout 30 \
+  --timeout 180 \
   --output path/to/output/results.csv \
   --strategy-path path/to/strategy.txt \
-  --monitor-output path/to/output/monitor  # (Optional) Directory to store CPU and memory usage logs
 ```
 
 #### Notes
-
-- **Memory Allocation**:  
-  If `--memory-per-task` is not specified, total available memory will be equally divided among tasks.
-
-- **Monitoring**:  
-  If `--monitor-output` is not specified, CPU and memory usage logs will not be generated.
 
 - **CPU Allocation**:  
   Set `--cpus-per-task` equal to the number of parallel strategies used (e.g., 4 for SMTCOMP-25 format) to ensure each strategy runs on a dedicated core.
