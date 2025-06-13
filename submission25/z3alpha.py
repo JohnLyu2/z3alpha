@@ -1,28 +1,19 @@
 #!/usr/bin/env python3
 
 import sys
-import os
+from pathlib import Path
 import subprocess
+import json
+import time
+import os
+import argparse
 
-logic_strategy = {
-    "BV": "bv900.txt",
-    "UFDT": "ufdt900.txt",
-    "QF_BV": "qfbv900.txt",
-    "QF_DT": "qfdt900.txt",
-    "QF_UFDT": "qfufdt900.txt",
-    "QF_AUFBV": "qfaufbv900.txt",
-    "QF_UFBV": "qfufbv900.txt",
-    "QF_AX": "qfax900.txt",
-    "QF_UF": "qfuf900.txt",
-    "QF_IDL": "qfidl900.txt",
-    "QF_LIA": "qflia900.txt",
-    "QF_LRA": "qflra900.txt",
-    "QF_RDL": "qfrdl900.txt",
-    "QF_NIA": "qfnia900.txt",
-    "QF_NRA": "qfnra900.txt",
-    "QF_S": "qfs900.txt",
-    "QF_SLIA": "qfslia900.txt"
-}
+def load_logic_strategies():
+    script_path = Path(__file__).resolve()
+    z3alpha_dir = script_path.parent
+    strategies_path = z3alpha_dir / "strats" / "logic_strategies.json"
+    with open(strategies_path, 'r') as f:
+        return json.load(f)
 
 def read_smtlib_logic(smt2_str):
     for line in smt2_str.split('\n'):
@@ -39,43 +30,88 @@ def rewrite_smt2_with_strat(smt2_str, strat):
             new_smt2_str += line + "\n"
     return new_smt2_str
 
+def debug_print(msg, debug=False):
+    if debug:
+        print(f"[DEBUG] {msg}", file=sys.stderr)
+
 def main():
-    script_path = os.path.realpath(__file__)
-    z3alpha_dir = os.path.dirname(script_path)
-    if len(sys.argv) != 2:
-        print(f"Usage: {script_path} <smt2_path>")
-        return
+    parser = argparse.ArgumentParser(description='Run Z3 with appropriate strategy based on SMT-LIB logic.')
+    parser.add_argument('smt2_path', help='Path to the SMT2 file')
+    parser.add_argument('--debug', action='store_true', help='Enable debug output')
+    args = parser.parse_args()
+
+    script_path = Path(__file__).resolve()
+    z3alpha_dir = script_path.parent
     
-    smt2_path = sys.argv[1]
+    smt2_path = Path(args.smt2_path)
+    debug_print(f"Processing SMT2 file: {smt2_path}", args.debug)
+    
     with open(smt2_path, 'r') as f:
         smt2_str = f.read()
 
-    solver_path = os.path.join(z3alpha_dir, "z3bin", "z3")
+    solver_path = z3alpha_dir / "z3bin" / "z3"
+    debug_print(f"Using solver: {solver_path}", args.debug)
 
     logic = read_smtlib_logic(smt2_str)
-    if logic in ["QF_S", "QF_SLIA", "QF_SNIA"]:
-        solver_path = os.path.join(z3alpha_dir, "z3bin", "z3str")
+    debug_print(f"Detected logic: {logic}", args.debug)
 
-    if logic and (logic in logic_strategy):
-        strat_filename = logic_strategy[logic]
-        strat_path = os.path.join(z3alpha_dir, "strats", strat_filename)
-        # check whether strat_path exists
-        if os.path.exists(strat_path):
-            with open(strat_path, 'r') as f:
-                strat = f.read()
-            smt2_str = rewrite_smt2_with_strat(smt2_str, strat)
+    if logic:
+        logic_strategies = load_logic_strategies()
+        if logic in logic_strategies:
+            strat_filename = logic_strategies[logic]
+            strat_path = z3alpha_dir / "strats" / strat_filename
+            debug_print(f"Found strategy file: {strat_path}", args.debug)
+            
+            # check whether strat_path exists
+            if strat_path.exists():
+                with open(strat_path, 'r') as f:
+                    strat = f.read()
+                debug_print(f"Using strategy: {strat.strip()}", args.debug)
+                smt2_str = rewrite_smt2_with_strat(smt2_str, strat)
+            else:
+                debug_print(f"Strategy file not found: {strat_path}", args.debug)
+        else:
+            debug_print(f"No strategy found for logic: {logic}", args.debug)
 
-    # write into a new smt2 file in tmp
-    new_smt2_path = "/tmp/rw_instance.smt2"
-    with open(new_smt2_path, 'w') as f:
+    # write into a new smt2 file in tmp with unique name
+    timestamp = int(time.time() * 1000)  # milliseconds
+    pid = os.getpid()
+    rw_smt2_path = Path(f"/tmp/{pid}_{timestamp}.smt2")
+    debug_print(f"Writing temporary file: {rw_smt2_path}", args.debug)
+    
+    with open(rw_smt2_path, 'w') as f:
         f.write(smt2_str)
 
-    # run z3 with the new smt2 file
-    cmd = f"{solver_path} {new_smt2_path}"
-    result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-
-    # Print the standard output and standard error
-    print(result.stdout, end="")
+    try:
+        debug_print(f"Running Z3 with command: {solver_path} {rw_smt2_path}", args.debug)
+        result = subprocess.run(
+            [str(solver_path), str(rw_smt2_path)],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        # Print stdout to stdout and stderr to stderr
+        if result.stdout:
+            sys.stdout.write(result.stdout)
+        if result.stderr:
+            sys.stderr.write(result.stderr)
+    except subprocess.CalledProcessError as e:
+        print(f"Error running Z3: {e}", file=sys.stderr)
+        if e.stdout:
+            sys.stdout.write(e.stdout)
+        if e.stderr:
+            sys.stderr.write(e.stderr)
+        sys.exit(e.returncode)
+    except Exception as e:
+        print(f"Unexpected error: {e}", file=sys.stderr)
+        sys.exit(1)
+    finally:
+        # Clean up the temporary file
+        try:
+            rw_smt2_path.unlink()
+            debug_print(f"Cleaned up temporary file: {rw_smt2_path}", args.debug)
+        except Exception:
+            pass  # Ignore cleanup errors
 
 if __name__ == "__main__":
     main()
