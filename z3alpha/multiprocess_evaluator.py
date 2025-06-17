@@ -114,7 +114,7 @@ def run_solver(
         runtime = time_after - time_before
         
         lines = out.decode("utf-8").split("\n")
-        res = lines[0] if lines else "error"
+        res = lines[0] if lines and len(lines[0]) > 0 else "error"
         
         log.info(f"Task {id}: Completed in {runtime:.2f}s with result: {res}")
         
