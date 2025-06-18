@@ -1,0 +1,5 @@
+strat
+(then propagate-values (using-params simplify :elim_and false :blast_distinct false :local_ctx false :pull_cheap_ite false :som false :flat false :hi_div0 false :hoist_mul false) elim-uncnstr smt)
+(then (using-params simplify :elim_and false :blast_distinct false :local_ctx false :pull_cheap_ite false :som false :flat false :hi_div0 false :hoist_mul false) (using-params smt :random_seed 300))
+(then (using-params simplify :elim_and false :blast_distinct false :local_ctx false :pull_cheap_ite false :som false :flat false :hi_div0 false :hoist_mul false) ctx-simplify (using-params smt :random_seed 100))
+(then (using-params simplify :elim_and false :blast_distinct false :local_ctx false :pull_cheap_ite false :som false :flat false :hi_div0 false :hoist_mul false) (using-params smt :random_seed 200))

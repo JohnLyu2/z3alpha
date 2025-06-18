@@ -1,9 +1,9 @@
 {
-  "logic": "QF_NRA",
+  "logic": "UFDTNIRA",
   "batch_size": 64,
   "s1config": {
     "bench_dirs": [
-      "/tmp/train_benchmarks/QF_NRA"
+      "/tmp/train_benchmarks/UFDTNIRA"
     ],
     "sim_num": 600,
     "timeout": 30,

@@ -7,7 +7,7 @@
   },
   "timeout": 180,
   "batch_size": 64,
-  "res_dir": "/tmp/results/QF_NRA",
-  "test_dir": "./QF_NRA",
+  "res_dir": "/tmp/results/AUFDTNIRA",
+  "test_dir": "./AUFDTNIRA",
   "tmp_dir": "/tmp/"
 }
