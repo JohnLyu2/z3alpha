@@ -1,6 +1,7 @@
 {
   "solvers": {
-    "z3": "z3"
+    "z3": "z3",
+    "cvc5": "cvc5"
   },
   "strat_files": {
     "z3alpha": "./data/ijcai24/results/QF_NRA/LassoRanker/sample_strategies/strategy_z3alpha.txt",
