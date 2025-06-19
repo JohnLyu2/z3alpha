@@ -1,4 +1,4 @@
-import sys
+import sys, os
 import argparse
 import logging
 from .multiprocess_evaluator import run_solver
@@ -8,14 +8,22 @@ def _get_args(argv):
         description="Z3Alpha: Execute Z3 solver with specified strategy on benchmark instances"
     )
     parser.add_argument("benchmark_path", help="Path to the benchmark/instance file")
-    parser.add_argument(
+    
+    strategy_group = parser.add_mutually_exclusive_group()
+
+    strategy_group.add_argument(
         "--strategy",
         help="Strategy to use for solving (optional)",
         type=str,
         default=None,
         required=False,
     )
-
+    strategy_group.add_argument(
+        "--strategy-path",
+        help="Path to txt file containing strategy to use for solving",
+        type=str,
+        default=None,
+    )
     parser.add_argument(
         "--z3-binary-path",
         help="path to Z3 solver executable",
@@ -51,6 +59,19 @@ def _get_args(argv):
     )
     return parser.parse_args(argv)
 
+def load_strategy_from_file(strategy_path):
+    if not os.path.exists(strategy_path):
+        raise FileNotFoundError(f"Strategy file not found: {strategy_path}")
+    
+    try:
+        with open(strategy_path, 'r', encoding='utf-8') as f:
+            strategy = f.read().strip()
+                    
+        logging.debug(f"Loaded strategy from {strategy_path}: {strategy}")
+        return strategy
+        
+    except IOError as e:
+        raise IOError(f"Failed to read strategy file {strategy_path}: {e}")
 
 def main(argv=sys.argv[1:]):
     args = _get_args(argv)
@@ -60,6 +81,14 @@ def main(argv=sys.argv[1:]):
     )
 
     try:
+
+        if args.strategy:
+            strategy = args.strategy
+            strategy_source = "command line"
+        elif args.strategy_path:
+            strategy = load_strategy_from_file(args.strategy_path)
+            strategy_source = f"file: {args.strategy_path}"
+
         # Call the existing run_solver function
         task_id, result_status, runtime, smt_file = run_solver(
             solver_path=args.z3_binary_path,
