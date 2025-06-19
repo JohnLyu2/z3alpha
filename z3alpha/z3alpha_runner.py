@@ -17,7 +17,7 @@ def _get_args(argv):
     )
 
     parser.add_argument(
-        "--solver-path",
+        "--z3-binary-path",
         help="path to Z3 solver executable",
         type=str,
         default="z3",
@@ -31,31 +31,10 @@ def _get_args(argv):
         required=False,
     )
     parser.add_argument(
-        "--memory-limit",
-        help="memory limit in MB",
-        type=int,
-        default=None,
-        required=False,
-    )
-    parser.add_argument(
-        "--cpu-limit",
-        help="number of CPUs to use, 0 means use all available CPUs",
-        type=int,
-        default=0,
-        required=False,
-    )
-    parser.add_argument(
         "--tmp-dir",
         help="temporary directory for modified SMT files",
         type=str,
         default="/tmp/",
-        required=False,
-    )
-    parser.add_argument(
-        "--output",
-        help="output file path for results",
-        type=str,
-        default=None,
         required=False,
     )
     parser.add_argument(
@@ -83,14 +62,14 @@ def main(argv=sys.argv[1:]):
     try:
         # Call the existing run_solver function
         task_id, result_status, runtime, smt_file = run_solver(
-            solver_path=args.solver_path,
+            solver_path=args.z3_binary_path,
             smt_file=args.benchmark_path,
             timeout=args.timeout,
             id=0,  # Single task, so ID is 0
             strategy=args.strategy,
             tmp_dir=args.tmp_dir,
-            cpu_limit=args.cpu_limit,
-            memory_limit=args.memory_limit,
+            cpu_limit=0,
+            memory_limit=None,
             monitor_resources=False
         )
         
@@ -101,18 +80,8 @@ def main(argv=sys.argv[1:]):
             'status': result_status,
             'runtime': runtime,
             'timeout': args.timeout,
-            'memory_limit': args.memory_limit,
-            'cpu_limit': args.cpu_limit
         }
-        
-        # Save output if requested
-        if args.output:
-            with open(args.output, 'w') as f:
-                f.write(f"Status: {result_status}\n")
-                f.write(f"Runtime: {runtime:.3f}s\n")
-                f.write(f"Benchmark: {smt_file}\n")
-                f.write(f"Strategy: {args.strategy}\n")
-        
+                
         # Log result
         if args.verbose:
             logging.info("Solving completed:")
