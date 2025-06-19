@@ -16,7 +16,7 @@ log = logging.getLogger(__name__)
 
 def run_solver(
     solver_path, smt_file, timeout, id, strategy=None, tmp_dir="/tmp/", 
-    cpu_limit=1, memory_limit=None, monitor_resources=False
+    cpu_limit=1, memory_limit=None, monitor_resources=False, quiet=False
 ):
     """Enhanced runner with resource monitoring"""
     
@@ -25,12 +25,12 @@ def run_solver(
         try:
             process = psutil.Process()
             initial_affinity = process.cpu_affinity()
-            log.info(f"Task {id}: Initial CPU affinity: {initial_affinity}")
+            if not quiet: log.info(f"Task {id}: Initial CPU affinity: {initial_affinity}")
             
             if cpu_limit >= len(initial_affinity):
-                log.debug(f"Process {id} using all assigned CPUs: {initial_affinity}")
+                if not quiet: log.debug(f"Process {id} using all assigned CPUs: {initial_affinity}")
             elif len(initial_affinity) <= 1:
-                log.debug(f"Process {id} has only one CPU available, skipping affinity setting")
+                if not quiet: log.debug(f"Process {id} has only one CPU available, skipping affinity setting")
             else:
                 # Distribute CPUs evenly across processes
                 start_idx = (id * cpu_limit) % len(initial_affinity)
@@ -46,11 +46,11 @@ def run_solver(
                 try:
                     process.cpu_affinity(new_affinity)
                     actual_affinity = process.cpu_affinity()
-                    log.info(f"Task {id}: CPU affinity set to: {actual_affinity}")
+                    if not quiet: log.info(f"Task {id}: CPU affinity set to: {actual_affinity}")
                     
                     # Verify the setting worked
                     if set(actual_affinity) == set(new_affinity):
-                        log.info(f"Task {id}: ✓ CPU affinity successfully set")
+                        if not quiet: log.info(f"Task {id}: ✓ CPU affinity successfully set")
                     else:
                         log.warning(f"Task {id}: ✗ CPU affinity mismatch. Expected: {new_affinity}, Got: {actual_affinity}")
                         
@@ -60,12 +60,12 @@ def run_solver(
         except (AttributeError, NotImplementedError):
             log.warning(f"Task {id}: CPU affinity setting not supported")
     else:
-        log.info(f"Task {id}: CPU affinity setting disabled")
+        if not quiet: log.info(f"Task {id}: CPU affinity setting disabled")
     
     # Log process info
-    log.info(f"Task {id}: Starting solver process (PID: {os.getpid()})")
+    if not quiet: log.info(f"Task {id}: Starting solver process (PID: {os.getpid()})")
     if memory_limit:
-        log.info(f"Task {id}: Memory limit: {memory_limit} MB")
+        if not quiet: log.info(f"Task {id}: Memory limit: {memory_limit} MB")
     
     # Start resource monitoring for this process if requested
     if monitor_resources:
@@ -106,7 +106,7 @@ def run_solver(
         p = subprocess.Popen(shlex.split(cmd), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     
     # Log the actual process PID after starting
-    log.info(f"Task {id}: Solver subprocess PID: {p.pid}")
+    if not quiet: log.info(f"Task {id}: Solver subprocess PID: {p.pid}")
     
     try:
         out, err = p.communicate(timeout=timeout)
@@ -116,7 +116,7 @@ def run_solver(
         lines = out.decode("utf-8").split("\n")
         res = lines[0] if lines and len(lines[0]) > 0 else "error"
         
-        log.info(f"Task {id}: Completed in {runtime:.2f}s with result: {res}")
+        if not quiet: log.info(f"Task {id}: Completed in {runtime:.2f}s with result: {res}")
         
         # Check for error
         if res.startswith("(error") or err:
@@ -126,7 +126,7 @@ def run_solver(
         return id, res, runtime, smt_file
     
     except subprocess.TimeoutExpired:
-        log.info(f"Task {id}: Timeout after {timeout}s")
+        if not quiet: log.info(f"Task {id}: Timeout after {timeout}s")
         p.terminate()
         try:
             p.wait(timeout=5)

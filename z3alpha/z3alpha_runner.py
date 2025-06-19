@@ -99,7 +99,8 @@ def main(argv=sys.argv[1:]):
             tmp_dir=args.tmp_dir,
             cpu_limit=0,
             memory_limit=None,
-            monitor_resources=False
+            monitor_resources=False, 
+            quiet=True,
         )
         
         # Prepare result dictionary
