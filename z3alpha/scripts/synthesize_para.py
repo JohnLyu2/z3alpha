@@ -26,7 +26,7 @@ def main():
     config = json.load(open(args.json_config, "r"))
     
     # Use log_parent_dir if provided, otherwise use default experiments/synthesis
-    parent_dir = Path(config.get("parent_log_dir", "experiments/synthesis"))
+    parent_dir = Path(config.get("parent_log_dir", "/tmp/experiments/synthesis"))
     log_folder = parent_dir / f"out-{datetime.datetime.now():%Y-%m-%d_%H-%M-%S}"
     
     assert not log_folder.exists()
