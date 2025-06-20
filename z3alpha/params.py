@@ -66,7 +66,37 @@ def create_params_dict(logic):
         params[20]["push_ite_arith"] = ["true", "false"]
         params[20]["hoist_ite"] = ["true", "false"]
         params[20]["arith_lhs"] = ["true", "false"]
+    elif logic == "QF_NIRA":
+        # "simplify"
+        params[20]["som"] = [
+            "true",
+            "false",
+        ]  # z3-qfbv z3-qfnia z3-qflia z3-qflra fast-qfnia fast-qfbv fast-qfnra
+        params[20]["flat"] = [
+            "true",
+            "false",
+        ]  # z3-qfbv z3-qfnia z3-qflia fast-qfnia fast-qfbv fast-qfnra
+        params[20]["push_ite_arith"] = ["true", "false"]
+        params[20]["hoist_ite"] = ["true", "false"]
+        params[20]["arith_lhs"] = ["true", "false"]
+    elif logic == "QF_IDL":
+        # "simplify"
+        params[20]["som"] = [
+            "true",
+            "false",
+        ]  # z3-qfbv z3-qfnia z3-qflia z3-qflra fast-qfnia fast-qfbv fast-qfnra
+        params[20]["flat"] = [
+            "true",
+            "false",
+        ]  # z3-qfbv z3-qfnia z3-qflia fast-qfnia fast-qfbv fast-qfnra
+        params[20]["push_ite_arith"] = ["true", "false"]
+        params[20]["hoist_ite"] = ["true", "false"]
+        params[20]["arith_lhs"] = ["true", "false"]
     elif logic == "QF_LRA":
+        # "simplify"
+        params[20]["som"] = ["true", "false"]
+        params[20]["flat"] = ["true", "false"]
+    elif logic == "QF_LIRA":
         # "simplify"
         params[20]["som"] = ["true", "false"]
         params[20]["flat"] = ["true", "false"]
@@ -107,6 +137,91 @@ def create_params_dict(logic):
         params[21]["push_ite_bv"] = ["true", "false"]
     elif logic == "QF_S":
         pass
+    elif logic == "UFNIA":
+        params[20]["som"] = ["true", "false"]
+        params[20]["flat"] = ["true", "false"]
+        params[20]["hi_div0"] = ["true", "false"]
+        params[20]["hoist_mul"] = ["true", "false"]
+    elif logic == "UFDTNIRA":
+        params[20]["som"] = ["true", "false"]
+        params[20]["flat"] = ["true", "false"]
+        params[20]["hi_div0"] = ["true", "false"]
+        params[20]["hoist_mul"] = ["true", "false"]
+    elif logic == "AUFDTNIRA":
+        params[20]["som"] = ["true", "false"]
+        params[20]["flat"] = ["true", "false"]
+        params[20]["hi_div0"] = ["true", "false"]
+        params[20]["hoist_mul"] = ["true", "false"]
+    elif logic == "AUFNIRA":
+        params[20]["som"] = ["true", "false"]
+        params[20]["flat"] = ["true", "false"]
+        params[20]["hi_div0"] = ["true", "false"]
+        params[20]["hoist_mul"] = ["true", "false"]
+    elif logic == "LIA":
+        # "simplify"
+        params[20]["som"] = [
+            "true",
+            "false",
+        ]
+        params[20]["flat"] = [
+            "true",
+            "false",
+        ]  # z3-qfbv z3-qfnia z3-qflia fast-qfnia fast-qfbv fast-qfnra
+        params[20]["push_ite_arith"] = ["true", "false"]
+        params[20]["hoist_ite"] = ["true", "false"]
+        params[20]["arith_lhs"] = ["true", "false"]
+    elif logic == "NIA":
+        # "simplify"
+        params[20]["som"] = [
+            "true",
+            "false",
+        ]
+        params[20]["flat"] = [
+            "true",
+            "false",
+        ]  # z3-qfbv z3-qfnia z3-qflia fast-qfnia fast-qfbv fast-qfnra
+        params[20]["push_ite_arith"] = ["true", "false"]
+        params[20]["hoist_ite"] = ["true", "false"]
+        params[20]["arith_lhs"] = ["true", "false"]
+    elif logic == "NRA":
+        # "simplify"
+        params[20]["som"] = [
+            "true",
+            "false",
+        ]
+        params[20]["flat"] = [
+            "true",
+            "false",
+        ]  # z3-qfbv z3-qfnia z3-qflia fast-qfnia fast-qfbv fast-qfnra
+        params[20]["push_ite_arith"] = ["true", "false"]
+        params[20]["hoist_ite"] = ["true", "false"]
+        params[20]["arith_lhs"] = ["true", "false"]
+    elif logic == "LRA":
+        # "simplify"
+        params[20]["som"] = [
+            "true",
+            "false",
+        ]
+        params[20]["flat"] = [
+            "true",
+            "false",
+        ]  # z3-qfbv z3-qfnia z3-qflia fast-qfnia fast-qfbv fast-qfnra
+        params[20]["push_ite_arith"] = ["true", "false"]
+        params[20]["hoist_ite"] = ["true", "false"]
+        params[20]["arith_lhs"] = ["true", "false"]
+    elif logic == "QF_SLIA":
+        # "simplify"
+        params[20]["som"] = [
+            "true",
+            "false",
+        ]
+        params[20]["flat"] = [
+            "true",
+            "false",
+        ]  # z3-qfbv z3-qfnia z3-qflia fast-qfnia fast-qfbv fast-qfnra
+        params[20]["push_ite_arith"] = ["true", "false"]
+        params[20]["hoist_ite"] = ["true", "false"]
+        params[20]["arith_lhs"] = ["true", "false"]
     else:
         raise NotImplementedError(f"Logic {logic} not implemented")
     return params
