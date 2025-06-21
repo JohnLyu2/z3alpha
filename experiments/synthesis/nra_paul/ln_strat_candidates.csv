@@ -1,0 +1,5 @@
+strat
+(then (using-params lia2pb :lia2pb_max_bits 16) factor elim-uncnstr fix-dl-var elim-uncnstr fix-dl-var nra)
+(then fix-dl-var (using-params smt :random_seed 400))
+(then elim-uncnstr (using-params smt :random_seed 200))
+(then purify-arith elim-uncnstr eq2bv smt)

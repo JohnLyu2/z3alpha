@@ -1,0 +1,5 @@
+strat
+(then propagate-ineqs ctx-simplify lia)
+(then solve-eqs normalize-bounds lia)
+(then degree-shift (using-params simplify :elim_and true :blast_distinct true :local_ctx true :pull_cheap_ite true :som true :flat true :push_ite_arith true :hoist_ite true :arith_lhs true) elim-uncnstr solve-eqs elim-uncnstr lia)
+(then cofactor-term-ite solve-eqs propagate-ineqs lia)

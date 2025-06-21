@@ -1,0 +1,33 @@
+BootStrap: docker
+From: ubuntu:24.04
+
+#%setup
+    #rm -r /z3alpha
+    #mkdir z3alpha
+
+
+%files
+    ./data /data/z3alpha
+    ./scripts /data/z3alpha
+    ./z3alpha /data/z3alpha
+    ./pyproject.toml /data/z3alpha
+    /home/paul/Downloads/SMTData2025/work/LIA/ /data/z3alpha/
+
+%post
+    apt-get -y update
+    apt-get -y install wget unzip build-essential vim python3-venv python3-pip
+    python3 -m venv /venv
+    . /venv/bin/activate
+    cd /data/z3alpha/
+    pip install -e .
+    pip install tabulate z3-solver==4.15.0
+
+%runscript
+    . /venv/bin/activate
+    cd /data/z3alpha/
+    python3 scripts/exp_tester.py ./smtcomp25/configs/eval/lia.json
+    python3 scripts/sampling_benchmarks.py \
+    --performance-path /tmp/results/LIA/z3.csv \
+    --target-dir /tmp/train_benchmarks/LIA \
+    --target-size 320
+    python3 z3alpha/scripts/synthesize_para.py ./smtcomp25/configs/synthesis/lia.json
