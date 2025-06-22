@@ -5,8 +5,8 @@
   },
   "strat_files": {
     "z3": null,
-    "z3alpha": "data/ijcai24/results/QF_BV/sample_strategies/strategy_z3alpha.txt",
-    "fastsmt": "data/ijcai24/results/QF_BV/sample_strategies/strategy_fastsmt.txt"
+    "z3alpha": "data/ijcai24/results/QF_BV/full_logic/sample_strategies/strategy_z3alpha.txt",
+    "fastsmt": "data/ijcai24/results/QF_BV/full_logic/sample_strategies/strategy_fastsmt.txt"
   },
   "timeout": 10,
   "batch_size": 50,
