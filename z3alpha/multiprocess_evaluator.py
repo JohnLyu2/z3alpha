@@ -7,6 +7,8 @@ import logging
 import csv
 import psutil
 import threading
+import argparse
+import sys
 from pathlib import Path
 from z3alpha.resource_monitor import ResourceMonitor, log_resource_usage
 from z3alpha.utils import solvedNum, parN
@@ -485,9 +487,6 @@ class SolverEvaluator:
 
 
 if __name__ == "__main__":
-    import argparse
-    import sys
-    
     # Set up logging
     log.setLevel(logging.INFO)
     log_handler = logging.StreamHandler()
@@ -539,10 +538,10 @@ if __name__ == "__main__":
     benchmark_lst = list(benchmark_dir.rglob("*.smt2"))
     
     if not benchmark_lst:
-        print(f"Error: No .smt2 files found in {args.benchmark_dir} or its subdirectories")
+        log.error(f"No .smt2 files found in {args.benchmark_dir} or its subdirectories")
         sys.exit(1)
     
-    print(f"Found {len(benchmark_lst)} benchmark files in {args.benchmark_dir}")
+    log.info(f"Found {len(benchmark_lst)} benchmark files in {args.benchmark_dir}")
     
     # Create evaluator and run
     try:
@@ -559,18 +558,18 @@ if __name__ == "__main__":
             monitor_output_dir=args.monitor_output
         )
         
-        print(f"Running benchmarks with {evaluator.batchSize} parallel processes...")
+        log.info(f"Running benchmarks with {evaluator.batchSize} parallel processes...")
         results = evaluator.testing(strategy)
         
-        print(f"\nResults:")
-        print(f"Solved: {results[0]}/{len(benchmark_lst)} ({results[0]/len(benchmark_lst)*100:.2f}%)")
-        print(f"PAR2 score: {results[1]:.2f}")
-        print(f"PAR10 score: {results[2]:.2f}")
-        print(f"Results written to: {args.output}")
+        log.info(f"\nResults:")
+        log.info(f"Solved: {results[0]}/{len(benchmark_lst)} ({results[0]/len(benchmark_lst)*100:.2f}%)")
+        log.info(f"PAR2 score: {results[1]:.2f}")
+        log.info(f"PAR10 score: {results[2]:.2f}")
+        log.info(f"Results written to: {args.output}")
         
         if args.monitor_output:
-            print(f"Monitoring data saved to: {args.monitor_output}")
+            log.info(f"Monitoring data saved to: {args.monitor_output}")
         
     except Exception as e:
-        print(f"Error: {e}")
+        log.error(f"Error: {e}")
         sys.exit(1)
