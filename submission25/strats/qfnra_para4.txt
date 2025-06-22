@@ -1,1 +1,6 @@
-(par-or (then solve-eqs solve-eqs elim-uncnstr propagate-values smt) (then (using-params propagate-values :push_ite_bv true) (using-params simplify :elim_and true :blast_distinct true :local_ctx true :pull_cheap_ite true :som true :flat true :hi_div0 true :hoist_mul true :push_ite_bv true) (using-params simplify :elim_and true :blast_distinct true :local_ctx true :pull_cheap_ite true :som true :flat true :hi_div0 true :hoist_mul true :push_ite_bv true) solve-eqs simplify propagate-values ctx-simplify qfnra) (then elim-uncnstr (using-params smt :random_seed 500)) (using-params qfnra-nlsat :inline_vars true :factor true :seed 100))
+(par-or 
+(then (then solve-eqs solve-eqs elim-uncnstr propagate-values smt) fail-if-undecided)
+(then (then (using-params propagate-values :push_ite_bv true) (using-params simplify :elim_and true :blast_distinct true :local_ctx true :pull_cheap_ite true :som true :flat true :hi_div0 true :hoist_mul true :push_ite_bv true) (using-params simplify :elim_and true :blast_distinct true :local_ctx true :pull_cheap_ite true :som true :flat true :hi_div0 true :hoist_mul true :push_ite_bv true) solve-eqs simplify propagate-values ctx-simplify qfnra) fail-if-undecided)
+(then (then elim-uncnstr (using-params smt :random_seed 500)) fail-if-undecided)
+(then (using-params qfnra-nlsat :inline_vars true :factor true :seed 100) fail-if-undecided)
+)
