@@ -1,0 +1,16 @@
+{
+  "solvers": {
+    "z3": "z3",
+    "cvc5": "cvc5"
+  },
+  "strat_files": {
+    "fastsmt": "data/ijcai24/results/QF_NIA/sample_strategies/strategy_fastsmt.txt",
+    "z3": null,
+    "z3alpha": "data/ijcai24/results/QF_NIA/sample_strategies/strategy_z3alpha.txt"
+  },
+  "timeout": 10,
+  "batch_size": 60,
+  "res_dir": "experiments/evaluation/QF_NIA",
+  "test_dir": "data/ijcai24/benchmarks/QF_NIA/test",
+  "tmp_dir": "/tmp/"
+}

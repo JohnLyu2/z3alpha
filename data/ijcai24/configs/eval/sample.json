@@ -1,0 +1,13 @@
+{
+  "solvers": {
+    "z3": "z3"
+  },
+  "strat_files": {
+    "z3": "/home/z52lu/z3alpha/experiments/synthesis/out-2025-06-05_07-46-37_qfnra_john/parallel_strategy_manual_fail_if_undecided.txt"
+  },
+  "timeout": 1,
+  "batch_size": 16,
+  "res_dir": "./tmp_res",
+  "test_dir": "/project/def-vganesh/z52lu/smtlib25/non-incremental/QF_NRA/hycomp/",
+  "tmp_dir": "/tmp/"
+}
