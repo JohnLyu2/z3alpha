@@ -1,0 +1,1 @@
+(par-or (then (then cofactor-term-ite (using-params smt :random_seed 100)) fail-if-undecided) (then (then propagate-values solve-eqs factor elim-uncnstr (using-params smt :smt.string_solver z3str3)) fail-if-undecided) (then (then fm (using-params smt :random_seed 100)) fail-if-undecided) (then (using-params smt :random_seed 300) fail-if-undecided))

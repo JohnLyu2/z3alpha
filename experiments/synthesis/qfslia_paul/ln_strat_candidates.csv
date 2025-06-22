@@ -1,0 +1,5 @@
+strat
+(then cofactor-term-ite (using-params smt :random_seed 100))
+(then propagate-values solve-eqs factor elim-uncnstr (using-params smt :smt.string_solver z3str3))
+(then fm (using-params smt :random_seed 100))
+(using-params smt :random_seed 300)
