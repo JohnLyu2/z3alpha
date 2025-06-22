@@ -507,6 +507,17 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    # Ensure output directory exists
+    output_path = Path(args.output)
+    
+    # Check if output path is a directory (has no filename)
+    if output_path.suffix == '' or output_path.name == '':
+        log.error(f"Output path '{args.output}' appears to be a directory. Please provide a file path (e.g., 'results.csv' or 'path/to/results.csv')")
+        sys.exit(1)
+    
+    output_dir = output_path.parent
+    output_dir.mkdir(parents=True, exist_ok=True)
+
     # Determine strategy to use
     strategy = None
 
