@@ -1,0 +1,13 @@
+Job ID: 45181127
+Node: nc31025
+Start time: Sat 21 Jun 2025 09:30:57 PM EDT
+Found 257 benchmark files in /home/jchen688/scratch/jchen688/non-incremental/NIA
+Running benchmarks with 4 parallel processes...
+
+Results:
+Solved: 114/257 (44.36%)
+PAR2 score: 51514.95
+PAR10 score: 257434.95
+Results written to: JHC/paral_experiments/nia/results_45181127.csv
+Monitoring data saved to: JHC/paral_experiments/nia/monitoring
+End time: Sat 21 Jun 2025 11:42:17 PM EDT

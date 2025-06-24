@@ -1,0 +1,13 @@
+Job ID: 45181131
+Node: nc10103
+Start time: Sat 21 Jun 2025 09:30:57 PM EDT
+Found 22172 benchmark files in /home/jchen688/scratch/jchen688/non-incremental/QF_S
+Running benchmarks with 4 parallel processes...
+
+Results:
+Solved: 19201/22172 (86.60%)
+PAR2 score: 1083887.00
+PAR10 score: 5362127.00
+Results written to: JHC/paral_experiments/qfs/results_45181131.csv
+Monitoring data saved to: JHC/paral_experiments/qfs/monitoring_qfnia
+End time: Sun 22 Jun 2025 09:15:01 PM EDT
