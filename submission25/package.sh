@@ -7,4 +7,4 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR"
 
 # Create the zip file
-zip -r submission25.zip z3alpha.py strats/ z3bin/ 
+zip -r submission25.zip z3alpha.py strats/ z3bin/ test_instances/ 
