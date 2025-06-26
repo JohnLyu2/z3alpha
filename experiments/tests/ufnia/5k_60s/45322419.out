@@ -1,0 +1,13 @@
+Job ID: 45322419
+Node: nc10538
+Start time: Wed 25 Jun 2025 02:29:49 AM EDT
+Found 5000 benchmark files in /home/jchen688/scratch/jchen688/non-incremental/5k_UFNIA
+Running benchmarks with 4 parallel processes...
+
+Results:
+Solved: 2483/5000 (49.66%)
+PAR2 score: 305119.12
+PAR10 score: 1513279.12
+Results written to: JHC/paral_experiments/ufnia/results_45322419.csv
+Monitoring data saved to: JHC/paral_experiments/ufnia/monitoring_5k
+End time: Wed 25 Jun 2025 10:29:33 PM EDT

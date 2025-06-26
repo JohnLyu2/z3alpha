@@ -1,0 +1,13 @@
+Job ID: 45322558
+Node: nc10150
+Start time: Wed 25 Jun 2025 02:59:40 AM EDT
+Found 10000 benchmark files in /home/jchen688/scratch/jchen688/non-incremental/10k_QF_SLIA
+Running benchmarks with 4 parallel processes...
+
+Results:
+Solved: 9418/10000 (94.18%)
+PAR2 score: 79178.04
+PAR10 score: 358538.04
+Results written to: JHC/paral_experiments/qfslia/results_45322558.csv
+Monitoring data saved to: JHC/paral_experiments/qfslia/monitoring_10k
+End time: Wed 25 Jun 2025 02:25:17 PM EDT

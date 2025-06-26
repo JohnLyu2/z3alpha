@@ -1,0 +1,13 @@
+Job ID: 45322415
+Node: nc10216
+Start time: Wed 25 Jun 2025 02:29:49 AM EDT
+Found 5000 benchmark files in /home/jchen688/scratch/jchen688/non-incremental/5k_QF_NIA
+Running benchmarks with 4 parallel processes...
+
+Results:
+Solved: 3968/5000 (79.36%)
+PAR2 score: 137117.76
+PAR10 score: 632477.76
+Results written to: JHC/paral_experiments/qfnia/results_45322415.csv
+Monitoring data saved to: JHC/paral_experiments/qfnia/monitoring_qfnia_5k
+End time: Wed 25 Jun 2025 04:53:35 PM EDT
