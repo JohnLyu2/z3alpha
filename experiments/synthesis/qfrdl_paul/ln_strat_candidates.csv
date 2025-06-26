@@ -1,0 +1,5 @@
+strat
+(then degree-shift (using-params smt :random_seed 300))
+(then degree-shift elim-uncnstr smt)
+(then propagate-values (using-params smt :random_seed 200))
+(then card2bv (using-params smt :random_seed 100))

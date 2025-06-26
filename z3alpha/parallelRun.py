@@ -5,7 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 import sys
 import os
 
-logic_strategy = {"QF_SLIA": "/home/paul/Dokumente/z3alpha/test.txt"}
+logic_strategy = {"QF_RDL": "/home/paul/Dokumente/z3alpha/experiments/synthesis/out-2025-06-19_23-28-24_qflra_john/parallel_strategy.txt"}
 
 
 def read_smtlib_logic(smt_file):
@@ -72,4 +72,4 @@ def main(smt_file):
 
 
 if __name__ == "__main__":
-    main("/home/paul/Dokumente/z3alpha/smtcomp24/test_instances/qfslia0.smt2")
+    main()

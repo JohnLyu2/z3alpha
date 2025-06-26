@@ -1,0 +1,13 @@
+{
+  "solvers": {
+    "z3": "z3"
+  },
+  "strat_files": {
+    "z3": null
+  },
+  "timeout": 180,
+  "batch_size": 64,
+  "res_dir": "/tmp/results/QF_LIRA",
+  "test_dir": "./QF_LIRA",
+  "tmp_dir": "/tmp/"
+}

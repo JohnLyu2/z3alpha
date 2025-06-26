@@ -310,6 +310,8 @@ class PreprocessTactic(ASTNode):
             return actions + [i for i in range(32, 46)] + [25]
         elif self.logic == "NRA":
             return actions + [i for i in range(32, 46)] + [25]
+        elif self.logic == "QF_RDL":
+            return actions + [i for i in range(32, 46)] + [25]
         else:
             raise Exception("unexpected smt logic")
 
@@ -385,9 +387,11 @@ class SolverTactic(ASTNode):
         elif self.logic == "NRA":
             return actions + [205]
         elif self.logic == "NIA":
-            return actions
+            return actions + [203]
         elif self.logic == "QF_SLIA":
             return actions + [18] + [203]
+        elif self.logic == "QF_RDL":
+            return actions + [204]
         else:
             raise Exception("unexpected smt logic")
 

@@ -222,6 +222,11 @@ def create_params_dict(logic):
         params[20]["push_ite_arith"] = ["true", "false"]
         params[20]["hoist_ite"] = ["true", "false"]
         params[20]["arith_lhs"] = ["true", "false"]
+
+    elif logic == "QF_RDL":
+        # "simplify"
+        params[20]["som"] = ["true", "false"]
+        params[20]["flat"] = ["true", "false"]
     else:
         raise NotImplementedError(f"Logic {logic} not implemented")
     return params

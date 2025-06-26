@@ -1,0 +1,13 @@
+{
+  "solvers": {
+    "z3": "z3"
+  },
+  "strat_files": {
+    "z3": null
+  },
+  "timeout": 180,
+  "batch_size": 64,
+  "res_dir": "/tmp/results/ANIA",
+  "test_dir": "./ANIA",
+  "tmp_dir": "/tmp/"
+}
