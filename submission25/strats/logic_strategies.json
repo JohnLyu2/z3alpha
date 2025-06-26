@@ -1,5 +1,11 @@
 {
-     "NIA": "nia_para4.txt",
-    "QF_NRA": "qfnra_para4.txt"
-   
+    "LIA": "lia.txt",
+    "LRA": "lra.txt",
+    "NRA": "nra.txt",
+    "QF_IDL": "qfidl.txt",
+    "QF_LIA": "qflia.txt",
+    "QF_LRA": "qflra.txt",
+    "QF_NRA": "qfnra.txt",
+    "QF_S": "qfs.txt",
+    "QF_SLIA": "qfslia.txt"
 } 

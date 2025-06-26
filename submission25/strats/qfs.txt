@@ -1,0 +1,5 @@
+(par-or
+(then (then solve-eqs (using-params simplify :elim_and false :blast_distinct false :local_ctx false :pull_cheap_ite false) (using-params smt :smt.string_solver z3str3) fail-if-undecided))
+(then (then solve-eqs (using-params smt :random_seed 400) fail-if-undecided))
+(then (then (using-params simplify :elim_and true :blast_distinct true :local_ctx true :pull_cheap_ite true) (using-params smt :random_seed 200) fail-if-undecided))
+(then (then (using-params simplify :elim_and false :blast_distinct false :local_ctx false :pull_cheap_ite false) propagate-values (using-params simplify :elim_and true :blast_distinct true :local_ctx true :pull_cheap_ite true) simplify (using-params smt :smt.string_solver z3str3) fail-if-undecided)))

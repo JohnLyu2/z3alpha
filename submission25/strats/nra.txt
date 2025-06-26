@@ -1,0 +1,4 @@
+(par-or (then (then (using-params lia2pb :lia2pb_max_bits 16) factor elim-uncnstr fix-dl-var elim-uncnstr fix-dl-var nra) fail-if-undecided)
+(then (then fix-dl-var (using-params smt :random_seed 400)) fail-if-undecided)
+(then (then elim-uncnstr (using-params smt :random_seed 200)) fail-if-undecided)
+(then (then purify-arith elim-uncnstr eq2bv smt) fail-if-undecided))
