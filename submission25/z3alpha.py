@@ -96,14 +96,10 @@ def main():
         if result.stderr:
             sys.stderr.write(result.stderr)
     except subprocess.CalledProcessError as e:
-        print(f"Error running Z3: {e}", file=sys.stderr)
-        if e.stdout:
-            sys.stdout.write(e.stdout)
-        if e.stderr:
-            sys.stderr.write(e.stderr)
-        sys.exit(e.returncode)
+        sys.stderr.write("error\n")
+        sys.exit(1)
     except Exception as e:
-        print(f"Unexpected error: {e}", file=sys.stderr)
+        sys.stderr.write("error\n")
         sys.exit(1)
     finally:
         # Clean up the temporary file
