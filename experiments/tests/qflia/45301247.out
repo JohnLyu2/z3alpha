@@ -1,0 +1,13 @@
+Job ID: 45301247
+Node: nc10214
+Start time: Tue 24 Jun 2025 10:47:38 PM EDT
+Found 13306 benchmark files in /home/jchen688/scratch/jchen688/non-incremental/QF_LIA
+Running benchmarks with 4 parallel processes...
+
+Results:
+Solved: 12625/13306 (94.88%)
+PAR2 score: 307171.49
+PAR10 score: 1287811.49
+Results written to: JHC/paral_experiments/qflia/results_45301247.csv
+Monitoring data saved to: JHC/paral_experiments/qflia/monitoring_qfnia
+End time: Wed 25 Jun 2025 11:16:47 PM EDT
