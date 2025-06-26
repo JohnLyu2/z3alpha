@@ -1,0 +1,5 @@
+(par-or
+(then (then solve-eqs (using-params simplify :elim_and false :blast_distinct false :local_ctx false :pull_cheap_ite false :som false :flat false :hi_div0 false :hoist_mul false :push_ite_bv false) qfnia) fail-if-undecided)
+(then (then (using-params nla2bv :nla2bv_max_bv_size 64) qfbv) fail-if-undecided)
+(then (then (using-params propagate-values :push_ite_bv true) (using-params smt :random_seed 100)) fail-if-undecided)
+(then (then lia2card (using-params simplify :elim_and false :blast_distinct false :local_ctx false :pull_cheap_ite false :som false :flat false :hi_div0 false :hoist_mul false :push_ite_bv false) card2bv solve-eqs lia2card smt) fail-if-undecided))
