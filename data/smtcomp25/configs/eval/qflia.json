@@ -1,13 +1,15 @@
 {
   "solvers": {
-    "z3": "z3"
+    "z3": "/home/lu/z3_strategies/z3sub/z3bin/z3"
   },
   "strat_files": {
+    "z3alpha_P": "/home/lu/z3_strategies/z3alpha/experiments/synthesis/QF_LIA_paul/parallel_strategy.txt",
+    "z3alpha_J": "/home/lu/z3_strategies/z3alpha/experiments/synthesis/out-2025-06-19_00-41-33_qflia_john/parallel_strategy.txt",
     "z3": null
   },
-  "timeout": 180,
-  "batch_size": 64,
-  "res_dir": "/tmp/results/QF_LIA",
-  "test_dir": "./QF_LIA",
+  "timeout": 60,
+  "batch_size": 10,
+  "res_dir": "/home/lu/z3_strategies/z3alpha/data/smtcomp25/results/QF_LIA_sm06",
+  "test_dir": "/home/lu/z3_strategies/z3alpha/data/smtcomp25/test_set_qflia",
   "tmp_dir": "/tmp/"
 }
