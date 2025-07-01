@@ -1,1 +1,0 @@
-(par-or (then (then propagate-values (using-params smt :random_seed 500)) fail-if-undecided) (then (then solve-eqs elim-uncnstr propagate-values qflia) fail-if-undecided) (then (then elim-uncnstr (using-params smt :random_seed 200)) fail-if-undecided) (then (then propagate-ineqs (using-params smt :random_seed 500)) fail-if-undecided))
