@@ -1,0 +1,5 @@
+strat
+(then (using-params propagate-values :push_ite_bv true) (using-params propagate-values :push_ite_bv true) elim-uncnstr lia2card ctx-simplify smt)
+(then (using-params nla2bv :nla2bv_max_bv_size 32) simplify bit-blast solve-eqs sat)
+(then solve-eqs ctx-simplify solve-eqs ctx-simplify card2bv propagate-values qfnia)
+(then ctx-simplify (using-params smt :random_seed 100))

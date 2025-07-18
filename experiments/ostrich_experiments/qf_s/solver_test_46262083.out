@@ -1,0 +1,13 @@
+Job ID: 46262083
+Node: nc30514
+Start time: Sat 12 Jul 2025 10:07:39 PM EDT
+Found 22172 benchmark files in /home/jchen688/scratch/jchen688/non-incremental/QF_S
+Running benchmarks with 4 parallel processes...
+
+Results:
+Solved: 20055/22172 (90.45%)
+PAR2 score: 74176.98
+PAR10 score: 243536.98
+Results written to: JHC/ostrich_experiments/qf_s/ostrich_46262083.csv
+Monitoring data saved to: JHC/ostrich_experiments/qf_s/monitoring_46262083
+End time: Sun 13 Jul 2025 05:13:45 AM EDT

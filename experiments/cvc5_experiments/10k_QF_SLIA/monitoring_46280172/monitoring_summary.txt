@@ -1,0 +1,22 @@
+RESOURCE MONITORING SUMMARY
+==================================================
+Monitoring duration: 47861 data points
+Unique processes monitored: 5
+PIDs: [4050525, 4050529, 4050530, 4050531, 4050532]
+
+CPU Usage Statistics:
+  Average: 3.10%
+  Peak: 18.00%
+  Min: 0.30%
+
+Memory Usage Statistics:
+  Average: 27.89 MB
+  Peak: 48.26 MB
+  Min: 20.64 MB
+
+CPU Affinity Analysis:
+  CPUs (43, 44, 45, 46): 9572 observations
+  CPUs (11, 32, 33, 34): 9572 observations
+  CPUs (35, 36, 37, 38): 9572 observations
+  CPUs (11, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46): 9573 observations
+  CPUs (39, 40, 41, 42): 9572 observations

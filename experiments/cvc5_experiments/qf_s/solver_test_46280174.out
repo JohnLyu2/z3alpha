@@ -1,0 +1,49 @@
+Job ID: 46280174
+Node: nc31419
+Start time: Sun 13 Jul 2025 01:19:50 PM EDT
+This is cvc5 version 1.3.1-dev.20.f38e07df0 [git f38e07df0 on branch main]
+compiled with GCC version 12.3.1 20230526
+on Jul 13 2025 10:42:32
+
+Copyright (c) 2009-2025 by the authors and their institutional
+affiliations listed at https://cvc5.github.io/people.html
+
+cvc5 is open-source and is covered by the BSD license (modified).
+
+THIS SOFTWARE IS PROVIDED AS-IS, WITHOUT ANY WARRANTIES.
+USE AT YOUR OWN RISK.
+
+This version of cvc5 is linked against the following non-(L)GPL'ed
+third party libraries.
+
+  CaDiCaL - Simplified Satisfiability Solver
+  See https://github.com/arminbiere/cadical for copyright information.
+
+  SymFPU - The Symbolic Floating Point Unit
+  See https://github.com/martin-cs/symfpu/tree/CVC4 for copyright information.
+
+This version of cvc5 is linked against the following third party
+libraries covered by the LGPLv3 license.
+See licenses/lgpl-3.0.txt for more information.
+
+  GMP - Gnu Multi Precision Arithmetic Library
+  See http://gmplib.org for copyright information.
+
+  LibPoly polynomial library
+  See https://github.com/SRI-CSL/libpoly for copyright and
+  licensing information.
+
+See the file COPYING (distributed with the source code, and with
+all binaries) for the full cvc5 copyright, licensing, and (lack of)
+warranty information.
+
+Found 22172 benchmark files in /home/jchen688/scratch/jchen688/non-incremental/QF_S
+Running benchmarks with 4 parallel processes...
+
+Results:
+Solved: 19137/22172 (86.31%)
+PAR2 score: 65380.44
+PAR10 score: 308180.44
+Results written to: JHC/cvc5_experiments/qf_s/cvc5_46280174.csv
+Monitoring data saved to: JHC/cvc5_experiments/qf_s/monitoring_46280174
+End time: Sun 13 Jul 2025 06:02:51 PM EDT

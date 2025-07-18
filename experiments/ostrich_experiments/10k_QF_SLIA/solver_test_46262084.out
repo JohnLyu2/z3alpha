@@ -1,0 +1,13 @@
+Job ID: 46262084
+Node: nc30522
+Start time: Sat 12 Jul 2025 10:07:42 PM EDT
+Found 10000 benchmark files in /home/jchen688/scratch/jchen688/non-incremental/10k_QF_SLIA
+Running benchmarks with 4 parallel processes...
+
+Results:
+Solved: 9408/10000 (94.08%)
+PAR2 score: 111134.36
+PAR10 score: 395294.36
+Results written to: JHC/ostrich_experiments/10k_QF_SLIA/ostrich_46262084.csv
+Monitoring data saved to: JHC/ostrich_experiments/10k_QF_SLIA/monitoring_46262084
+End time: Sun 13 Jul 2025 02:11:10 PM EDT

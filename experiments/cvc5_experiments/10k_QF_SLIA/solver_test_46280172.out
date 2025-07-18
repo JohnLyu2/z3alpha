@@ -1,0 +1,13 @@
+Job ID: 46280172
+Node: nc31224
+Start time: Sun 13 Jul 2025 01:19:50 PM EDT
+Found 10000 benchmark files in /home/jchen688/scratch/jchen688/non-incremental/10k_QF_SLIA
+Running benchmarks with 4 parallel processes...
+
+Results:
+Solved: 9602/10000 (96.02%)
+PAR2 score: 55197.60
+PAR10 score: 246237.60
+Results written to: JHC/cvc5_experiments/10k_QF_SLIA/cvc5_46280172.csv
+Monitoring data saved to: JHC/cvc5_experiments/10k_QF_SLIA/monitoring_46280172
+End time: Sun 13 Jul 2025 09:41:22 PM EDT

@@ -1,0 +1,14 @@
+Job ID: 46363257
+Node: nc30545
+Start time: Tue 15 Jul 2025 04:33:49 AM EDT
+Z3 version 4.13.4 - 64 bit - build hashcode 1edb62ebb88fc8d1969340ce26b7329344f48fe9 - mata hashcode 2fef6595d3dfb2f7531e300d1da3c85a7658a627
+Found 10000 benchmark files in /home/jchen688/scratch/jchen688/non-incremental/10k_QF_SLIA
+Running benchmarks with 4 parallel processes...
+
+Results:
+Solved: 9940/10000 (99.40%)
+PAR2 score: 16258.43
+PAR10 score: 45058.43
+Results written to: JHC/z3_noodler_experiments/10k_QF_SLIA/z3_noodler_46363257.csv
+Monitoring data saved to: JHC/z3_noodler_experiments/qf_s/monitoring_46363257
+End time: Tue 15 Jul 2025 07:37:01 AM EDT
