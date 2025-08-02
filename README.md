@@ -42,15 +42,15 @@ Install Z3alpha and its dependencies:
 
 ## A Synthesis Example
 
-Here, we provide an example of synthesizing a tailored Z3 strategy for a toy benchmark set `data/ijcai24/benchmarks/samples/`. The `z3alpha/scripts/synthesize_full.py` script performs the staged MCTS, which takes a configuration JSON file as an argument. The configuration file specifies settings such as the MCTS simulation number, training datasets, timeouts, etc. The configuration file for this toy example is provided at `data/ijcai24/configs/synthesis/sample.json`. 
+Here, we provide an example of synthesizing a tailored Z3 strategy for a toy benchmark set `data/sample/benchmarks/`. The `z3alpha/scripts/synthesize_full.py` script performs the staged MCTS, which takes a configuration JSON file as an argument. The configuration file specifies settings such as the MCTS simulation number, training datasets, timeouts, etc. The configuration file for this toy example is provided at `data/sample/configs/synthesis.json`. 
 
 The command for this toy example is as follows:
 
 ```bash
-python ./z3alpha/scripts/synthesize_full.py data/ijcai24/configs/synthesis/sample.json
+python ./z3alpha/scripts/synthesize_full.py data/sample/configs/synthesis.json
 ```
 
-After this command terminates, the synthesized strategy is saved to a result directory under `experiments/synthesis/`, along with the logs (if enabled). The result directory is named as `out-<starting time:%Y-%m-%d_%H-%M-%S>`.
+After this command terminates, the synthesized strategy is saved to a result directory under `experiments/synthesis/`. The result directory is named as `out-<starting time:%Y-%m-%d_%H-%M-%S>`.
 
 ## IJCAI-24 Reproduction
 
