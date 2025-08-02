@@ -38,7 +38,6 @@ def main(argv=sys.argv[1:]):
 
     assert Path(tmp_dir).exists(), f"The tmp directory {tmp_dir} does not exist"
     assert Path(smt_file).exists(), f"The SMT file {smt_file} does not exist"
-    assert Path(z3_path).exists(), f"The Z3 executable {z3_path} does not exist"
 
     if strat_file:
         with open(strat_file, "r") as f:
