@@ -3,7 +3,7 @@
   "batch_size": 2,
   "s1config": {
     "bench_dirs": [
-      "data/ijcai24/benchmarks/samples"
+      "data/sample/benchmarks"
     ],
     "sim_num": 15,
     "timeout": 1,
@@ -13,7 +13,7 @@
   },
   "s2config": {
     "bench_dirs": [
-      "data/ijcai24/benchmarks/samples"
+      "data/sample/benchmarks"
     ],
     "sim_num": 50,
     "timeout": 5,
