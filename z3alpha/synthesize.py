@@ -1,8 +1,13 @@
 import time
 import random
 import csv
-import os
-import pathlib
+from pathlib import Path
+import argparse
+import logging
+import json
+import datetime
+
+
 from z3 import *
 
 from z3alpha.evaluator import SolverEvaluator
@@ -21,9 +26,9 @@ def createBenchmarkList(
     # benchmarkLst = [str(p) for p in sorted(list(pathlib.Path(benchmark_directory).rglob(f"*.smt2")))]
     benchmarkLst = []
     for dir in benchmark_directories:
-        assert os.path.exists(dir)
+        assert Path(dir).exists()
         benchmarkLst += [
-            str(p) for p in sorted(list(pathlib.Path(dir).rglob(f"*.smt2")))
+            str(p) for p in sorted(list(Path(dir).rglob(f"*.smt2")))
         ]
     benchmarkLst.sort()
     if not is_sorted:
@@ -123,7 +128,7 @@ def stage1_synthesize(config, stream_logger, log_folder):
         num_ln_strat, s1_res_dict, s1config["timeout"]
     )
     stream_logger.info(ln_select_logs)
-    lnStratCandidatsPath = os.path.join(log_folder, "ln_strat_candidates.csv")
+    lnStratCandidatsPath = Path(log_folder) / "ln_strat_candidates.csv"
     with open(lnStratCandidatsPath, "w") as f:
         # write one strategy per line as a csv file
         cwriter = csv.writer(f)
@@ -183,7 +188,7 @@ def cache4stage2(selected_strat, config, stream_logger, log_folder, benchlst=Non
         stream_logger.info(f"Stage 2 Caching: {i + 1}/{len(selected_strat)}")
         strat_res = s2evaluator.getResLst(strat)
         s2_res_lst.append((strat, strat_res))
-    ln_res_csv = os.path.join(log_folder, "ln_res.csv")
+    ln_res_csv = Path(log_folder) / "ln_res.csv"
     write_strat_res_to_csv(s2_res_lst, ln_res_csv, s2benchLst)
     stream_logger.info(f"Cached results saved to {ln_res_csv}")
     endTime = time.time()
@@ -224,7 +229,7 @@ def stage2_synthesize(results, bench_lst, config, stream_logger, log_folder):
     tmp_folder = config["temp_folder"]
 
     s2startTime = time.time()
-    stream_logger.info(f"S2 MCTS Simulations Start")
+    stream_logger.info("S2 MCTS Simulations Start")
 
     probeStats, probeRecords = createProbeStats(bench_lst)
     s2dict["probe_stats"] = probeStats
@@ -247,7 +252,7 @@ def stage2_synthesize(results, bench_lst, config, stream_logger, log_folder):
 
     for i in range(3):
         order = i + 1
-        stratPath = os.path.join(log_folder, f"final_strategy{order}.txt")
+        stratPath = Path(log_folder) / f"final_strategy{order}.txt"
         with open(stratPath, "w") as f:
             f.write(best3_s2[i])
         stream_logger.info(f"No {order} final Strategy saved to: {stratPath}")
@@ -256,3 +261,44 @@ def stage2_synthesize(results, bench_lst, config, stream_logger, log_folder):
     s2time = s2endTime - s2startTime
     stream_logger.info(f"Stage 2 MCTS Time: {s2time:.0f}")
     return best3_s2, s2time
+
+
+def main():
+    log = logging.getLogger(__name__)
+    log.setLevel(logging.INFO)
+    log_handler = logging.StreamHandler()
+    log_handler.setFormatter(
+        logging.Formatter("%(asctime)s:%(levelname)s:%(message)s", "%Y-%m-%d %H:%M:%S")
+    )
+    log.addHandler(log_handler)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "json_config", type=str, help="The experiment configuration file in json"
+    )
+    configJsonPath = parser.parse_args()
+    config = json.load(open(configJsonPath.json_config, "r"))
+    # num_strat = config['ln_strat_num']
+    log_folder = (
+        f"experiments/synthesis/out-{datetime.datetime.now():%Y-%m-%d_%H-%M-%S}/"
+    )
+    assert not Path(log_folder).exists()
+    Path(log_folder).mkdir(parents=True, exist_ok=False)
+    selected_strats, s1_time = stage1_synthesize(config, log, log_folder)
+    res_dict, bench_lst, cache_time = cache4stage2(
+        selected_strats, config, log, log_folder
+    )
+    bst_strats, s2mcts_time = stage2_synthesize(
+        res_dict, bench_lst, config, log, log_folder
+    )
+    order = 1
+    for bst_strat in bst_strats:
+        log.info(f"Best strategy {order}: {bst_strat}")
+        order += 1
+    log.info(
+        f"S1 time: {s1_time:.0f}, S2 Cache time: {cache_time:.0f}, S2 MCTS time: {s2mcts_time:.0f}, Total time: {s1_time + cache_time + s2mcts_time:.0f}"
+    )
+
+
+if __name__ == "__main__":
+    main()
