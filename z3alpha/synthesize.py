@@ -143,7 +143,7 @@ def stage1_synthesize(config, stream_logger, log_folder):
     endTime = time.time()
     s1time = endTime - startTime
     stream_logger.info(f"Stage 1 Time: {s1time:.0f}")
-    return selected_strat, s1time
+    return selected_strat
 
 def add_fail_if_undecided(strat):
     return f"(then {strat} fail-if-undecided)"
@@ -194,7 +194,7 @@ def cache4stage2(selected_strat, config, stream_logger, log_folder, benchlst=Non
     endTime = time.time()
     cacheTime = endTime - startTime
     stream_logger.info(f"Stage 2 Cache Time: {cacheTime:.0f}")
-    return s2_res_lst, s2benchLst, cacheTime
+    return s2_res_lst, s2benchLst
 
 
 def stage2_synthesize(results, bench_lst, config, stream_logger, log_folder):
@@ -250,54 +250,79 @@ def stage2_synthesize(results, bench_lst, config, stream_logger, log_folder):
     run2.start()
     best3_s2 = run2.getBest3Strats()
 
-    for i in range(3):
-        order = i + 1
-        stratPath = Path(log_folder) / f"final_strategy{order}.txt"
-        with open(stratPath, "w") as f:
-            f.write(best3_s2[i])
-        stream_logger.info(f"No {order} final Strategy saved to: {stratPath}")
+    # Only output the best strategy
+    best_strategy = best3_s2[0]
+    stratPath = Path(log_folder) / "final_strategy.txt"
+    with open(stratPath, "w") as f:
+        f.write(best_strategy)
+    stream_logger.info(f"Best final strategy saved to: {stratPath}")
 
     s2endTime = time.time()
     s2time = s2endTime - s2startTime
     stream_logger.info(f"Stage 2 MCTS Time: {s2time:.0f}")
-    return best3_s2, s2time
+    return best3_s2
 
+
+def branched_synthesize(config, log_folder=None, stream_logger=None):
+    """
+    Perform the complete synthesis for branched strategy [IJCAI 2024].
+    
+    Args:
+        config: Configuration dictionary containing synthesis parameters
+        log_folder: Optional log folder path. If None, creates a timestamped folder
+        stream_logger: Optional logger. If None, creates a default logger
+    
+    """
+    start_time = time.time()
+    
+    # Setup logger if not provided
+    if stream_logger is None:
+        stream_logger = logging.getLogger(__name__)
+        stream_logger.setLevel(logging.INFO)
+        log_handler = logging.StreamHandler()
+        log_handler.setFormatter(
+            logging.Formatter("%(asctime)s:%(levelname)s:%(message)s", "%Y-%m-%d %H:%M:%S")
+        )
+        stream_logger.addHandler(log_handler)
+    
+    # Setup log folder if not provided
+    if log_folder is None:
+        log_folder = f"experiments/synthesis/out-{datetime.datetime.now():%Y-%m-%d_%H-%M-%S}/"
+        assert not Path(log_folder).exists()
+        Path(log_folder).mkdir(parents=True, exist_ok=False)
+    
+    # Stage 1: Initial strategy synthesis
+    selected_strats = stage1_synthesize(config, stream_logger, log_folder)
+    
+    # Stage 2: Cache results for selected strategies
+    res_dict, bench_lst = cache4stage2(
+        selected_strats, config, stream_logger, log_folder
+    )
+    
+    # Stage 3: Final strategy synthesis
+    bst_strats = stage2_synthesize(
+        res_dict, bench_lst, config, stream_logger, log_folder
+    )
+    
+    # Log results
+    order = 1
+    for bst_strat in bst_strats:
+        stream_logger.info(f"Best strategy {order}: {bst_strat}")
+        order += 1
+    
+    total_time = time.time() - start_time
+    stream_logger.info(f"Total synthesis time: {total_time:.0f} seconds")
 
 def main():
-    log = logging.getLogger(__name__)
-    log.setLevel(logging.INFO)
-    log_handler = logging.StreamHandler()
-    log_handler.setFormatter(
-        logging.Formatter("%(asctime)s:%(levelname)s:%(message)s", "%Y-%m-%d %H:%M:%S")
-    )
-    log.addHandler(log_handler)
-
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "json_config", type=str, help="The experiment configuration file in json"
     )
-    configJsonPath = parser.parse_args()
-    config = json.load(open(configJsonPath.json_config, "r"))
-    # num_strat = config['ln_strat_num']
-    log_folder = (
-        f"experiments/synthesis/out-{datetime.datetime.now():%Y-%m-%d_%H-%M-%S}/"
-    )
-    assert not Path(log_folder).exists()
-    Path(log_folder).mkdir(parents=True, exist_ok=False)
-    selected_strats, s1_time = stage1_synthesize(config, log, log_folder)
-    res_dict, bench_lst, cache_time = cache4stage2(
-        selected_strats, config, log, log_folder
-    )
-    bst_strats, s2mcts_time = stage2_synthesize(
-        res_dict, bench_lst, config, log, log_folder
-    )
-    order = 1
-    for bst_strat in bst_strats:
-        log.info(f"Best strategy {order}: {bst_strat}")
-        order += 1
-    log.info(
-        f"S1 time: {s1_time:.0f}, S2 Cache time: {cache_time:.0f}, S2 MCTS time: {s2mcts_time:.0f}, Total time: {s1_time + cache_time + s2mcts_time:.0f}"
-    )
+    args = parser.parse_args()
+    config = json.load(open(args.json_config, "r"))
+    
+    # Use the new full_synthesize function
+    branched_synthesize(config)
 
 
 if __name__ == "__main__":
