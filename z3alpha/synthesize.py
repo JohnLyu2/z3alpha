@@ -250,7 +250,7 @@ def stage2_synthesize(results, bench_lst, config, stream_logger, log_folder):
     run_stage_two.start()
     best_strategy = run_stage_two.getBestStrat()
 
-    stratPath = Path(log_folder) / "final_strategy.txt"
+    stratPath = Path(log_folder) / "synthesized_.txt"
     with open(stratPath, "w") as f:
         f.write(best_strategy)
     stream_logger.info(f"Best final strategy saved to: {stratPath}")
@@ -259,6 +259,31 @@ def stage2_synthesize(results, bench_lst, config, stream_logger, log_folder):
     s2time = s2endTime - s2startTime
     stream_logger.info(f"Stage 2 MCTS Time: {s2time:.0f}")
     return best_strategy
+
+
+def parallel_synthesize(config, log_folder, stream_logger):
+    """
+    Perform parallel strategy synthesis.
+    
+    Args:
+        config: Configuration dictionary containing synthesis parameters
+        log_folder: Log folder path for output files
+        stream_logger: Logger for output messages
+    """
+    start_time = time.time()
+    
+    selected_strats = stage1_synthesize(config, stream_logger, log_folder)
+    
+    parallel_strat = parallel_linear_strategies(selected_strats)
+    
+    parallel_strat_path = Path(log_folder) / "synthesized_strategy.txt"
+    with open(parallel_strat_path, "w") as f:
+        f.write(parallel_strat)
+    stream_logger.info(f"Final parallel strategy saved to {parallel_strat_path}")
+
+    total_time = time.time() - start_time
+    stream_logger.info(f"Total synthesis time: {total_time:.0f} seconds")
+
 
 
 def branched_synthesize(config, log_folder, stream_logger):
@@ -294,6 +319,11 @@ def main():
     parser.add_argument(
         "json_config", type=str, help="The experiment configuration file in json"
     )
+    parser.add_argument(
+        "--parallel", "-p",
+        action="store_true",
+        help="Synthesize parallel strategy instead of branched strategy"
+    )
     args = parser.parse_args()
     config = json.load(open(args.json_config, "r"))
     
@@ -313,8 +343,11 @@ def main():
     assert not log_folder.exists()
     log_folder.mkdir(parents=True)
     
-    # Use the branched_synthesize function
-    branched_synthesize(config, log_folder, stream_logger)
+
+    if args.parallel:
+        parallel_synthesize(config, log_folder, stream_logger)
+    else:
+        branched_synthesize(config, log_folder, stream_logger)
 
 
 if __name__ == "__main__":
