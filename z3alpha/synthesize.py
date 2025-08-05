@@ -8,7 +8,7 @@ import json
 import datetime
 
 
-from z3 import *
+from z3 import parse_smt2_file, Probe, Goal
 
 from z3alpha.evaluator import SolverEvaluator
 from z3alpha.mcts import MCTS_RUN
@@ -28,7 +28,7 @@ def createBenchmarkList(
     for dir in benchmark_directories:
         assert Path(dir).exists()
         benchmarkLst += [
-            str(p) for p in sorted(list(Path(dir).rglob(f"*.smt2")))
+            str(p) for p in sorted(list(Path(dir).rglob("*.smt2")))
         ]
     benchmarkLst.sort()
     if not is_sorted:
@@ -237,7 +237,7 @@ def stage2_synthesize(results, bench_lst, config, stream_logger, log_folder):
     s2config = config["s2config"]
     s2config["s2dict"] = s2dict
 
-    run2 = MCTS_RUN(
+    run_stage_two = MCTS_RUN(
         2,
         s2config,
         bench_lst,
@@ -247,11 +247,9 @@ def stage2_synthesize(results, bench_lst, config, stream_logger, log_folder):
         log_folder,
         tmp_folder=tmp_folder,
     )
-    run2.start()
-    best3_s2 = run2.getBest3Strats()
+    run_stage_two.start()
+    best_strategy = run_stage_two.getBestStrat()
 
-    # Only output the best strategy
-    best_strategy = best3_s2[0]
     stratPath = Path(log_folder) / "final_strategy.txt"
     with open(stratPath, "w") as f:
         f.write(best_strategy)
@@ -260,56 +258,34 @@ def stage2_synthesize(results, bench_lst, config, stream_logger, log_folder):
     s2endTime = time.time()
     s2time = s2endTime - s2startTime
     stream_logger.info(f"Stage 2 MCTS Time: {s2time:.0f}")
-    return best3_s2
+    return best_strategy
 
 
-def branched_synthesize(config, log_folder=None, stream_logger=None):
+def branched_synthesize(config, log_folder, stream_logger):
     """
     Perform the complete synthesis for branched strategy [IJCAI 2024].
     
     Args:
         config: Configuration dictionary containing synthesis parameters
-        log_folder: Optional log folder path. If None, creates a timestamped folder
-        stream_logger: Optional logger. If None, creates a default logger
+        log_folder: Log folder path for output files
+        stream_logger: Logger for output messages
     
     """
     start_time = time.time()
     
-    # Setup logger if not provided
-    if stream_logger is None:
-        stream_logger = logging.getLogger(__name__)
-        stream_logger.setLevel(logging.INFO)
-        log_handler = logging.StreamHandler()
-        log_handler.setFormatter(
-            logging.Formatter("%(asctime)s:%(levelname)s:%(message)s", "%Y-%m-%d %H:%M:%S")
-        )
-        stream_logger.addHandler(log_handler)
-    
-    # Setup log folder if not provided
-    if log_folder is None:
-        log_folder = f"experiments/synthesis/out-{datetime.datetime.now():%Y-%m-%d_%H-%M-%S}/"
-        assert not Path(log_folder).exists()
-        Path(log_folder).mkdir(parents=True, exist_ok=False)
-    
-    # Stage 1: Initial strategy synthesis
+    # Step 1: Initial strategy synthesis
     selected_strats = stage1_synthesize(config, stream_logger, log_folder)
     
-    # Stage 2: Cache results for selected strategies
+    # Step 2: Cache results for selected strategies
     res_dict, bench_lst = cache4stage2(
         selected_strats, config, stream_logger, log_folder
     )
     
-    # Stage 3: Final strategy synthesis
-    bst_strats = stage2_synthesize(
+    # Step 3: Branched strategy synthesis
+    stage2_synthesize(
         res_dict, bench_lst, config, stream_logger, log_folder
     )
-    
-    # Log results
-    order = 1
-    for bst_strat in bst_strats:
-        stream_logger.info(f"Best strategy {order}: {bst_strat}")
-        order += 1
-    
+
     total_time = time.time() - start_time
     stream_logger.info(f"Total synthesis time: {total_time:.0f} seconds")
 
@@ -321,8 +297,24 @@ def main():
     args = parser.parse_args()
     config = json.load(open(args.json_config, "r"))
     
-    # Use the new full_synthesize function
-    branched_synthesize(config)
+    # Setup logger
+    stream_logger = logging.getLogger(__name__)
+    stream_logger.setLevel(logging.INFO)
+    log_handler = logging.StreamHandler()
+    log_handler.setFormatter(
+        logging.Formatter("%(asctime)s:%(levelname)s:%(message)s", "%Y-%m-%d %H:%M:%S")
+    )
+    stream_logger.addHandler(log_handler)
+    
+    # Use log_parent_dir if provided, otherwise use default experiments/synthesis
+    parent_dir = Path(config.get("parent_log_dir", "experiments/synthesis"))
+    log_folder = parent_dir / f"out-{datetime.datetime.now():%Y-%m-%d_%H-%M-%S}"
+    
+    assert not log_folder.exists()
+    log_folder.mkdir(parents=True)
+    
+    # Use the branched_synthesize function
+    branched_synthesize(config, log_folder, stream_logger)
 
 
 if __name__ == "__main__":
