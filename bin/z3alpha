@@ -7,6 +7,6 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT_DIR))
 sys.dont_write_bytecode = True  # do not write .pyc files
 
-from z3alpha.z3alpha_runner import main  # noqa: E402
+from z3alpha.strat_runner import main  # noqa: E402
 
 sys.exit(main())
