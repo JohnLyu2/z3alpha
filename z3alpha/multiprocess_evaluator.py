@@ -18,7 +18,7 @@ def run_solver(
     solver_path, smt_file, timeout, id, strategy=None, tmp_dir="/tmp/", 
     cpu_limit=1, memory_limit=None, monitor_resources=False, quiet=False
 ):
-    """Enhanced runner with resource monitoring"""
+    """Enhanced runner with resource monitoring - now using CLI entry point"""
     
     # Enhanced CPU affinity logging
     if cpu_limit > 0:
@@ -76,34 +76,26 @@ def run_solver(
         )
         monitor_thread.start()
     
-    # Prepare the SMT file with strategy if provided
+    # Build command using the CLI entry point
+    # Convert Path objects to strings
+    cmd = ["z3alpha", str(smt_file), "--z3-path", str(solver_path), "--tmp-dir", str(tmp_dir)]
+    
+    # Add strategy if provided
     if strategy is not None:
-        if not os.path.exists(tmp_dir):
-            os.makedirs(tmp_dir)
-        new_file_name = os.path.join(tmp_dir, f"tmp_{id}.smt2")
-        with open(new_file_name, "w") as tmp_file:
-            with open(smt_file, "r") as f:
-                for line in f:
-                    new_line = line
-                    if "check-sat" in line:
-                        new_line = f"(check-sat-using {strategy})\n"
-                    tmp_file.write(new_line)
-    else:
-        new_file_name = smt_file
+        cmd.extend(["--strategy", str(strategy)])
     
     # Run the solver
     time_before = time.time()
-    safe_path = shlex.quote(new_file_name)
-    cmd = f"{solver_path} {safe_path}"
+    
+    if not quiet: log.info(f"Task {id}: Running command: {' '.join(cmd)}")
     
     # Memory limit handling
     if memory_limit:
-        cmd = f"ulimit -v {memory_limit * 1024} && {cmd}"
-        shell = True
-        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=shell)
+        # Use ulimit to set memory limit
+        ulimit_cmd = f"ulimit -v {memory_limit * 1024} && {' '.join(shlex.quote(arg) for arg in cmd)}"
+        p = subprocess.Popen(ulimit_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     else:
-        shell = False
-        p = subprocess.Popen(shlex.split(cmd), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     
     # Log the actual process PID after starting
     if not quiet: log.info(f"Task {id}: Solver subprocess PID: {p.pid}")
@@ -134,8 +126,7 @@ def run_solver(
             p.kill()
         
         return id, "timeout", timeout, smt_file
-
-
+        
 def task_runner(args):
     """Enhanced wrapper function with resource monitoring"""
     smt_file, id, solver_path, timeout, strategy, tmp_dir, cpu_limit, memory_limit, monitor_resources = args
