@@ -23,7 +23,12 @@ VALUE_TYPE = "par10"  # hard code for now
 def createBenchmarkList(
     benchmark_directories, timeout, batchSize, tmp_folder, z3path, is_sorted
 ):
-    # benchmarkLst = [str(p) for p in sorted(list(pathlib.Path(benchmark_directory).rglob(f"*.smt2")))]
+    """
+    Create and optionally sort a list of SMT benchmark files for strategy synthesis.
+    This function performs two main tasks:
+    1. Discovers all .smt2 files from a specified list of directories
+    2. Optionally evaluates and sorts benchmarks by difficulty (PAR2 score)
+    """
     benchmarkLst = []
     for dir in benchmark_directories:
         assert Path(dir).exists()
@@ -39,14 +44,18 @@ def createBenchmarkList(
     resLst = evaluator.getResLst(None)
     # par2 list from resLst; for each entry (solved, time) in resLst, if solved, return time; else return 2 * timeout
     par2Lst = [2 * timeout if not res[0] else res[1] for res in resLst]
-    # # sort benchmarkLst resLst into a ascending list by par2Lst
-    # benchmarkLst = [x for _, x in sorted(zip(par2Lst, benchmarkLst))]
     # sort benchmarkLst resLst into a descending list by par2Lst
     benchmarkLst = [x for _, x in sorted(zip(par2Lst, benchmarkLst), reverse=True)]
     return benchmarkLst
 
 
 def createProbeStats(bench_lst):
+    """
+    Create probe stats, i.e., #constants, #expressions, and size, for a list of SMT benchmarks.
+    This function returns:
+    - probeStats: a dictionary containing percentile values for #constants, #expressions, and size in the list
+    - probeRecords: a list of dictionaries containing the probe values for each benchmark
+    """
     numConstsLst = []
     numExprsLst = []
     sizeLst = []
