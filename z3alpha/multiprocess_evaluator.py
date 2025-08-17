@@ -18,21 +18,21 @@ log = logging.getLogger(__name__)
 
 def run_solver(
     solver_path, smt_file, timeout, id, strategy=None, tmp_dir="/tmp/", 
-    cpu_limit=1, memory_limit=None, monitor_resources=False
+    cpu_limit=1, memory_limit=None, monitor_resources=False, quiet=False
 ):
-    """Enhanced runner with resource monitoring"""
+    """Enhanced runner with resource monitoring - now using CLI entry point"""
     
     # Enhanced CPU affinity logging
     if cpu_limit > 0:
         try:
             process = psutil.Process()
             initial_affinity = process.cpu_affinity()
-            log.info(f"Task {id}: Initial CPU affinity: {initial_affinity}")
+            if not quiet: log.info(f"Task {id}: Initial CPU affinity: {initial_affinity}")
             
             if cpu_limit >= len(initial_affinity):
-                log.debug(f"Process {id} using all assigned CPUs: {initial_affinity}")
+                if not quiet: log.debug(f"Process {id} using all assigned CPUs: {initial_affinity}")
             elif len(initial_affinity) <= 1:
-                log.debug(f"Process {id} has only one CPU available, skipping affinity setting")
+                if not quiet: log.debug(f"Process {id} has only one CPU available, skipping affinity setting")
             else:
                 # Distribute CPUs evenly across processes
                 start_idx = (id * cpu_limit) % len(initial_affinity)
@@ -48,11 +48,11 @@ def run_solver(
                 try:
                     process.cpu_affinity(new_affinity)
                     actual_affinity = process.cpu_affinity()
-                    log.info(f"Task {id}: CPU affinity set to: {actual_affinity}")
+                    if not quiet: log.info(f"Task {id}: CPU affinity set to: {actual_affinity}")
                     
                     # Verify the setting worked
                     if set(actual_affinity) == set(new_affinity):
-                        log.info(f"Task {id}: ✓ CPU affinity successfully set")
+                        if not quiet: log.info(f"Task {id}: ✓ CPU affinity successfully set")
                     else:
                         log.warning(f"Task {id}: ✗ CPU affinity mismatch. Expected: {new_affinity}, Got: {actual_affinity}")
                         
@@ -62,12 +62,12 @@ def run_solver(
         except (AttributeError, NotImplementedError):
             log.warning(f"Task {id}: CPU affinity setting not supported")
     else:
-        log.info(f"Task {id}: CPU affinity setting disabled")
+        if not quiet: log.info(f"Task {id}: CPU affinity setting disabled")
     
     # Log process info
-    log.info(f"Task {id}: Starting solver process (PID: {os.getpid()})")
+    if not quiet: log.info(f"Task {id}: Starting solver process (PID: {os.getpid()})")
     if memory_limit:
-        log.info(f"Task {id}: Memory limit: {memory_limit} MB")
+        if not quiet: log.info(f"Task {id}: Memory limit: {memory_limit} MB")
     
     # Start resource monitoring for this process if requested
     if monitor_resources:
@@ -78,37 +78,29 @@ def run_solver(
         )
         monitor_thread.start()
     
-    # Prepare the SMT file with strategy if provided
+    # Build command using the CLI entry point
+    # Convert Path objects to strings
+    cmd = ["z3alpha", str(smt_file), "--z3-path", str(solver_path), "--tmp-dir", str(tmp_dir)]
+    
+    # Add strategy if provided
     if strategy is not None:
-        if not os.path.exists(tmp_dir):
-            os.makedirs(tmp_dir)
-        new_file_name = os.path.join(tmp_dir, f"tmp_{id}.smt2")
-        with open(new_file_name, "w") as tmp_file:
-            with open(smt_file, "r") as f:
-                for line in f:
-                    new_line = line
-                    if "check-sat" in line:
-                        new_line = f"(check-sat-using {strategy})\n"
-                    tmp_file.write(new_line)
-    else:
-        new_file_name = smt_file
+        cmd.extend(["--strategy", str(strategy)])
     
     # Run the solver
     time_before = time.time()
-    safe_path = shlex.quote(new_file_name)
-    cmd = f"{solver_path} {safe_path}"
+    
+    if not quiet: log.info(f"Task {id}: Running command: {' '.join(cmd)}")
     
     # Memory limit handling
     if memory_limit:
-        cmd = f"ulimit -v {memory_limit * 1024} && {cmd}"
-        shell = True
-        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=shell)
+        # Use ulimit to set memory limit
+        ulimit_cmd = f"ulimit -v {memory_limit * 1024} && {' '.join(shlex.quote(arg) for arg in cmd)}"
+        p = subprocess.Popen(ulimit_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     else:
-        shell = False
-        p = subprocess.Popen(shlex.split(cmd), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     
     # Log the actual process PID after starting
-    log.info(f"Task {id}: Solver subprocess PID: {p.pid}")
+    if not quiet: log.info(f"Task {id}: Solver subprocess PID: {p.pid}")
     
     try:
         out, err = p.communicate(timeout=timeout)
@@ -116,9 +108,9 @@ def run_solver(
         runtime = time_after - time_before
         
         lines = out.decode("utf-8").split("\n")
-        res = lines[0] if lines else "error"
+        res = lines[0] if lines and len(lines[0]) > 0 else "error"
         
-        log.info(f"Task {id}: Completed in {runtime:.2f}s with result: {res}")
+        if not quiet: log.info(f"Task {id}: Completed in {runtime:.2f}s with result: {res}")
         
         # Check for error
         if res.startswith("(error") or err:
@@ -128,7 +120,7 @@ def run_solver(
         return id, res, runtime, smt_file
     
     except subprocess.TimeoutExpired:
-        log.info(f"Task {id}: Timeout after {timeout}s")
+        if not quiet: log.info(f"Task {id}: Timeout after {timeout}s")
         p.terminate()
         try:
             p.wait(timeout=5)
@@ -136,8 +128,7 @@ def run_solver(
             p.kill()
         
         return id, "timeout", timeout, smt_file
-
-
+        
 def task_runner(args):
     """Enhanced wrapper function with resource monitoring"""
     smt_file, id, solver_path, timeout, strategy, tmp_dir, cpu_limit, memory_limit, monitor_resources = args
