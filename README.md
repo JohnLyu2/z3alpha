@@ -47,7 +47,7 @@ Here, we provide an example of synthesizing a tailored Z3 strategy for a toy ben
 The command for this toy example is as follows:
 
 ```bash
-python ./z3alpha/scripts/synthesize_full.py data/sample/configs/synthesis.json
+python -m z3alpha.synthesize data/sample/configs/synthesis.json
 ```
 
 After this command terminates, the synthesized strategy is saved to a result directory under `experiments/synthesis/`. The result directory is named as `out-<starting time:%Y-%m-%d_%H-%M-%S>`.
