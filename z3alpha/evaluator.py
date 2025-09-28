@@ -32,7 +32,9 @@ class SolverRunner(threading.Thread):
         if self.strategy is not None:
             if not os.path.exists(self.tmpDir):
                 os.makedirs(self.tmpDir)
-            self.new_file_name = os.path.join(self.tmpDir, f"tmp_{id}.smt2")
+            # Create a unique filename using process ID and timestamp
+            unique_id = f"{os.getpid()}_{int(time.time() * 1000)}_{id}"
+            self.new_file_name = os.path.join(self.tmpDir, f"tmp_{unique_id}.smt2")
             self.tmp_file = open(self.new_file_name, "w")
             with open(self.smt_file, "r") as f:
                 for line in f:

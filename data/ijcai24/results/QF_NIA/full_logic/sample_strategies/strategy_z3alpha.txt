@@ -1,0 +1,1 @@
+(if (> num-exprs 4405) (then solve-eqs propagate-values solve-eqs smt) (or-else (try-for (then card2bv ctx-simplify qfnra-nlsat) 2000) (or-else (try-for (then cofactor-term-ite (using-params nla2bv :nla2bv_max_bv_size 16) simplify qfbv) 2000) (then card2bv (using-params smt :random_seed 500)))))

@@ -4,6 +4,7 @@ import pathlib
 import sys
 import argparse
 import json
+from datetime import datetime
 
 sys.path.append("./")
 sys.path.append("../")
@@ -45,7 +46,8 @@ def main():
             test_solvers[solver] = (solver_path, None)
 
     test_lst = sorted(str(p.resolve()) for p in pathlib.Path(test_dir).rglob("*.smt2"))
-    res_csv = os.path.join(res_dir, "res.csv")
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    res_csv = os.path.join(res_dir, f"res_{timestamp}.csv")
     with open(res_csv, "w") as f:
         csvwriter = csv.writer(f)
         csvwriter.writerow(["solver", "solved", "par2", "par10"])  # write header
