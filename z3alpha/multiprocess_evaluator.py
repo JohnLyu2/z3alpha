@@ -44,7 +44,7 @@ def parse_strategy_file(strategy_path):
 
 def run_solver(
     solver_cmd, smt_file, timeout, task_id, 
-    cpu_limit=1, memory_limit=None, monitor_resources=False, quiet=False
+    cpu_limit=1, memory_limit=None, monitor_resources=False
 ):
     """Enhanced runner with resource monitoring - now using CLI entry point"""
     
@@ -53,9 +53,9 @@ def run_solver(
         set_cpu_affinity(process, task_id, cpu_limit, process.cpu_affinity())    
         
     # Log process info
-    if not quiet: log.info(f"Task {task_id}: Starting solver process (PID: {os.getpid()})")
+    log.debug(f"Task {task_id}: Starting solver process (PID: {os.getpid()})")
     if memory_limit:
-        if not quiet: log.info(f"Task {task_id}: Memory limit: {memory_limit} MB")
+        log.debug(f"Task {task_id}: Memory limit: {memory_limit} MB")
     
     # Start resource monitoring for this process if requested
     if monitor_resources:
