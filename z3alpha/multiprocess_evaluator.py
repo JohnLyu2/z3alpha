@@ -325,49 +325,6 @@ class SolverEvaluator:
         # Verify all results
         assert all(r is not None for r in results), "Missing results detected"
         return results
-
-    def testing(self, strat_str):
-        log.info("=" * 60)
-        log.info("STARTING SOLVER EVALUATION WITH RESOURCE MONITORING")
-        log.info("=" * 60)
-        
-        start_time = time.time()
-        results = self.getResLst(strat_str)
-        total_time = time.time() - start_time
-        
-        log.info(f"Evaluation completed in {total_time:.2f} seconds")
-        
-        if self.isWriteRes:
-            with open(self.resPath, "w") as f:
-                writer = csv.writer(f)
-                writer.writerow(["id", "path", "solved", "time", "result"])
-                for i in range(len(self.benchmarkLst)):
-                    writer.writerow([
-                        i,
-                        self.benchmarkLst[i],
-                        results[i][0],
-                        results[i][1],
-                        results[i][2],
-                    ])
-            log.info(f"Results written to: {self.resPath}")
-        
-        solved = solvedNum(results)
-        par2 = parN(results, 2, self.timeout)
-        par10 = parN(results, 10, self.timeout)
-        
-        # Performance summary
-        log.info("=" * 60)
-        log.info("EVALUATION RESULTS")
-        log.info("=" * 60)
-        log.info(f"Total benchmarks: {len(self.benchmarkLst)}")
-        log.info(f"Solved: {solved} ({solved/len(self.benchmarkLst)*100:.1f}%)")
-        log.info(f"PAR2 score: {par2:.2f}")
-        log.info(f"PAR10 score: {par10:.2f}")
-        log.info(f"Total execution time: {total_time:.2f}s")
-        log.info(f"Average time per benchmark: {total_time/len(self.benchmarkLst):.2f}s")
-        log.info("=" * 60)
-        
-        return (solved, par2, par10)
     
 if __name__ == "__main__":
     import argparse
