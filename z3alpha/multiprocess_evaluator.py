@@ -11,6 +11,7 @@ from pathlib import Path
 from z3alpha.resource_monitor import ResourceMonitor, log_resource_usage
 from z3alpha.utils import solvedNum, parN, setup_logging
 from z3alpha.resource_allocation import set_cpu_affinity, calculate_resource_allocation
+from z3alpha.resource_logging import log_execution_summary, log_batch_progress
 
 log = logging.getLogger(__name__)
 
@@ -223,7 +224,7 @@ class SolverEvaluator:
         
         # Validate and log allocation
         allocation.validate()
-        allocation.log_summary()
+        allocation.log_summary(len(benchmark_lst))
         
         # Store allocation results
         self.batchSize = allocation.batch_size
@@ -277,17 +278,23 @@ class SolverEvaluator:
         # Start resource monitoring
         self.resource_monitor.start_monitoring()
         
-        log.info(f"Starting parallel execution: {self.maxParallelTasks} processes")
-        log.info(f"Resource allocation per process: {self.cpusPerTask} CPUs, {self.memoryPerTask or 'unlimited'} MB")
-        
+        log_execution_summary(
+            num_benchmarks=size,
+            batch_size=self.batchSize,
+            cpus_per_task=self.cpusPerTask,
+            memory_per_task=self.memoryPerTask
+        )       
+         
         pool = multiprocessing.Pool(processes=self.maxParallelTasks)
         
         try:
             for i in range(0, size, self.batchSize):
                 batch_end = min(i + self.batchSize, size)
                 
-                log.info(f"Processing batch {i//self.batchSize + 1}: tasks {i} to {batch_end-1}")
-                
+                batch_num = i // self.batchSize + 1
+                batch_start_time = time.time()
+                log_batch_progress(batch_num, i, batch_end)  
+                              
                 batch_args = [
                     (
                         self.benchmarkLst[idx],  # smt_file
@@ -300,6 +307,9 @@ class SolverEvaluator:
                     )
                     for idx in range(i, batch_end)
                 ]
+                
+                batch_duration = time.time() - batch_start_time
+                log_batch_progress(batch_num, i, batch_end, batch_duration)
                 
                 batch_results = pool.map(task_runner, batch_args)
                 
