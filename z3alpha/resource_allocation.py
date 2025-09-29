@@ -1,6 +1,7 @@
 import os
 import logging
 import psutil
+from z3alpha.resource_logging import log_system_resources, SystemResources, TaskAllocation, log_task_allocation, log_validation_result
 
 log = logging.getLogger(__name__)
 
@@ -146,63 +147,38 @@ class ResourceAllocation:
         self.total_memory = total_memory
     
     def validate(self):
-        """Validate resource allocation doesn't exceed limits"""
-        log.info("=" * 50)
-        log.info("RESOURCE ALLOCATION VALIDATION")
-        log.info("=" * 50)
-        
-        # CPU validation
-        total_used_cpus = self.cpus_per_task * self.batch_size
-        cpu_efficiency = total_used_cpus / self.total_cpus
-        
-        if total_used_cpus > self.total_cpus:
-            log.error(f"❌ CPU VIOLATION: Using {total_used_cpus} but only {self.total_cpus} available")
-            raise ValueError("CPU allocation exceeds available CPUs")
-        
-        log.info(f"✅ CPU allocation: {total_used_cpus}/{self.total_cpus} (efficiency: {cpu_efficiency*100:.1f}%)")
-        
-        # Memory validation
+        """Validate using consolidated logging"""
+        cpu_ok = self.total_cpus_used <= self.total_cpus
+        memory_ok = True
         if self.memory_per_task and self.total_memory:
-            total_used_mem = self.memory_per_task * self.batch_size
-            mem_efficiency = total_used_mem / self.total_memory
-            
-            if total_used_mem > self.total_memory:
-                log.error(f"❌ MEMORY VIOLATION: Using {total_used_mem}MB but only {self.total_memory}MB available")
-                raise ValueError("Memory allocation exceeds available memory")
-            
-            log.info(f"✅ Memory allocation: {total_used_mem}/{self.total_memory}MB (efficiency: {mem_efficiency*100:.1f}%)")
-        elif self.memory_per_task:
-            log.info(f"✅ Memory per task: {self.memory_per_task}MB (total unknown)")
+            memory_ok = self.total_memory_used <= self.total_memory
         
-        log.info("=" * 50)
-    
-    def log_summary(self):
-        """Log resource allocation summary"""
-        log.info("=" * 60)
-        log.info("RESOURCE ALLOCATION SUMMARY")
-        log.info("=" * 60)
-        log.info(f"Parallel tasks: {self.batch_size}")
-        log.info(f"CPUs per task: {self.cpus_per_task}")
-        log.info(f"Total CPU usage: {self.cpus_per_task * self.batch_size}/{self.total_cpus}")
+        passed = cpu_ok and memory_ok
         
-        if self.memory_per_task:
-            log.info(f"Memory per task: {self.memory_per_task} MB")
-            if self.total_memory:
-                log.info(f"Total memory usage: {self.memory_per_task * self.batch_size}/{self.total_memory} MB")
+        log_validation_result(
+            passed=passed,
+            cpu_ok=cpu_ok,
+            memory_ok=memory_ok,
+            used_cpus=self.total_cpus_used,
+            total_cpus=self.total_cpus,
+            used_memory=self.total_memory_used,
+            total_memory=self.total_memory
+        )
+
+    def log_summary(self, num_benchmarks: int):
+        """Log summary using consolidated logging"""
+        allocation_info = TaskAllocation(
+            batch_size=self.batch_size,
+            cpus_per_task=self.cpus_per_task,
+            memory_per_task_mb=self.memory_per_task,
+            total_cpus_used=self.total_cpus_used,
+            total_memory_used_mb=self.total_memory_used,
+            limiting_factor=self.limiting_factor,
+            spare_cpus=self.spare_cpus,
+            spare_memory_mb=self.spare_memory
+        )
         
-        log.info(f"Limiting factor: {self.limiting_factor}")
-        
-        # Calculate spare resources
-        spare_cpus = self.total_cpus - (self.cpus_per_task * self.batch_size)
-        if spare_cpus > 0:
-            log.info(f"Spare CPUs: {spare_cpus}")
-        
-        if self.memory_per_task and self.total_memory:
-            spare_mem = self.total_memory - (self.memory_per_task * self.batch_size)
-            if spare_mem > 0:
-                log.info(f"Spare memory: {spare_mem} MB")
-        
-        log.info("=" * 60)
+        log_task_allocation(allocation_info, num_benchmarks)
 
 
 def calculate_resource_allocation(cpus_per_task, memory_per_task, num_benchmarks):
@@ -217,27 +193,34 @@ def calculate_resource_allocation(cpus_per_task, memory_per_task, num_benchmarks
     Returns:
         ResourceAllocation: Object containing allocation details
     """
-    # Get Slurm and system resources
+    # Gather all resource information
     slurm_cpus, slurm_mem, is_slurm = get_slurm_resources()
     total_cpus = os.cpu_count()
-    
-    # Determine available CPUs
     available_cpus = slurm_cpus if slurm_cpus else total_cpus
-    log.info(f"Available CPUs: {available_cpus} (system: {total_cpus})")
     
-    # Get total memory
+    # Get memory info
     total_memory = None
     if slurm_mem:
         total_memory = slurm_mem
-        log.info(f"Available memory: {total_memory} MB (Slurm)")
     else:
         try:
             total_memory = psutil.virtual_memory().total // (1024 * 1024)
-            log.info(f"Available memory: {total_memory} MB (system)")
-        except (ImportError, AttributeError):
-            log.warning("Could not detect system memory")
+        except:
+            pass
     
-    # Calculate constraints
+    # Log system resources in one consolidated call
+    system_resources = SystemResources(
+        total_cpus=total_cpus,
+        available_cpus=available_cpus,
+        total_memory_mb=total_memory if not slurm_mem else None,
+        available_memory_mb=total_memory,
+        slurm_cpus=slurm_cpus,
+        slurm_memory_mb=slurm_mem,
+        is_slurm=is_slurm
+    )
+    log_system_resources(system_resources)
+    
+    # Calculate constraints (no logging here)
     max_by_cpu = available_cpus // cpus_per_task
     max_by_benchmarks = num_benchmarks
     
