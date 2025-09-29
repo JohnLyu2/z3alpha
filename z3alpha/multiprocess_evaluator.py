@@ -232,42 +232,6 @@ class SolverEvaluator:
         self.cpusPerTask = allocation.cpus_per_task
         self.memoryPerTask = allocation.memory_per_task
 
-    def validate_resource_allocation(self):
-        """Validate resource allocation against system limits"""
-        log.info("=" * 50)
-        log.info("RESOURCE ALLOCATION VALIDATION")
-        log.info("=" * 50)
-        
-        # CPU validation
-        total_used_cpus = self.cpusPerTask * self.batchSize
-        if self.slurm_cpus:
-            if total_used_cpus > self.slurm_cpus:
-                log.error(f"❌ CPU VIOLATION: Using {total_used_cpus} but Slurm allocated {self.slurm_cpus}")
-                raise ValueError("CPU allocation exceeds Slurm limits")
-            else:
-                cpu_efficiency = total_used_cpus / self.slurm_cpus
-                log.info(f"✅ CPU allocation OK: {total_used_cpus}/{self.slurm_cpus} (efficiency: {cpu_efficiency*100:.1f}%)")
-        else:
-            cpu_efficiency = total_used_cpus / self.total_cpus
-            log.info(f"✅ CPU allocation: {total_used_cpus}/{self.total_cpus} system CPUs (efficiency: {cpu_efficiency*100:.1f}%)")
-        
-        # Memory validation
-        if self.memoryPerTask:
-            total_used_mem = self.memoryPerTask * self.batchSize
-            total_available_mem = self.slurm_mem or (psutil.virtual_memory().total // (1024 * 1024) if hasattr(psutil, 'virtual_memory') else None)
-            
-            if total_available_mem:
-                if total_used_mem > total_available_mem:
-                    log.error(f"❌ MEMORY VIOLATION: Using {total_used_mem}MB but only {total_available_mem}MB available")
-                    raise ValueError("Memory allocation exceeds available memory")
-                else:
-                    mem_efficiency = total_used_mem / total_available_mem
-                    log.info(f"✅ Memory allocation OK: {total_used_mem}/{total_available_mem}MB (efficiency: {mem_efficiency*100:.1f}%)")
-            else:
-                log.info(f"✅ Memory allocation: {total_used_mem}MB requested (cannot verify total)")
-        
-        log.info("=" * 50)
-
     def getBenchmarkSize(self):
         return len(self.benchmarkLst)
 
