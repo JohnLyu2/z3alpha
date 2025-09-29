@@ -9,7 +9,7 @@ import psutil
 import threading
 from pathlib import Path
 from z3alpha.resource_monitor import ResourceMonitor, log_resource_usage
-from z3alpha.utils import solvedNum, parN
+from z3alpha.utils import solvedNum, parN, setup_logging
 from z3alpha.resource_allocation import set_cpu_affinity, calculate_resource_allocation
 
 log = logging.getLogger(__name__)
@@ -68,7 +68,7 @@ def run_solver(
     
     # Build command 
     cmd = solver_cmd + [str(smt_file)]    
-    if not quiet: log.info(f"Task {task_id}: Running command: {' '.join(cmd)}")
+    log.info(f"Task {task_id}: Running command: {' '.join(cmd)}")
     
     # Run the solver
     time_before = time.time()
@@ -358,16 +358,9 @@ class SolverEvaluator:
         log.info("=" * 60)
         
         return (solved, par2, par10)
-
-
+    
 if __name__ == "__main__":
     import argparse
-        
-    # Set up logging
-    log.setLevel(logging.INFO)
-    log_handler = logging.StreamHandler()
-    log_handler.setFormatter(logging.Formatter("%(asctime)s:%(levelname)s:%(message)s"))
-    log.addHandler(log_handler)
     
     parser = argparse.ArgumentParser(description='Run SMT benchmarks')
     
@@ -388,8 +381,12 @@ if __name__ == "__main__":
     # Output configuration
     parser.add_argument('--output', type=str, default='results.csv', help='Output CSV file for results')
     parser.add_argument('--monitor-output', type=str, default=None, help='Directory for monitoring output files')
-
+    parser.add_argument("--log_level", type=str, default="info", choices=["debug", "info", "warning", "error"], help="Logging level")
+    
     args = parser.parse_args()
+
+    # Set up logging
+    setup_logging(args.log_level)
 
     # Build solver command
     solver_cmd = [args.solver] + args.solver_args
