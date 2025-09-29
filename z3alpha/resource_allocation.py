@@ -145,6 +145,10 @@ class ResourceAllocation:
         self.limiting_factor = limiting_factor
         self.total_cpus = total_cpus
         self.total_memory = total_memory
+        self.total_cpus_used = self.cpus_per_task * self.batch_size
+        self.total_memory_used = (self.memory_per_task * self.batch_size) if self.memory_per_task else None
+        self.spare_cpus = self.total_cpus - self.total_cpus_used
+        self.spare_memory = (self.total_memory - self.total_memory_used) if self.total_memory_used else None
     
     def validate(self):
         """Validate using consolidated logging"""
