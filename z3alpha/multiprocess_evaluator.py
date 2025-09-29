@@ -131,64 +131,6 @@ def task_runner(args):
         monitor_resources=monitor_resources
     )
 
-def get_slurm_resources():
-    """Get resources allocated by Slurm if running in a Slurm environment"""
-    cpus_per_task = os.environ.get('SLURM_CPUS_PER_TASK')
-    if cpus_per_task:
-        cpus_per_task = int(cpus_per_task)
-        log.info(f"Found SLURM_CPUS_PER_TASK: {cpus_per_task}")
-    else:
-        cpus_on_node = os.environ.get('SLURM_CPUS_ON_NODE')
-        if cpus_on_node:
-            cpus_per_task = int(cpus_on_node)
-            log.info(f"Found SLURM_CPUS_ON_NODE: {cpus_per_task}")
-        else:
-            cpus_per_task = None
-            log.info("No Slurm CPU allocation detected")
-    
-    # Get memory allocation
-    total_mem_mb = None
-    mem_per_node = os.environ.get('SLURM_MEM_PER_NODE')
-    if mem_per_node:
-        if mem_per_node.endswith('G'):
-            total_mem_mb = int(float(mem_per_node[:-1]) * 1024)
-        elif mem_per_node.endswith('M'):
-            total_mem_mb = int(mem_per_node[:-1])
-        elif mem_per_node.endswith('K'):
-            total_mem_mb = int(float(mem_per_node[:-1]) / 1024)
-        else:
-            total_mem_mb = int(mem_per_node)
-        log.info(f"Found SLURM_MEM_PER_NODE: {mem_per_node} -> {total_mem_mb} MB")
-    
-    if total_mem_mb is None:
-        mem_per_cpu = os.environ.get('SLURM_MEM_PER_CPU')
-        if mem_per_cpu and cpus_per_task:
-            if mem_per_cpu.endswith('G'):
-                mem_per_cpu_mb = int(float(mem_per_cpu[:-1]) * 1024)
-            elif mem_per_cpu.endswith('M'):
-                mem_per_cpu_mb = int(mem_per_cpu[:-1])
-            elif mem_per_cpu.endswith('K'):
-                mem_per_cpu_mb = int(float(mem_per_cpu[:-1]) / 1024)
-            else:
-                mem_per_cpu_mb = int(mem_per_cpu)
-            
-            total_mem_mb = mem_per_cpu_mb * cpus_per_task
-            log.info(f"Found SLURM_MEM_PER_CPU: {mem_per_cpu} -> {total_mem_mb} MB")
-    
-    is_slurm = False
-    if 'SLURM_JOB_ID' in os.environ:
-        is_slurm = True
-        log.info(f"Running in Slurm job {os.environ.get('SLURM_JOB_ID')}")
-        
-        if cpus_per_task is None:
-            cpus_per_task = os.cpu_count()
-            log.warning(f"Running in Slurm but could not detect CPU allocation, using system CPU count: {cpus_per_task}")
-    
-    log.info(f"Final Slurm resources: {cpus_per_task} CPUs, {total_mem_mb} MB memory")
-    
-    return cpus_per_task, total_mem_mb
-
-
 class SolverEvaluator:
     def __init__(
         self,
