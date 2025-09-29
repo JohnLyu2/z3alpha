@@ -10,9 +10,9 @@ import threading
 from pathlib import Path
 from z3alpha.resource_monitor import ResourceMonitor, log_resource_usage
 from z3alpha.utils import solvedNum, parN
+from z3alpha.resource_allocation import set_cpu_affinity, calculate_resource_allocation
 
 log = logging.getLogger(__name__)
-
 
 def run_solver(
     solver_path, smt_file, timeout, id, strategy=None, tmp_dir="/tmp/", 
@@ -20,48 +20,10 @@ def run_solver(
 ):
     """Enhanced runner with resource monitoring - now using CLI entry point"""
     
-    # Enhanced CPU affinity logging
     if cpu_limit > 0:
-        try:
-            process = psutil.Process()
-            initial_affinity = process.cpu_affinity()
-            if not quiet: log.info(f"Task {id}: Initial CPU affinity: {initial_affinity}")
-            
-            if cpu_limit >= len(initial_affinity):
-                if not quiet: log.debug(f"Process {id} using all assigned CPUs: {initial_affinity}")
-            elif len(initial_affinity) <= 1:
-                if not quiet: log.debug(f"Process {id} has only one CPU available, skipping affinity setting")
-            else:
-                # Distribute CPUs evenly across processes
-                start_idx = (id * cpu_limit) % len(initial_affinity)
-                end_idx = start_idx + cpu_limit
-                
-                # Handle wraparound if needed
-                if end_idx <= len(initial_affinity):
-                    new_affinity = initial_affinity[start_idx:end_idx]
-                else:
-                    # Wraparound case
-                    new_affinity = initial_affinity[start_idx:] + initial_affinity[:end_idx - len(initial_affinity)]
-                
-                try:
-                    process.cpu_affinity(new_affinity)
-                    actual_affinity = process.cpu_affinity()
-                    if not quiet: log.info(f"Task {id}: CPU affinity set to: {actual_affinity}")
-                    
-                    # Verify the setting worked
-                    if set(actual_affinity) == set(new_affinity):
-                        if not quiet: log.info(f"Task {id}: ✓ CPU affinity successfully set")
-                    else:
-                        log.warning(f"Task {id}: ✗ CPU affinity mismatch. Expected: {new_affinity}, Got: {actual_affinity}")
-                        
-                except (ValueError, OSError) as e:
-                    log.warning(f"Task {id}: Cannot set CPU affinity: {e}")
-                    
-        except (AttributeError, NotImplementedError):
-            log.warning(f"Task {id}: CPU affinity setting not supported")
-    else:
-        if not quiet: log.info(f"Task {id}: CPU affinity setting disabled")
-    
+        process = psutil.Process()
+        set_cpu_affinity(process, id, cpu_limit, process.cpu_affinity())    
+        
     # Log process info
     if not quiet: log.info(f"Task {id}: Starting solver process (PID: {os.getpid()})")
     if memory_limit:
@@ -228,119 +190,22 @@ class SolverEvaluator:
         # Initialize resource monitor
         self.resource_monitor = ResourceMonitor(monitor_output_dir)
         
-        # Get Slurm resources first if available
-        self.slurm_cpus, self.slurm_mem = get_slurm_resources()
-        log.info(f"Detected Slurm resources: {self.slurm_cpus} CPUs, {self.slurm_mem} MB memory")
+        # Calculate optimal resource allocation
+        allocation = calculate_resource_allocation(
+            cpus_per_task=cpus_per_task,
+            memory_per_task=memory_per_task,
+            num_benchmarks=self.getBenchmarkSize()
+        )
         
-        # Determine the total available CPUs
-        self.total_cpus = os.cpu_count()
-        log.info(f"Total system CPUs: {self.total_cpus}")
+        # Validate and log allocation
+        allocation.validate()
+        allocation.log_summary()
         
-        # Use Slurm resources if available, otherwise use system resources
-        if self.slurm_cpus is not None:
-            log.info(f"Using Slurm-allocated resources: {self.slurm_cpus} CPUs")
-            self.available_cpus = self.slurm_cpus
-        else:
-            self.available_cpus = self.total_cpus
-            
-        log.info(f"Will use {self.available_cpus} CPUs for calculation")
-        
-        # Calculate batch size based on available CPUs and CPUs per task
-        self.cpusPerTask = cpus_per_task
-        
-        # Calculate maximum possible parallel tasks based on CPU constraints
-        max_parallel_tasks_by_cpu = self.available_cpus // self.cpusPerTask
-        
-        if max_parallel_tasks_by_cpu == 0:
-            log.error(f"Cannot allocate {self.cpusPerTask} CPUs per task with only {self.available_cpus} available CPUs")
-            raise ValueError(f"Insufficient CPUs: need at least {self.cpusPerTask} CPUs but only have {self.available_cpus}")
-        
-        # Get total available memory
-        total_memory = None
-        if self.slurm_mem is not None:
-            total_memory = self.slurm_mem
-            log.info(f"Using Slurm-allocated memory: {total_memory} MB")
-        else:
-            try:
-                total_memory = psutil.virtual_memory().total // (1024 * 1024)
-                log.info(f"Total system memory: {total_memory} MB")
-            except (ImportError, AttributeError):
-                log.warning("Could not detect system memory")
-        
-        # Calculate memory constraints
-        max_parallel_tasks_by_memory = float('inf')  # No memory limit by default
-        
-        if memory_per_task is not None:
-            # User specified memory per task - this becomes a constraint
-            self.memoryPerTask = memory_per_task
-            if total_memory is not None:
-                max_parallel_tasks_by_memory = total_memory // self.memoryPerTask
-                log.info(f"Memory constraint: {total_memory} MB ÷ {self.memoryPerTask} MB/task = {max_parallel_tasks_by_memory} max parallel tasks")
-                
-                if max_parallel_tasks_by_memory == 0:
-                    log.error(f"Cannot allocate {self.memoryPerTask} MB per task with only {total_memory} MB available memory")
-                    raise ValueError(f"Insufficient memory: need at least {self.memoryPerTask} MB per task but only have {total_memory} MB total")
-            else:
-                log.warning(f"Using specified memory per task ({self.memoryPerTask} MB) but cannot verify against total memory")
-        else:
-            # Auto-calculate memory per task after determining batch size
-            self.memoryPerTask = None
-        
-        # Determine maximum parallel tasks considering BOTH CPU and memory constraints
-        num_benchmarks = self.getBenchmarkSize()
-        
-        # The actual limit is the minimum of: CPU limit, memory limit, and number of benchmarks
-        constraints = [max_parallel_tasks_by_cpu, num_benchmarks]
-        constraint_names = ["CPU", "benchmark count"]
-        
-        if max_parallel_tasks_by_memory != float('inf'):
-            constraints.append(max_parallel_tasks_by_memory)
-            constraint_names.append("memory")
-        
-        max_parallel_tasks = min(constraints)
-        limiting_factor_idx = constraints.index(max_parallel_tasks)
-        limiting_factor = constraint_names[limiting_factor_idx]
-        
-        log.info(f"Resource constraints:")
-        log.info(f"  - CPU constraint: {max_parallel_tasks_by_cpu} tasks ({self.available_cpus} CPUs ÷ {self.cpusPerTask} CPUs/task)")
-        if max_parallel_tasks_by_memory != float('inf'):
-            log.info(f"  - Memory constraint: {max_parallel_tasks_by_memory} tasks ({total_memory} MB ÷ {self.memoryPerTask} MB/task)")
-        log.info(f"  - Benchmark constraint: {num_benchmarks} tasks")
-        log.info(f"  - Limiting factor: {limiting_factor}")
-        log.info(f"  - Final batch size: {max_parallel_tasks} parallel tasks")
-        
-        self.batchSize = max_parallel_tasks
-        self.maxParallelTasks = self.batchSize
-        
-        # Auto-calculate memory per task if not specified
-        if self.memoryPerTask is None and total_memory is not None:
-            self.memoryPerTask = total_memory // self.batchSize
-            log.info(f"Auto-calculated memory per task: {self.memoryPerTask} MB ({total_memory} MB ÷ {self.batchSize} tasks)")
-        
-        # Calculate resource utilization
-        total_used_cpus = self.cpusPerTask * self.batchSize
-        spare_cpus = self.available_cpus - total_used_cpus
-        
-        if spare_cpus > 0:
-            reason = f"limited by {limiting_factor}"
-            log.info(f"Spare CPUs: {spare_cpus} ({reason})")
-        else:
-            log.info(f"Using all available CPUs efficiently: {total_used_cpus}/{self.available_cpus}")
-        
-        if self.memoryPerTask and total_memory:
-            total_used_memory = self.memoryPerTask * self.batchSize
-            spare_memory = total_memory - total_used_memory
-            if spare_memory > 0:
-                log.info(f"Spare memory: {spare_memory} MB")
-            else:
-                log.info(f"Using all available memory efficiently: {total_used_memory}/{total_memory} MB")
-        
-        # Validation
-        self.validate_resource_allocation()
-        
-        log.info(f"Initialized: {self.batchSize} parallel tasks, {self.cpusPerTask} CPUs per task")
-        if self.memoryPerTask:
-            log.info(f"Memory per task: {self.memoryPerTask} MB")
+        # Store allocation results
+        self.batchSize = allocation.batch_size
+        self.maxParallelTasks = allocation.batch_size
+        self.cpusPerTask = allocation.cpus_per_task
+        self.memoryPerTask = allocation.memory_per_task
 
     def validate_resource_allocation(self):
         """Validate resource allocation against system limits"""
