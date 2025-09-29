@@ -171,7 +171,7 @@ class MCTS_RUN:
             )
         self.root = root
         self.bestReward = -1
-        self.topStrategies = [None, None, None]
+        self.topStrategies = [None, None, None] # top 3 strategies
         self.topRewards = [-1, -1, -1]
 
     def _uct(self, childNode, parentNode, action):

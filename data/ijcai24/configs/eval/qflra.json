@@ -11,6 +11,6 @@
   "timeout": 10,
   "batch_size": 30,
   "res_dir": "experiments/evaluation/qflra",
-  "test_dir": "./benchmarks/QF_LRA/test",
+  "test_dir": "data/ijcai24/benchmarks/QF_LRA/test",
   "tmp_dir": "/tmp/"
 }

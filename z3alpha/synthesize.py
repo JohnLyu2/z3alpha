@@ -1,9 +1,14 @@
 import time
 import random
 import csv
-import os
-import pathlib
-from z3 import *
+from pathlib import Path
+import argparse
+import logging
+import json
+import datetime
+
+
+from z3 import parse_smt2_file, Probe, Goal
 
 from z3alpha.evaluator import SolverEvaluator
 from z3alpha.mcts import MCTS_RUN
@@ -18,12 +23,17 @@ VALUE_TYPE = "par10"  # hard code for now
 def createBenchmarkList(
     benchmark_directories, timeout, batchSize, tmp_folder, z3path, is_sorted
 ):
-    # benchmarkLst = [str(p) for p in sorted(list(pathlib.Path(benchmark_directory).rglob(f"*.smt2")))]
+    """
+    Create and optionally sort a list of SMT benchmark files for strategy synthesis.
+    This function performs two main tasks:
+    1. Discovers all .smt2 files from a specified list of directories
+    2. Optionally evaluates and sorts benchmarks by difficulty (PAR2 score)
+    """
     benchmarkLst = []
     for dir in benchmark_directories:
-        assert os.path.exists(dir)
+        assert Path(dir).exists()
         benchmarkLst += [
-            str(p) for p in sorted(list(pathlib.Path(dir).rglob(f"*.smt2")))
+            str(p) for p in sorted(list(Path(dir).rglob("*.smt2")))
         ]
     benchmarkLst.sort()
     if not is_sorted:
@@ -34,14 +44,18 @@ def createBenchmarkList(
     resLst = evaluator.getResLst(None)
     # par2 list from resLst; for each entry (solved, time) in resLst, if solved, return time; else return 2 * timeout
     par2Lst = [2 * timeout if not res[0] else res[1] for res in resLst]
-    # # sort benchmarkLst resLst into a ascending list by par2Lst
-    # benchmarkLst = [x for _, x in sorted(zip(par2Lst, benchmarkLst))]
     # sort benchmarkLst resLst into a descending list by par2Lst
     benchmarkLst = [x for _, x in sorted(zip(par2Lst, benchmarkLst), reverse=True)]
     return benchmarkLst
 
 
 def createProbeStats(bench_lst):
+    """
+    Create probe stats, i.e., #constants, #expressions, and size, for a list of SMT benchmarks.
+    This function returns:
+    - probeStats: a dictionary containing percentile values for #constants, #expressions, and size in the list
+    - probeRecords: a list of dictionaries containing the probe values for each benchmark
+    """
     numConstsLst = []
     numExprsLst = []
     sizeLst = []
@@ -123,7 +137,7 @@ def stage1_synthesize(config, stream_logger, log_folder):
         num_ln_strat, s1_res_dict, s1config["timeout"]
     )
     stream_logger.info(ln_select_logs)
-    lnStratCandidatsPath = os.path.join(log_folder, "ln_strat_candidates.csv")
+    lnStratCandidatsPath = Path(log_folder) / "ln_strat_candidates.csv"
     with open(lnStratCandidatsPath, "w") as f:
         # write one strategy per line as a csv file
         cwriter = csv.writer(f)
@@ -138,7 +152,7 @@ def stage1_synthesize(config, stream_logger, log_folder):
     endTime = time.time()
     s1time = endTime - startTime
     stream_logger.info(f"Stage 1 Time: {s1time:.0f}")
-    return selected_strat, s1time
+    return selected_strat
 
 def add_fail_if_undecided(strat):
     return f"(then {strat} fail-if-undecided)"
@@ -183,13 +197,13 @@ def cache4stage2(selected_strat, config, stream_logger, log_folder, benchlst=Non
         stream_logger.info(f"Stage 2 Caching: {i + 1}/{len(selected_strat)}")
         strat_res = s2evaluator.getResLst(strat)
         s2_res_lst.append((strat, strat_res))
-    ln_res_csv = os.path.join(log_folder, "ln_res.csv")
+    ln_res_csv = Path(log_folder) / "ln_res.csv"
     write_strat_res_to_csv(s2_res_lst, ln_res_csv, s2benchLst)
     stream_logger.info(f"Cached results saved to {ln_res_csv}")
     endTime = time.time()
     cacheTime = endTime - startTime
     stream_logger.info(f"Stage 2 Cache Time: {cacheTime:.0f}")
-    return s2_res_lst, s2benchLst, cacheTime
+    return s2_res_lst, s2benchLst
 
 
 def stage2_synthesize(results, bench_lst, config, stream_logger, log_folder):
@@ -224,7 +238,7 @@ def stage2_synthesize(results, bench_lst, config, stream_logger, log_folder):
     tmp_folder = config["temp_folder"]
 
     s2startTime = time.time()
-    stream_logger.info(f"S2 MCTS Simulations Start")
+    stream_logger.info("S2 MCTS Simulations Start")
 
     probeStats, probeRecords = createProbeStats(bench_lst)
     s2dict["probe_stats"] = probeStats
@@ -232,7 +246,7 @@ def stage2_synthesize(results, bench_lst, config, stream_logger, log_folder):
     s2config = config["s2config"]
     s2config["s2dict"] = s2dict
 
-    run2 = MCTS_RUN(
+    run_stage_two = MCTS_RUN(
         2,
         s2config,
         bench_lst,
@@ -242,17 +256,108 @@ def stage2_synthesize(results, bench_lst, config, stream_logger, log_folder):
         log_folder,
         tmp_folder=tmp_folder,
     )
-    run2.start()
-    best3_s2 = run2.getBest3Strats()
+    run_stage_two.start()
+    best_strategy = run_stage_two.getBestStrat()
 
-    for i in range(3):
-        order = i + 1
-        stratPath = os.path.join(log_folder, f"final_strategy{order}.txt")
-        with open(stratPath, "w") as f:
-            f.write(best3_s2[i])
-        stream_logger.info(f"No {order} final Strategy saved to: {stratPath}")
+    stratPath = Path(log_folder) / "synthesized_.txt"
+    with open(stratPath, "w") as f:
+        f.write(best_strategy)
+    stream_logger.info(f"Best final strategy saved to: {stratPath}")
 
     s2endTime = time.time()
     s2time = s2endTime - s2startTime
     stream_logger.info(f"Stage 2 MCTS Time: {s2time:.0f}")
-    return best3_s2, s2time
+    return best_strategy
+
+
+def parallel_synthesize(config, log_folder, stream_logger):
+    """
+    Perform parallel strategy synthesis.
+    
+    Args:
+        config: Configuration dictionary containing synthesis parameters
+        log_folder: Log folder path for output files
+        stream_logger: Logger for output messages
+    """
+    start_time = time.time()
+    
+    selected_strats = stage1_synthesize(config, stream_logger, log_folder)
+    
+    parallel_strat = parallel_linear_strategies(selected_strats)
+    
+    parallel_strat_path = Path(log_folder) / "synthesized_strategy.txt"
+    with open(parallel_strat_path, "w") as f:
+        f.write(parallel_strat)
+    stream_logger.info(f"Final parallel strategy saved to {parallel_strat_path}")
+
+    total_time = time.time() - start_time
+    stream_logger.info(f"Total synthesis time: {total_time:.0f} seconds")
+
+
+
+def branched_synthesize(config, log_folder, stream_logger):
+    """
+    Perform the complete synthesis for branched strategy [IJCAI 2024].
+    
+    Args:
+        config: Configuration dictionary containing synthesis parameters
+        log_folder: Log folder path for output files
+        stream_logger: Logger for output messages
+    
+    """
+    start_time = time.time()
+    
+    # Step 1: Initial strategy synthesis
+    selected_strats = stage1_synthesize(config, stream_logger, log_folder)
+    
+    # Step 2: Cache results for selected strategies
+    res_dict, bench_lst = cache4stage2(
+        selected_strats, config, stream_logger, log_folder
+    )
+    
+    # Step 3: Branched strategy synthesis
+    stage2_synthesize(
+        res_dict, bench_lst, config, stream_logger, log_folder
+    )
+
+    total_time = time.time() - start_time
+    stream_logger.info(f"Total synthesis time: {total_time:.0f} seconds")
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "json_config", type=str, help="The experiment configuration file in json"
+    )
+    parser.add_argument(
+        "--parallel", "-p",
+        action="store_true",
+        help="Synthesize parallel strategy instead of branched strategy"
+    )
+    args = parser.parse_args()
+    config = json.load(open(args.json_config, "r"))
+    
+    # Setup logger
+    stream_logger = logging.getLogger(__name__)
+    stream_logger.setLevel(logging.INFO)
+    log_handler = logging.StreamHandler()
+    log_handler.setFormatter(
+        logging.Formatter("%(asctime)s:%(levelname)s:%(message)s", "%Y-%m-%d %H:%M:%S")
+    )
+    stream_logger.addHandler(log_handler)
+    
+    # Use log_parent_dir if provided, otherwise use default experiments/synthesis
+    parent_dir = Path(config.get("parent_log_dir", "experiments/synthesis"))
+    log_folder = parent_dir / f"out-{datetime.datetime.now():%Y-%m-%d_%H-%M-%S}"
+    
+    assert not log_folder.exists()
+    log_folder.mkdir(parents=True)
+    
+
+    if args.parallel:
+        parallel_synthesize(config, log_folder, stream_logger)
+    else:
+        branched_synthesize(config, log_folder, stream_logger)
+
+
+if __name__ == "__main__":
+    main()
