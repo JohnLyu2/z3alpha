@@ -1,15 +1,12 @@
 import os
 import multiprocessing
 import subprocess
-import shlex
 import time
 import logging
-import csv
-import psutil
 import threading
 from pathlib import Path
 from z3alpha.resource_monitor import ResourceMonitor, log_resource_usage
-from z3alpha.utils import solvedNum, parN, setup_logging
+from z3alpha.utils import setup_logging
 from z3alpha.resource_allocation import set_cpu_affinity, calculate_resource_allocation
 from z3alpha.resource_logging import log_execution_summary, log_batch_progress
 
