@@ -14,96 +14,121 @@ from z3alpha.resource_allocation import set_cpu_affinity, calculate_resource_all
 
 log = logging.getLogger(__name__)
 
+
+def build_solver_command(solver_path, smt_file, additional_args=None):
+    cmd = [str(solver_path), str(smt_file)]
+    
+    if additional_args:
+        cmd.extend(str(arg) for arg in additional_args)
+    
+    return cmd
+
+def parse_strategy_file(strategy_path):
+    if not strategy_path:
+        return None
+    
+    try:
+        with open(strategy_path, 'r') as f:
+            strategy = f.read().strip()
+        
+        if not strategy:
+            raise ValueError(f"Strategy file {strategy_path} is empty")
+        
+        log.info(f"Strategy loaded from {strategy_path}: {strategy[:100]}{'...' if len(strategy) > 100 else ''}")
+        return strategy
+        
+    except FileNotFoundError:
+        raise FileNotFoundError(f"Strategy file not found: {strategy_path}")
+    except Exception as e:
+        raise Exception(f"Error reading strategy file {strategy_path}: {e}")
+
 def run_solver(
-    solver_path, smt_file, timeout, id, strategy=None, tmp_dir="/tmp/", 
+    solver_cmd, smt_file, timeout, task_id, 
     cpu_limit=1, memory_limit=None, monitor_resources=False, quiet=False
 ):
     """Enhanced runner with resource monitoring - now using CLI entry point"""
     
     if cpu_limit > 0:
         process = psutil.Process()
-        set_cpu_affinity(process, id, cpu_limit, process.cpu_affinity())    
+        set_cpu_affinity(process, task_id, cpu_limit, process.cpu_affinity())    
         
     # Log process info
-    if not quiet: log.info(f"Task {id}: Starting solver process (PID: {os.getpid()})")
+    if not quiet: log.info(f"Task {task_id}: Starting solver process (PID: {os.getpid()})")
     if memory_limit:
-        if not quiet: log.info(f"Task {id}: Memory limit: {memory_limit} MB")
+        if not quiet: log.info(f"Task {task_id}: Memory limit: {memory_limit} MB")
     
     # Start resource monitoring for this process if requested
     if monitor_resources:
         monitor_thread = threading.Thread(
             target=log_resource_usage, 
-            args=(os.getpid(), id, min(timeout, 60)),  # Monitor for up to 60 seconds
+            args=(os.getpid(), task_id, min(timeout, 60)),  # Monitor for up to 60 seconds
             daemon=True
         )
         monitor_thread.start()
     
-    # Build command using the CLI entry point
-    # Convert Path objects to strings
-    cmd = ["z3alpha", str(smt_file), "--z3-path", str(solver_path), "--tmp-dir", str(tmp_dir)]
-    
-    # Add strategy if provided
-    if strategy is not None:
-        cmd.extend(["--strategy", str(strategy)])
+    # Build command 
+    cmd = solver_cmd + [str(smt_file)]    
+    if not quiet: log.info(f"Task {task_id}: Running command: {' '.join(cmd)}")
     
     # Run the solver
     time_before = time.time()
     
-    if not quiet: log.info(f"Task {id}: Running command: {' '.join(cmd)}")
+    # Build full command
+    cmd = solver_cmd + [str(smt_file)]
+    log.info(f"Task {task_id}: Running: {' '.join(cmd)}")
     
-    # Memory limit handling
-    if memory_limit:
-        # Use ulimit to set memory limit
-        ulimit_cmd = f"ulimit -v {memory_limit * 1024} && {' '.join(shlex.quote(arg) for arg in cmd)}"
-        p = subprocess.Popen(ulimit_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-    else:
-        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    
-    # Log the actual process PID after starting
-    if not quiet: log.info(f"Task {id}: Solver subprocess PID: {p.pid}")
+    # Execute solver
+    time_before = time.time()
     
     try:
+        if memory_limit:
+            # Use ulimit for memory constraint
+            ulimit_cmd = f"ulimit -v {memory_limit * 1024} && {' '.join(cmd)}"
+            p = subprocess.Popen(ulimit_cmd, stdout=subprocess.PIPE, 
+                               stderr=subprocess.PIPE, shell=True)
+        else:
+            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        
+        log.debug(f"Task {task_id}: Subprocess PID: {p.pid}")
+        
+        # Wait for completion
         out, err = p.communicate(timeout=timeout)
-        time_after = time.time()
-        runtime = time_after - time_before
+        runtime = time.time() - time_before
         
+        # Parse result
         lines = out.decode("utf-8").split("\n")
-        res = lines[0] if lines and len(lines[0]) > 0 else "error"
+        result = lines[0] if lines and len(lines[0]) > 0 else "error"
         
-        if not quiet: log.info(f"Task {id}: Completed in {runtime:.2f}s with result: {res}")
+        log.info(f"Task {task_id}: Completed in {runtime:.2f}s → {result}")
         
-        # Check for error
-        if res.startswith("(error") or err:
-            log.warning(f"Task {id}: Error - {res}, stderr: {err.decode('utf-8')}")
-            return id, "error", runtime, smt_file
+        # Check for errors
+        if result.startswith("(error") or err:
+            log.warning(f"Task {task_id}: Error - {result}, stderr: {err.decode('utf-8')}")
+            return task_id, "error", runtime, smt_file
         
-        return id, res, runtime, smt_file
+        return task_id, result, runtime, smt_file
     
     except subprocess.TimeoutExpired:
-        if not quiet: log.info(f"Task {id}: Timeout after {timeout}s")
+        log.info(f"Task {task_id}: Timeout after {timeout}s")
         p.terminate()
         try:
             p.wait(timeout=5)
         except subprocess.TimeoutExpired:
             p.kill()
-        
-        return id, "timeout", timeout, smt_file
+        return task_id, "timeout", timeout, smt_file
         
 def task_runner(args):
-    """Enhanced wrapper function with resource monitoring"""
-    smt_file, id, solver_path, timeout, strategy, tmp_dir, cpu_limit, memory_limit, monitor_resources = args
+    """Wrapper for parallel execution"""
+    smt_file, task_id, solver_cmd, timeout, cpu_limit, memory_limit, monitor_resources = args
     return run_solver(
-        solver_path=solver_path,
+        solver_cmd=solver_cmd,
         smt_file=smt_file,
         timeout=timeout,
-        id=id,
-        strategy=strategy,
-        tmp_dir=tmp_dir,
+        task_id=task_id,
         cpu_limit=cpu_limit,
         memory_limit=memory_limit,
         monitor_resources=monitor_resources
     )
-
 
 def get_slurm_resources():
     """Get resources allocated by Slurm if running in a Slurm environment"""
@@ -166,27 +191,26 @@ def get_slurm_resources():
 class SolverEvaluator:
     def __init__(
         self,
-        solver_path,
+        solver_cmd,
         benchmark_lst,
         timeout,
         cpus_per_task,
-        tmp_dir="/tmp/",
         is_write_res=False,
         res_path=None,
         memory_per_task=None,
         disable_cpu_affinity=False,
         monitor_output_dir=None
     ):
-        self.solverPath = solver_path
+        self.solverCmd = solver_cmd
         self.benchmarkLst = benchmark_lst
-        assert self.getBenchmarkSize() > 0
         self.timeout = timeout
-        assert self.timeout > 0
-        self.tmpDir = tmp_dir
         self.isWriteRes = is_write_res
         self.resPath = res_path
         self.disable_cpu_affinity = disable_cpu_affinity
         
+        assert self.getBenchmarkSize() > 0
+        assert self.timeout > 0
+
         # Initialize resource monitor
         self.resource_monitor = ResourceMonitor(monitor_output_dir)
         
@@ -246,7 +270,7 @@ class SolverEvaluator:
     def getBenchmarkSize(self):
         return len(self.benchmarkLst)
 
-    def getResLst(self, strat_str):
+    def getResLst(self):
         size = self.getBenchmarkSize()
         results = [None] * size
         
@@ -265,25 +289,23 @@ class SolverEvaluator:
                 log.info(f"Processing batch {i//self.batchSize + 1}: tasks {i} to {batch_end-1}")
                 
                 batch_args = [
-                    (self.benchmarkLst[idx], idx, self.solverPath, self.timeout, strat_str, 
-                     self.tmpDir, 0 if self.disable_cpu_affinity else self.cpusPerTask, 
-                     self.memoryPerTask, True)
+                    (
+                        self.benchmarkLst[idx],  # smt_file
+                        idx,                      # task_id
+                        self.solverCmd,          # solver_cmd (list)
+                        self.timeout,            # timeout
+                        0 if self.disable_cpu_affinity else self.cpusPerTask,  # cpu_limit
+                        self.memoryPerTask,      # memory_limit
+                        True                     # monitor_resources
+                    )
                     for idx in range(i, batch_end)
                 ]
                 
-                batch_start_time = time.time()
                 batch_results = pool.map(task_runner, batch_args)
-                batch_duration = time.time() - batch_start_time
                 
-                log.info(f"Batch {i//self.batchSize + 1} completed in {batch_duration:.2f}s")
-                
-                for id, res, time_task, path in batch_results:
-                    solved = True if (res == "sat" or res == "unsat") else False
-                    results[id] = (solved, time_task, res)
-                    
-                # Brief pause between batches to reduce system load
-                if batch_end < size:
-                    time.sleep(1)
+                for task_id, res, time_task, path in batch_results:
+                    solved = (res == "sat" or res == "unsat")
+                    results[task_id] = (solved, time_task, res)
         
         finally:
             pool.close()
@@ -291,9 +313,7 @@ class SolverEvaluator:
             self.resource_monitor.stop_monitoring()
         
         # Verify all results
-        for i in range(size):
-            assert results[i] is not None, f"Missing result for task {i}"
-            
+        assert all(r is not None for r in results), "Missing results detected"
         return results
 
     def testing(self, strat_str):
@@ -342,8 +362,7 @@ class SolverEvaluator:
 
 if __name__ == "__main__":
     import argparse
-    import sys
-    
+        
     # Set up logging
     log.setLevel(logging.INFO)
     log_handler = logging.StreamHandler()
@@ -351,71 +370,57 @@ if __name__ == "__main__":
     log.addHandler(log_handler)
     
     parser = argparse.ArgumentParser(description='Run SMT benchmarks')
-    parser.add_argument('--solver', type=str, default='z3', help='Path to SMT solver executable')
+    
+    # Solver configuration
+    parser.add_argument('--solver', type=str, default='z3', help='Solver executable name or path')
+    parser.add_argument('--solver-args', nargs='*', default=[], help='Additional solver arguments (e.g., --solver-args --option1 value1 --option2)')
+    parser.add_argument('--strategy-path', type=str, default=None, help='Path to Z3 solving strategy file (will be added as --strategy <content>)')
+
+    # Benchmark configuration
     parser.add_argument('--timeout', type=int, default=600, help='Timeout in seconds for each benchmark')
-    parser.add_argument('--cpus-per-task', type=int, required=True, help='Number of CPUs to use per process')
     parser.add_argument('--benchmark-dir', type=str, required=True, help='Directory containing SMT2 benchmark files')
-    parser.add_argument('--output', type=str, default='results.csv', help='Output CSV file for results')
-    parser.add_argument('--strategy-path', type=str, default=None, help='Path to Z3 solving strategy file')
+    
+    # Resource configuration
+    parser.add_argument('--cpus-per-task', type=int, required=True, help='Number of CPUs to use per process')
     parser.add_argument('--memory-per-task', type=int, default=None, help='Memory limit per task in MB (auto-calculated if not specified)')
     parser.add_argument('--disable-cpu-affinity', action='store_true', help='Disable CPU affinity setting')
+
+    # Output configuration
+    parser.add_argument('--output', type=str, default='results.csv', help='Output CSV file for results')
     parser.add_argument('--monitor-output', type=str, default=None, help='Directory for monitoring output files')
 
     args = parser.parse_args()
 
-    # Determine strategy to use
-    strategy = None
+    # Build solver command
+    solver_cmd = [args.solver] + args.solver_args
+    
+    # Add strategy if provided
+    if args.strategy_path:
+        strategy = parse_strategy_file(args.strategy_path)
+        solver_cmd.extend(["--strategy", strategy])
 
-    try:
-        with open(args.strategy_path, 'r') as f:
-            strategy = f.read().strip()
-        
-        if not strategy:
-            raise ValueError(f"Strategy file {args.strategy_path} is empty")
-        
-        log.info(f"Strategy loaded from {args.strategy_path}: {strategy[:100]}{'...' if len(strategy) > 100 else ''}")
-    except FileNotFoundError:
-        raise FileNotFoundError(f"Strategy file not found: {args.strategy_path}")
-    except Exception as e:
-        raise Exception(f"Error reading strategy file {args.strategy_path}: {e}")
-
-    # Find benchmark files recursively using Path
+    print(f"Solver command: {' '.join(solver_cmd)}")
+    
+    # Find benchmarks
     benchmark_dir = Path(args.benchmark_dir)
-    benchmark_lst = list(benchmark_dir.rglob("*.smt2"))
+    benchmarks = list(benchmark_dir.rglob("*.smt2"))
     
-    if not benchmark_lst:
-        print(f"Error: No .smt2 files found in {args.benchmark_dir} or its subdirectories")
-        sys.exit(1)
+    if not benchmarks:
+        print(f"Error: No .smt2 files found in {args.benchmark_dir}")
+        exit(1)
     
-    print(f"Found {len(benchmark_lst)} benchmark files in {args.benchmark_dir}")
+    print(f"Found {len(benchmarks)} benchmarks")
     
-    # Create evaluator and run
-    try:
-        evaluator = SolverEvaluator(
-            solver_path=args.solver,
-            benchmark_lst=benchmark_lst,
-            timeout=args.timeout,
-            cpus_per_task=args.cpus_per_task,
-            tmp_dir="/tmp/",
-            is_write_res=True,
-            res_path=args.output,
-            memory_per_task=args.memory_per_task,
-            disable_cpu_affinity=args.disable_cpu_affinity,
-            monitor_output_dir=args.monitor_output
-        )
-        
-        print(f"Running benchmarks with {evaluator.batchSize} parallel processes...")
-        results = evaluator.testing(strategy)
-        
-        print(f"\nResults:")
-        print(f"Solved: {results[0]}/{len(benchmark_lst)} ({results[0]/len(benchmark_lst)*100:.2f}%)")
-        print(f"PAR2 score: {results[1]:.2f}")
-        print(f"PAR10 score: {results[2]:.2f}")
-        print(f"Results written to: {args.output}")
-        
-        if args.monitor_output:
-            print(f"Monitoring data saved to: {args.monitor_output}")
-        
-    except Exception as e:
-        print(f"Error: {e}")
-        sys.exit(1)
+    # Run evaluation
+    evaluator = SolverEvaluator(
+        solver_cmd=solver_cmd,
+        benchmark_lst=benchmarks,
+        timeout=args.timeout,
+        cpus_per_task=args.cpus_per_task,
+        memory_per_task=args.memory_per_task,
+        disable_cpu_affinity=args.disable_cpu_affinity,
+        monitor_output_dir=args.monitor_output
+    )
+    
+    results = evaluator.getResLst()
+    print(f"Completed: {sum(1 for r in results if r[0])} solved")
