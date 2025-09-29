@@ -3,6 +3,7 @@ import multiprocessing
 import subprocess
 import time
 import logging
+import psutil
 import threading
 from pathlib import Path
 from z3alpha.resource_monitor import ResourceMonitor, log_resource_usage
