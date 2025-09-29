@@ -6,6 +6,7 @@ import argparse
 import logging
 import json
 import datetime
+import os
 
 
 from z3 import parse_smt2_file, Probe, Goal
