@@ -22,9 +22,10 @@ pip install z3-solver
 ```
 
 2. **Install Z3alpha**
-   ```bash
-   pip3 install -e .
-   ```
+
+```bash
+pip3 install -e .
+```
 
 ## A Synthesis Example
 
