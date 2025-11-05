@@ -50,6 +50,7 @@ def write_strat_res_to_csv(res_lst, csv_path, bench_lst):
                 if res_tuple[0]:
                     write_lst.append(res_tuple[1])
                 else:
+                    # negative values if the instance is not saved
                     write_lst.append(-res_tuple[1])
             writer.writerow([strat] + write_lst)
 
