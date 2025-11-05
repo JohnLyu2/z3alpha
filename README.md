@@ -1,7 +1,6 @@
 **Z3alpha** synthesizes efficient Z3 strategies tailored to your problem set! See our IJCAI'24 paper [Layered and Staged Monte Carlo Tree Search for SMT Strategy Synthesis](https://arxiv.org/abs/2401.17159) for technical details. 
 
-Our tool is built on top of the [Z3 SMT solver](https://github.com/Z3Prover/z3). 
-
+Our tool is built on top of the [Z3 SMT solver](https://github.com/Z3Prover/z3).
 
 ## Setup
 
@@ -14,35 +13,23 @@ source venv/bin/activate  # Unix/macOS
 
 Install Z3alpha and its dependencies:
 
-1. **Z3 Command-line Tool**
-   - Install Z3 from the [Z3 GitHub repository](https://github.com/Z3Prover/z3)
-   - Verify installation by running:
-     ```bash
-     z3 -h
-     ```
-   - If you don't see the help message, add Z3 to your system's PATH
+1. **Z3 Solver**
 
-2. **Z3 Python Bindings**
-   - Install via pip:
-     ```bash
-     pip install z3-solver
-     ```
-   - Verify installation:
-     ```python
-     try:
-         import z3
-     except ImportError:
-         raise Exception("Z3 Python binding not found.")
-     ```
+Z3alpha depends both on the Z3 binary and the Z3 Python bindings. The easiest way to install both is to run:
 
-3. **Install Z3alpha**
+```bash
+pip install z3-solver
+```
+
+2. **Install Z3alpha**
    ```bash
-   pip install -e .
+   pip3 install -e .
    ```
 
 ## A Synthesis Example
 
-Here, we provide an example of synthesizing a tailored Z3 strategy for a toy benchmark set `data/sample/benchmarks/`. The `z3alpha/scripts/synthesize_full.py` script performs the staged MCTS, which takes a configuration JSON file as an argument. The configuration file specifies settings such as the MCTS simulation number, training datasets, timeouts, etc. The configuration file for this toy example is provided at `data/sample/configs/synthesis.json`. 
+Here, we provide an example of synthesizing a tailored Z3 strategy for a toy benchmark set `data/sample/benchmarks/`. 
+
 
 The command for this toy example is as follows:
 
@@ -50,7 +37,9 @@ The command for this toy example is as follows:
 python -m z3alpha.synthesize data/sample/configs/synthesis.json
 ```
 
-After this command terminates, the synthesized strategy is saved to a result directory under `experiments/synthesis/`. The result directory is named as `out-<starting time:%Y-%m-%d_%H-%M-%S>`.
+The configuration file specifies settings such as the number of MCTS simulations, training datasets, and timeouts. A sample configuration is provided at `data/sample/configs/synthesis.json`.
+
+After this command finishes, the synthesized strategy is saved under `experiments/synthesis/` in a directory named `out-<starting time:%Y-%m-%d_%H-%M-%S>`.
 
 ## IJCAI-24 Reproduction
 
@@ -64,10 +53,11 @@ The scripts in `data/ijcai24/benchmarks/download_scripts/` will download all ben
 
 ### Z3alpha Strategy Synthesis
 
-We provide sample configuration JSON files for the experiments in `data/ijcai24/configs/synthesis/`. When under the repository root, run the `z3alpha/scripts/synthesize_full.py` script with the corresponding configuration file to start the synthesis. For example, to synthesize a strategy for *leipzig*, run:
+We provide sample configuration JSON files for the experiments in `data/ijcai24/configs/synthesis/`. When under the repository root, run the following command with the corresponding configuration file. 
+For example, to synthesize a strategy for *leipzig*, run:
 
 ```bash
-python ./z3alpha/scripts/synthesize_full.py data/ijcai24/configs/synthesis/leipzig.json
+python -m z3alpha.synthesize data/ijcai24/configs/synthesis/leipzig.json
 ```
 
 Before running the script, ensure to adjust the JSON configuration file to match your computer's specifications.
