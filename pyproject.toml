@@ -10,6 +10,7 @@ readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
     "z3-solver",
+    "psutil",
 ]
 authors = [
     { name = "John Lu", email = "z52lu@uwaterloo.ca" },
@@ -26,6 +27,7 @@ classifiers = [
 z3alpha-synthesize-full = "z3alpha.scripts.synthesize_full:main"
 z3alpha-synthesize-s1 = "z3alpha.scripts.synthesize_s1:main"
 z3alpha-synthesize-s2 = "z3alpha.scripts.synthesize_s2:main"
+z3alpha = "z3alpha.strat_runner:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["z3alpha"]
