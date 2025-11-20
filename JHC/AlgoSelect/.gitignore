@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Large data directories
+benchmarks/
+data/
+results/
+
+# External dependencies (root level only)
+/MachSMT/
+
+# SMT-LIB Catalog - ignore large database but keep code
+SMT-LIB-Catalog-2025/database/
+SMT-LIB-Catalog-2025/data/
+
+# Temporary files
+*.log
+*.tmp
+tmp/
+output/
+lib/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Compiled files
+*.o
+*.a
+*.exe

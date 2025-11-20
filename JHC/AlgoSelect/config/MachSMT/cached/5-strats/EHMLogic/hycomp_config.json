@@ -1,0 +1,17 @@
+{
+  "paths": {
+    "tmp_dir": "/tmp/",
+    "benchmark_dir": "/home/jchen688/projects/def-vganesh/jchen688/z3alpha/benchmarks/fastsmt_exp/qf_nra/hycomp/test",
+    "output_dir": "JHC/experiments",
+    "training_file": "JHC/data/5-strats/hycomp/out-2025-05-09_11-46-06/ln_res.csv",
+    "mapping_file": "JHC/data/5-strats/hycomp/out-2025-05-09_11-46-06/strat_mapping.csv",
+    "default_strat": "JHC/data/5-strats/hycomp/out-2025-05-09_11-46-06/final_strategy1.txt", 
+    "test_res_file": "JHC/data/5-strats/hycomp/evaluation_results_20250510_003331/benchmark_results.csv"
+  },
+  "settings": {
+    "timeout": 10,
+    "num_benchmarks": -1,
+    "run_z3alpha_strat": false, 
+    "selector": "EHMLogic"
+  }
+}

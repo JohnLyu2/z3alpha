@@ -1,0 +1,105 @@
+<form class="pure-form pure-form-stacked" id="search-bar">
+    <fieldset>
+        <div class="pure-g">
+          <div class="pure-u-1-8" style="position:relative">
+            <label for="input-logic">Logic
+            {% if logicData %}
+            <span class="clear-search-input"
+                  hx-post="/clear_input/logic"
+                  hx-trigger="click"
+                  hx-target="#search-bar">❌️</span>
+            {% endif %}
+            </label>
+            <input type="search" name="search-logic" class="pure-input-1" id="input-logic"
+                   {% if logicData %}
+                   value="{{ logicData.logic }}"
+                   readonly="readonly"
+                   {% else %}
+                   hx-post="/search_logic"
+                   hx-trigger="input changed delay:250ms, search, click"
+                   hx-target="#logic-search-results"
+                   onblur="clearDiv('logic-search-results')"
+                   {% endif %}
+                   />
+            {% if logicData %}
+            <input type="hidden" id="logic-id" name="logic-id" value="{{ logicData.id }}">
+            {% endif %}
+            <div id="logic-search-results"
+               class="pure-menu pure-menu-scrollable search-suggestions">
+            </div>
+          </div>
+
+          <div class="pure-u-3-8" id="pick-family" style="position:relative">
+            <div class="pure-g">
+              <div class="pure-u-1-4">
+                <label for="data-store">Date</label>
+                <input type="text" readonly="readonly" name="date-store" class="pure-input-1" id="date-store"
+                  {% if familyData %}
+                  value="{{ familyData.date or ""}}"
+                  {% endif %}
+                />
+              </div>
+              <div class="pure-u-3-4">
+                <label for="input-family">Family
+                {% if familyData %}
+                <span class="clear-search-input"
+                      hx-post="/clear_input/family"
+                      hx-trigger="click"
+                      hx-target="#search-bar">❌️</span>
+                {% endif %}
+                </label>
+                <input type="search" name="search-family" class="pure-input-1" id="input-family"
+                       {% if familyData %}
+                       value="{{ familyData.name }}"
+                       readonly="readonly"
+                       {% else %}
+                       hx-post="/search_family"
+                       hx-trigger="input changed delay:250ms, search, click"
+                       hx-target="#family-search-results"
+                       onblur="clearDiv('family-search-results')"
+                       {% endif %}
+                />
+                {% if familyData %}
+                <input type="hidden" id="family-id" name="family-id" value="{{ familyData.id }}">
+                {% endif %}
+              </div>
+            </div>
+            <div id="family-search-results"
+             class="pure-menu pure-menu-scrollable search-suggestions"></div>
+          </div>
+
+          <div class="pure-u-1-2" style="position:relative">
+            <label for="input-benchmark">Benchmark
+            {% if benchmarkData %}
+                <span class="clear-search-input"
+                      hx-post="/clear_input/benchmark"
+                      hx-trigger="click"
+                      hx-target="#search-bar">❌️</span>
+            {% endif %}
+            </label>
+            <input type="search" name="search-benchmark" class="pure-input-1" id="input-benchmark"
+                   {% if benchmarkData %}
+                   value="{{ benchmarkData.name }}"
+                   readonly="readonly"
+                   {% else %}
+                   hx-post="/search_benchmark"
+                   hx-trigger="input changed delay:250ms, search, click"
+                   hx-target="#benchmark-search-results"
+                   onblur="clearDiv('benchmark-search-results')"
+                   {% endif %}
+            />
+            {% if benchmarkData %}
+            <input type="hidden" id="benchmark-id" name="benchmark-id" value="{{ benchmarkData.id }}">
+            <div hx-trigger="load"
+                 hx-target="#benchmark-body"
+                 hx-get="/benchmark/dynamic/{{ benchmarkData.id }}"
+                 hx-push-url="/benchmark/{{ benchmarkData.id }}"
+            >
+            {% endif %}
+            <div id="benchmark-search-results"
+             class="pure-u-1-2 pure-menu pure-menu-scrollable search-suggestions"></div>
+          </div>
+
+        </div>
+    </fieldset>
+</form>

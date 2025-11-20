@@ -1,0 +1,17 @@
+SELECT 
+    b.name AS benchmark_name,
+    r.status,
+    r.wallclockTime,
+    r.cpuTime,
+    e.name AS evaluation_name,
+    e.date AS evaluation_date
+FROM Results r
+JOIN SolverVariants sv ON r.solverVariant = sv.id
+JOIN Solvers s ON sv.solver = s.id
+JOIN Queries q ON r.query = q.id
+JOIN Benchmarks b ON q.benchmark = b.id
+JOIN Evaluations e ON r.evaluation = e.id
+WHERE s.name = 'Z3-Noodler' 
+AND b.logic = 'QF_SLIA'
+ORDER BY r.wallclockTime ASC
+LIMIT 10;

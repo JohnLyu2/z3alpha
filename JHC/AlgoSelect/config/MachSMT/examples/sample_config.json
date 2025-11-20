@@ -1,0 +1,19 @@
+{
+  "paths": {
+    "tmp_dir": "/tmp/",
+    "benchmark_dir": "data/sample/benchmarks",
+    "output_dir": "JHC/experiments",
+    "training_file": "JHC/sample/out-2025-05-15_00-33-10/ln_res.csv",
+    "mapping_file": "JHC/sample/out-2025-05-15_00-33-10/strat_mapping.csv",
+    "default_strat": "JHC/sample/out-2025-05-15_00-33-10/final_strategy1.txt", 
+    "test_res_file": ""
+  },
+  "settings": {
+    "timeout": 10,
+    "num_benchmarks": -1,
+    "run_z3alpha_strat": false, 
+    "selector": "EHMLogic", 
+    "batch_size": 5, 
+    "description": true
+  }
+}

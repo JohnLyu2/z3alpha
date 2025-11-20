@@ -1,0 +1,17 @@
+{
+    "paths": {
+      "tmp_dir": "/tmp/",
+      "benchmark_dir": "/home/jchen688/projects/def-vganesh/jchen688/z3alpha/benchmarks/qfnia/20170427-VeryMax/CInteger/test",
+      "output_dir": "JHC/experiments",
+      "training_file": "JHC/data/5-strats/VeryMax-CInteger/out-2025-05-11_00-36-40/ln_res.csv",
+      "mapping_file": "JHC/data/5-strats/VeryMax-CInteger/out-2025-05-11_00-36-40/strat_mapping.csv",
+      "default_strat": "JHC/data/5-strats/VeryMax-CInteger/out-2025-05-11_00-36-40/final_strategy1.txt",
+      "test_res_file": "JHC/data/5-strats/VeryMax-CInteger/evaluation_results_20250512_010238/benchmark_results.csv"
+    },
+    "settings": {
+      "timeout": 10,
+      "num_benchmarks": -1,
+      "run_z3alpha_strat": false, 
+      "selector": "EHMLogic"
+    }
+  }

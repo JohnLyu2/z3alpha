@@ -1,0 +1,17 @@
+SELECT
+    b.name AS benchmark_name,
+    b.logic,
+    LENGTH(b.description) AS description_length,
+    b.description,
+    b.generatedBy,
+    b.application,
+    f.name AS family_name,
+    AVG(LENGTH(b.description)) OVER () AS average_description_length,
+    STDDEV(LENGTH(b.description)) OVER () AS stdev_description_length
+FROM Benchmarks b
+JOIN Families f ON b.family = f.id
+WHERE b.logic = 'QF_ABVFP'  -- Replace with your desired logic
+AND b.description IS NOT NULL
+AND LENGTH(b.description) > 0
+ORDER BY description_length DESC
+LIMIT 1;

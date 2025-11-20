@@ -1,0 +1,14 @@
+<ul class="pure-menu-list">
+{% for item in data[:100] %}
+  <li class="pure-menu-item" hx-target="#search-bar"
+            hx-trigger="mousedown"
+            hx-swap="innerHTML"
+            hx-post="/pick_{{ update }}/{{ item.id }}"
+         >
+      <a href="#" class="pure-menu-link">{{ item.value }} </a>
+   </li>
+{% endfor %}
+{% if data|length > 100 %}
+  <li class="pure-menu-item"><a href="#" class="pure-menu-link">...</a></li>
+{% endif %}
+</ul>

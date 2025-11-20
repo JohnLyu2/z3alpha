@@ -1,0 +1,13 @@
+{
+  "paths": {
+    "benchmark_dir": "/home/jchen688/projects/def-vganesh/jchen688/github/z3alpha/JHC/AlgoSelect/benchmarks/SMTCOMP24/ALIA/test",
+    "output_dir": "JHC/AlgoSelect/results/SMTCOMP24/alia",
+    "training_file": "/home/jchen688/projects/def-vganesh/jchen688/github/z3alpha/JHC/AlgoSelect/benchmarks/SMTCOMP24/ALIA/train/train.csv",
+    "test_res_file": "/home/jchen688/projects/def-vganesh/jchen688/github/z3alpha/JHC/AlgoSelect/benchmarks/SMTCOMP24/ALIA/test/test.csv"
+  },
+  "settings": {
+    "timeout": 1200,
+    "num_benchmarks": -1,
+    "selector": "EHM"
+  }
+}

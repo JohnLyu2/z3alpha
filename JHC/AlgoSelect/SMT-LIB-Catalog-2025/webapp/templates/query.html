@@ -1,0 +1,124 @@
+<details open="true">
+  <summary class="query-header">Query {{ query.idx }}</summary>
+
+<div class="query-box">
+<table class="pure-table pure-table-bordered query-table">
+<tbody>
+<tr><td>Status          </td><td>{{ query.status }}         </td></tr>
+<tr><td>Inferred Status </td><td>{{ query.inferredStatus }} </td></tr>
+<tr><td>Size           </td><td>{{ query.normalizedSize }}</td></tr>
+<tr><td>Compressed Size</td><td>{{ query.compressedSize }}</td></tr>
+<tr><td>Max. Term Depth</td><td>{{ query.maxTermDepth }}  </td</tr>
+<tr><td>Asserts        </td><td>{{ query.assertsCount }}  </td></tr>
+<tr><td>Declared Functions</td><td>{{ query.declareFunCount }}</td></tr>
+<tr><td>Declared Constants</td><td>{{ query.declareConstCount }}</td</tr>
+<tr><td>Declared Sorts    </td><td>{{ query.declareSortCount }} </td</tr>
+<tr><td>Defined Functions</td><td>{{ query.defineFunCount }}    </td</tr>
+<tr><td>Defined Recursive Functions </td><td>{{ query.defineFunRecCount }}</td</tr>
+<tr><td>Defined Sorts</td><td>{{ query.defineSortCount }}      </td</tr>
+<tr><td>Constants</td><td>{{ query.constantFunCount }}         </td</tr>
+<tr><td>Declared Datatypes</td><td>{{ query.declareDatatypeCount }}</td</tr>
+</tbody>
+</table>
+
+<h3> Symbols </h3>
+<table class="pure-table pure-table-bordered syntax-table">
+<tbody>
+{% for count in symbols %}
+  {% if loop.index0 is divisibleby 4 %}
+  	<tr>
+  {% endif %}
+    <td><code>{{ count.name }}</code></td><td>{{ count.count }}</td>
+  {% if loop.index is divisibleby 4 %}
+  	</tr>
+  {% endif %}
+{% endfor %}
+{% if (symbols|length % 4) == 1 %}
+<td></td><td></td> <td></td><td></td> <td></td><td></td> </tr>
+{% endif %}
+{% if (symbols|length % 4) == 2 %}
+<td></td><td></td> <td></td><td></td> </tr>
+{% endif %}
+{% if (symbols|length % 4) == 3 %}
+<td></td> <td></td> </tr>
+{% endif %}
+</tbody>
+</table>
+
+{% if evaluation %}
+<h3> Evaluations </h3>
+<table class="pure-table pure-table-bordered evaluation-table">
+<thead>
+  <tr>
+      <th>Evaluation</th>
+      <th>Rating</th>
+      <th>Solver</th>
+      <th>Variant</th>
+      <th>Result</th>
+      <th>Wallclock</th>
+      <th>CPU Time</th>
+  </tr>
+</thead>
+<tbody>
+{% set ns = namespace(high=false) %}
+{% for result in evaluation %}
+
+{% if loop.changed(result.name) %}
+  {% set ns.high = not ns.high %}
+  {% if ns.high == true %}
+    <tr class="pure-table-odd">
+  {% else %}
+    <tr>
+  {% endif %}
+  <td style="border-top: 1px solid #cbcbcb">
+    <a href="{{ result.link }}">{{ result.name }}<a>
+  </td>
+  {% if result.rating %}
+  <td>{{ '{0:0.2f}'.format(result.rating) }} ({{ result.successfulSolvers }}/{{ result.consideredSolvers }})</td>
+  {% else %}<td></td>{% endif %}
+{% else %}
+{% if ns.high == true %}
+    <tr class="pure-table-odd">
+  {% else %}
+    <tr>
+  {% endif %}
+  <td></td><td></td>
+{% endif %}
+
+{% if loop.previtem %}
+  {% if loop.previtem.solvername != result.solverName or loop.previtem.name != result.name %}
+    <td style="border-top: 1px solid #cbcbcb">{{ result.solverName }}</td>
+  {% else %}
+   	<td></td>
+  {% endif %}
+{% else %}
+    <td>{{ result.solverName }}</td>
+{% endif %}
+<td>{{ result.fullName }}</td>
+<td>
+	{% if result.status == "unknown" %}
+    unknown ❌
+  {% else %}
+    {{ result.status }} ✅
+  {% endif %}
+</td>
+<td>
+{% if result.wallclockTime %}
+  {{ '%.05f' % result.wallclockTime }}
+{% else %}
+—
+{% endif %}
+</td>
+<td>
+{% if result.cpuTime %}
+  {{ '%.05f' % result.cpuTime }}
+{% else %}
+—
+{% endif %}
+</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+{% endif %}
+</details>

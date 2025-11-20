@@ -1,0 +1,20 @@
+SELECT 
+    r.id,
+    s.name AS solver_name,
+    b.logic,
+    b.name AS benchmark_name,
+    r.status,
+    r.wallclockTime,
+    r.cpuTime,
+    e.name AS evaluation_name,
+    e.date AS evaluation_date
+FROM Results r
+JOIN SolverVariants sv ON r.solverVariant = sv.id
+JOIN Solvers s ON sv.solver = s.id
+JOIN Queries q ON r.query = q.id
+JOIN Benchmarks b ON q.benchmark = b.id
+JOIN Evaluations e ON r.evaluation = e.id
+WHERE r.status = 'unknown' 
+AND (r.wallclockTime IS NOT NULL OR r.cpuTime IS NOT NULL)
+ORDER BY r.wallclockTime ASc
+LIMIT 20;

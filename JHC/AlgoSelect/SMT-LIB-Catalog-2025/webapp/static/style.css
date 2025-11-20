@@ -1,0 +1,108 @@
+pre {
+    white-space: pre-wrap;
+}
+
+.search-suggestions {
+    position: absolute;
+    background-color: white;
+    max-height: 40ex;
+    overflow-x: hidden;
+    width: 100%;
+}
+
+.clear-search-input {
+    padding-left: 0.5ex;
+}
+
+.benchmark-table {
+  width: 100%;
+  margin-bottom: 1em;
+}
+
+.benchmark-table tr td:first-child {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.query-header
+{
+  padding: .5em 1em;
+  border-left: 1px solid #cbcbcb;
+  border-top: 1px solid #cbcbcb;
+  border-right: 1px solid #cbcbcb;
+  color: #000;
+  background-color: #e0e0e0;
+	font-weight: bold;
+	text-decoration: none;
+}
+
+.query-preview {
+  display: block;
+  border-bottom: 1px solid #cbcbcb;
+}
+
+.query-short
+{
+  border-bottom: 1px solid #cbcbcb;
+}
+
+.query-short,
+.query-full:target,
+.query-full:target + a + .query-box
+{
+  display: none;
+}
+/* The + a + is a hack to skip one siblbling (the query-short) */
+
+.query-full,
+.query-full:target + .query-short,
+.query-short:target + .query-box
+{
+  display: block;
+}
+
+.query-table {
+  width: 100%;
+}
+
+.query-table tr td:first-child {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.syntax-table {
+  width: 100%;
+}
+
+.syntax-table tr td:nth-of-type(even) {
+  text-align: right;
+  background-color: #f2f2f2;
+}
+.syntax-table tr td {
+  width: 12.5%;
+}
+
+.evaluation-table {
+  width: 100%;
+}
+
+.evaluation-table tr td:nth-of-type(1) {
+  text-align: center;
+  border-bottom: none;
+}
+
+.evaluation-table tr td:nth-of-type(2) {
+  border-bottom: none;
+}
+
+.evaluation-table tr td:nth-of-type(4) {
+  text-align: right;
+}
+
+.evaluation-table tr td:nth-of-type(5) {
+  text-align: right;
+}
+
+.evaluation-table tr td:nth-of-type(6) {
+  text-align: right;
+}

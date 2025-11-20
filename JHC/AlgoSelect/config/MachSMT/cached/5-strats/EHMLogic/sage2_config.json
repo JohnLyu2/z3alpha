@@ -1,0 +1,17 @@
+{
+  "paths": {
+    "tmp_dir": "/tmp/",
+    "benchmark_dir": "/home/jchen688/projects/def-vganesh/jchen688/z3alpha/benchmarks/fastsmt_exp/sage2/test",
+    "output_dir": "JHC/experiments",
+    "training_file": "JHC/data/5-strats/sage2/out-2025-05-08_03-14-30/ln_res.csv",
+    "mapping_file": "JHC/data/5-strats/sage2/out-2025-05-08_03-14-30/strat_mapping.csv",
+    "default_strat": "JHC/data/5-strats/sage2/out-2025-05-08_03-14-30/final_strategy1.txt",
+    "test_res_file": "JHC/data/5-strats/sage2/evaluation_results_20250510_043355/benchmark_results.csv"
+  },
+  "settings": {
+    "timeout": 10,
+    "num_benchmarks": -1,
+    "run_z3alpha_strat": false, 
+    "selector": "EHMLogic"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "paths": {
+    "tmp_dir": "/tmp/",
+    "benchmark_dir": "JHC/AlgoSelect/benchmarks/qfnra/LassoRanker/test",
+    "output_dir": "JHC/AlgoSelect/experiments",
+    "training_file": "",
+    "mapping_file": "",
+    "default_strat": "", 
+    "test_res_file": ""
+  },
+  "settings": {
+    "timeout": 10,
+    "num_benchmarks": -1,
+    "run_z3alpha_strat": true, 
+    "selector": "EHMLogic"
+  }
+}

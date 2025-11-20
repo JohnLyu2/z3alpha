@@ -4,3 +4,6 @@
 
 venv/
 experiments/
+JHC/*
+!JHC/AlgoSelect/
+lib

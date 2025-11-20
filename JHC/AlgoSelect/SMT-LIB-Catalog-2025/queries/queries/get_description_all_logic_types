@@ -1,0 +1,34 @@
+WITH BenchmarksWithStats AS (
+    SELECT
+        b.name AS benchmark_name,
+        b.logic,
+        LENGTH(b.description) AS description_length,
+        b.generatedBy,
+        b.application,
+        f.name AS family_name,
+        -- Calculate the average length for each logic group
+        AVG(LENGTH(b.description)) OVER (PARTITION BY b.logic) AS average_description_length,
+        -- Assign a rank within each logic group, ordered by description length
+        ROW_NUMBER() OVER (PARTITION BY b.logic ORDER BY LENGTH(b.description) DESC) AS rn
+    FROM
+        Benchmarks b
+    JOIN
+        Families f ON b.family = f.id
+    WHERE
+        b.description IS NOT NULL
+        AND LENGTH(b.description) > 0
+)
+SELECT
+    benchmark_name,
+    logic,
+    description_length,
+    generatedBy,
+    application,
+    family_name,
+    average_description_length
+FROM
+    BenchmarksWithStats
+WHERE
+    rn = 1
+ORDER BY
+    logic;

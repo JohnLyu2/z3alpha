@@ -1,0 +1,1 @@
+# For z3alpha config stage1, why do we only include train1 folder, but for stage 2 we need both? 
