@@ -14,7 +14,7 @@ __all__ = ["SolverEvaluator", "SolverRunner", "_z3_timeout_arg"]
 
 
 def _z3_timeout_arg(seconds: float) -> list[str]:
-    """Timeout CLI args for Z3: -T:seconds (hard timeout). Use -t:ms for soft timeout in ms."""
+    """Timeout CLI args for Z3: -T:seconds (hard timeout)."""
     return [f"-T:{int(seconds)}"]
 
 
@@ -34,7 +34,9 @@ class SolverRunner(threading.Thread):
         threading.Thread.__init__(self)
         self.solver_path = solver_path
         self.smt_file = smt_file
-        self.timeout = timeout  # seconds; optionally passed to solver, used for PAR scoring
+        self.timeout = (
+            timeout  # seconds; optionally passed to solver, used for PAR scoring
+        )
         self.strategy = strategy
         self.id = id
         self.tmpDir = tmp_dir
@@ -67,6 +69,14 @@ class SolverRunner(threading.Thread):
         self.p.wait()
         self.time_after = time.time()
 
+    def _remove_tmp_file(self) -> None:
+        """Remove temp SMT file if we created one (strategy was not None)."""
+        if self.strategy is not None and os.path.isfile(self.new_file_name):
+            try:
+                os.remove(self.new_file_name)
+            except OSError:
+                pass
+
     def collect(self):
         if self.is_alive():
             try:
@@ -74,42 +84,46 @@ class SolverRunner(threading.Thread):
                 self.join()
             except OSError:
                 pass
+            self._remove_tmp_file()
             return self.id, "timeout", self.timeout, self.smt_file
 
-        out, _ = self.p.communicate()
-
-        if not out:
-            logger.warning(
-                f"Empty output from solver: {self.solver_path}\n strategy: {self.strategy}\ninstance: {self.smt_file}"
-            )
-            return self.id, "error", self.time_after - self.time_before, self.smt_file
-
         try:
-            text = out.decode("utf-8", errors="replace")
-        except Exception as e:
-            logger.warning(
-                f"Failed to decode solver output: {self.solver_path}\ninstance: {self.smt_file}\n{e}"
-            )
-            return self.id, "error", self.time_after - self.time_before, self.smt_file
+            out, _ = self.p.communicate()
 
-        lines = text.rstrip("\n").split("\n")
-        if not lines or not lines[0].strip():
-            logger.warning(
-                f"No lines in solver output: {self.solver_path}\ninstance: {self.smt_file}"
-            )
-            return self.id, "error", self.time_after - self.time_before, self.smt_file
+            if not out:
+                logger.warning(
+                    f"Empty output from solver: {self.solver_path}\n strategy: {self.strategy}\ninstance: {self.smt_file}"
+                )
+                return self.id, "error", self.time_after - self.time_before, self.smt_file
 
-        res = lines[0]
-        runtime = self.time_after - self.time_before
+            try:
+                text = out.decode("utf-8", errors="replace")
+            except Exception as e:
+                logger.warning(
+                    f"Failed to decode solver output: {self.solver_path}\ninstance: {self.smt_file}\n{e}"
+                )
+                return self.id, "error", self.time_after - self.time_before, self.smt_file
 
-        # this error format may not be the same with solvers other than z3
-        if res.startswith("(error"):
-            logger.warning(
-                f"Error occurred when solver: {self.solver_path}\n strategy: {self.strategy}\ninstance: {self.smt_file}\nMessage: {res}"
-            )
-            return self.id, "error", runtime, self.smt_file
+            lines = text.rstrip("\n").split("\n")
+            if not lines or not lines[0].strip():
+                logger.warning(
+                    f"No lines in solver output: {self.solver_path}\ninstance: {self.smt_file}"
+                )
+                return self.id, "error", self.time_after - self.time_before, self.smt_file
 
-        return self.id, res, runtime, self.smt_file
+            res = lines[0]
+            runtime = self.time_after - self.time_before
+
+            # this error format may not be the same with solvers other than z3
+            if res.startswith("(error"):
+                logger.warning(
+                    f"Error occurred when solver: {self.solver_path}\n strategy: {self.strategy}\ninstance: {self.smt_file}\nMessage: {res}"
+                )
+                return self.id, "error", runtime, self.smt_file
+
+            return self.id, res, runtime, self.smt_file
+        finally:
+            self._remove_tmp_file()
 
 
 class SolverEvaluator:
