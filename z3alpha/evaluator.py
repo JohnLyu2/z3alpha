@@ -76,9 +76,29 @@ class SolverRunner(threading.Thread):
                 pass
             return self.id, "timeout", self.timeout, self.smt_file
 
-        out, err = self.p.communicate()
+        out, _ = self.p.communicate()
 
-        lines = out[:-1].decode("utf-8").split("\n")
+        if not out:
+            logger.warning(
+                f"Empty output from solver: {self.solver_path}\n strategy: {self.strategy}\ninstance: {self.smt_file}"
+            )
+            return self.id, "error", self.time_after - self.time_before, self.smt_file
+
+        try:
+            text = out.decode("utf-8", errors="replace")
+        except Exception as e:
+            logger.warning(
+                f"Failed to decode solver output: {self.solver_path}\ninstance: {self.smt_file}\n{e}"
+            )
+            return self.id, "error", self.time_after - self.time_before, self.smt_file
+
+        lines = text.rstrip("\n").split("\n")
+        if not lines or not lines[0].strip():
+            logger.warning(
+                f"No lines in solver output: {self.solver_path}\ninstance: {self.smt_file}"
+            )
+            return self.id, "error", self.time_after - self.time_before, self.smt_file
+
         res = lines[0]
         runtime = self.time_after - self.time_before
 
