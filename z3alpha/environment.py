@@ -1,6 +1,6 @@
 import random
 from z3alpha.strat_tree import StrategyAST
-from z3alpha.evaluator import SolverEvaluator
+from z3alpha.evaluator import SolverEvaluator, _z3_timeout_arg
 from z3alpha.utils import solvedNumReward, parNReward
 
 
@@ -16,7 +16,12 @@ class StrategyGame:
             self.stratAST = StrategyAST(2, logic, timeout, sconfig)
             self.probe_records = sconfig["s2dict"]["probe_records"]
         self.simulator = SolverEvaluator(
-            z3path, training_lst, timeout, batch_size, tmp_dir
+            z3path,
+            training_lst,
+            timeout,
+            batch_size,
+            tmp_dir,
+            timeout_solver_arg=_z3_timeout_arg,
         )  # shallow copy for clone
         self.timeout = timeout
 

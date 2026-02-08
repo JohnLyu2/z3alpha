@@ -11,7 +11,7 @@ import datetime
 from z3 import parse_smt2_file, Probe, Goal
 
 from z3alpha.logging_config import setup_logging
-from z3alpha.evaluator import SolverEvaluator
+from z3alpha.evaluator import SolverEvaluator, _z3_timeout_arg
 from z3alpha.mcts import MCTS_RUN
 from z3alpha.selector import linear_strategy_select, convert_strats_to_act_lists
 from z3alpha.utils import calculatePercentile, write_strat_res_to_csv
@@ -40,7 +40,12 @@ def createBenchmarkList(
     if not is_sorted:
         return benchmarkLst
     evaluator = SolverEvaluator(
-        z3path, benchmarkLst, timeout, batchSize, tmp_dir=tmp_folder
+        z3path,
+        benchmarkLst,
+        timeout,
+        batchSize,
+        tmp_dir=tmp_folder,
+        timeout_solver_arg=_z3_timeout_arg,
     )
     resLst = evaluator.getResLst(None)
     # par2 list from resLst; for each entry (solved, time) in resLst, if solved, return time; else return 2 * timeout
@@ -191,7 +196,12 @@ def cache4stage2(selected_strat, config, stream_logger, log_folder, benchlst=Non
     # s2benchLst = createBenchmarkList(s2benchDirs, s2timeout, batch_size, tmp_folder, z3path, is_sorted=True)
     s2_res_lst = []
     s2evaluator = SolverEvaluator(
-        z3path, s2benchLst, s2timeout, batch_size, tmp_dir=tmp_folder
+        z3path,
+        s2benchLst,
+        s2timeout,
+        batch_size,
+        tmp_dir=tmp_folder,
+        timeout_solver_arg=_z3_timeout_arg,
     )
     for i in range(len(selected_strat)):
         strat = selected_strat[i]

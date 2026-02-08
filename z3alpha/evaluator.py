@@ -1,29 +1,44 @@
 import os
 import threading
 import subprocess
-import shlex
 import time
 import logging
 import csv
+from typing import Callable
 
 from z3alpha.utils import solvedNum, parN
 
 logger = logging.getLogger(__name__)
+
+__all__ = ["SolverEvaluator", "SolverRunner", "_z3_timeout_arg"]
+
+
+def _z3_timeout_arg(seconds: float) -> list[str]:
+    """Timeout CLI args for Z3: -T:seconds (hard timeout). Use -t:ms for soft timeout in ms."""
+    return [f"-T:{int(seconds)}"]
 
 
 class SolverRunner(threading.Thread):
     """Runner which executes (a single strategy) on a single formula by calling a solver in shell"""
 
     def __init__(
-        self, solver_path, smt_file, timeout, id, strategy=None, tmp_dir="/tmp/"
+        self,
+        solver_path,
+        smt_file,
+        timeout,
+        id,
+        strategy=None,
+        tmp_dir="/tmp/",
+        timeout_solver_arg: Callable[[float], list[str]] | None = None,
     ):
         threading.Thread.__init__(self)
         self.solver_path = solver_path
         self.smt_file = smt_file
-        self.timeout = timeout  # used only for output
+        self.timeout = timeout  # seconds; optionally passed to solver, used for PAR scoring
         self.strategy = strategy
         self.id = id
         self.tmpDir = tmp_dir
+        self.timeout_solver_arg = timeout_solver_arg
 
         if self.strategy is not None:
             if not os.path.exists(self.tmpDir):
@@ -44,9 +59,11 @@ class SolverRunner(threading.Thread):
 
     def run(self):
         self.time_before = time.time()
-        safe_path = shlex.quote(self.new_file_name)
-        cmd = f"{self.solver_path} {safe_path}"
-        self.p = subprocess.Popen(shlex.split(cmd), stdout=subprocess.PIPE)
+        cmd_list = [self.solver_path]
+        if self.timeout_solver_arg is not None:
+            cmd_list.extend(self.timeout_solver_arg(self.timeout))
+        cmd_list.append(self.new_file_name)
+        self.p = subprocess.Popen(cmd_list, stdout=subprocess.PIPE)
         self.p.wait()
         self.time_after = time.time()
 
@@ -72,18 +89,20 @@ class SolverRunner(threading.Thread):
             )
             return self.id, "error", runtime, self.smt_file
 
-        # rlimit = None
-        # for line in lines:
-        #     if 'rlimit' in line:
-        #         tokens = line.split(' ')
-        #         for token in tokens:
-        #             if token.isdigit():
-        #                 rlimit = int(token)
-
         return self.id, res, runtime, self.smt_file
 
 
 class SolverEvaluator:
+    """
+    Evaluates a solver on a benchmark list. Timeout (seconds) is always used for
+    join and PAR scoring.
+
+    timeout_solver_arg: optional callable (timeout_seconds) -> list of CLI args
+    to pass the timeout to the solver so it can exit on its own. Example for Z3:
+    _z3_timeout_arg or lambda s: [f\"-T:{int(s)}\"]. If None, the solver process
+    is not given a timeout (we still enforce via join + terminate).
+    """
+
     def __init__(
         self,
         solver_path,
@@ -93,6 +112,7 @@ class SolverEvaluator:
         tmp_dir="/tmp/",
         is_write_res=False,
         res_path=None,
+        timeout_solver_arg: Callable[[float], list[str]] | None = None,
     ):
         self.solverPath = solver_path
         self.benchmarkLst = benchmark_lst
@@ -103,6 +123,7 @@ class SolverEvaluator:
         self.tmpDir = tmp_dir
         self.isWriteRes = is_write_res
         self.resPath = res_path
+        self.timeout_solver_arg = timeout_solver_arg
 
     def getBenchmarkSize(self):
         return len(self.benchmarkLst)
@@ -117,7 +138,13 @@ class SolverEvaluator:
             for id in batch_instance_ids:
                 smtfile = self.benchmarkLst[id]
                 runnerThread = SolverRunner(
-                    self.solverPath, smtfile, self.timeout, id, strat_str, self.tmpDir
+                    self.solverPath,
+                    smtfile,
+                    self.timeout,
+                    id,
+                    strat_str,
+                    self.tmpDir,
+                    timeout_solver_arg=self.timeout_solver_arg,
                 )
                 runnerThread.start()
                 threads.append(runnerThread)
@@ -130,7 +157,7 @@ class SolverEvaluator:
                 results[id] = (solved, timeTask, resTask)
         # assert no entries in results is still -1
         for i in range(size):
-            assert results[i] != None
+            assert results[i] is not None
         return results
 
     # returns a tuple (#solved, par2, par10)
