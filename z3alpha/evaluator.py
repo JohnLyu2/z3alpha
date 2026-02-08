@@ -26,7 +26,7 @@ class SolverRunner(threading.Thread):
         solver_path,
         smt_file,
         timeout,
-        id,
+        run_id,
         strategy=None,
         tmp_dir="/tmp/",
         timeout_solver_arg: Callable[[float], list[str]] | None = None,
@@ -38,7 +38,7 @@ class SolverRunner(threading.Thread):
             timeout  # seconds; optionally passed to solver, used for PAR scoring
         )
         self.strategy = strategy
-        self.id = id
+        self.run_id = run_id
         self.tmpDir = tmp_dir
         self.timeout_solver_arg = timeout_solver_arg
 
@@ -46,7 +46,7 @@ class SolverRunner(threading.Thread):
             if not os.path.exists(self.tmpDir):
                 os.makedirs(self.tmpDir)
             # Create a unique filename using process ID and timestamp
-            unique_id = f"{os.getpid()}_{int(time.time() * 1000)}_{id}"
+            unique_id = f"{os.getpid()}_{int(time.time() * 1000)}_{run_id}"
             self.new_file_name = os.path.join(self.tmpDir, f"tmp_{unique_id}.smt2")
             self.tmp_file = open(self.new_file_name, "w")
             with open(self.smt_file, "r") as f:
@@ -85,7 +85,7 @@ class SolverRunner(threading.Thread):
             except OSError:
                 pass
             self._remove_tmp_file()
-            return self.id, "timeout", self.timeout, self.smt_file
+            return self.run_id, "timeout", self.timeout, self.smt_file
 
         try:
             out, _ = self.p.communicate()
@@ -94,7 +94,7 @@ class SolverRunner(threading.Thread):
                 logger.warning(
                     f"Empty output from solver: {self.solver_path}\n strategy: {self.strategy}\ninstance: {self.smt_file}"
                 )
-                return self.id, "error", self.time_after - self.time_before, self.smt_file
+                return self.run_id, "error", self.time_after - self.time_before, self.smt_file
 
             try:
                 text = out.decode("utf-8", errors="replace")
@@ -102,14 +102,14 @@ class SolverRunner(threading.Thread):
                 logger.warning(
                     f"Failed to decode solver output: {self.solver_path}\ninstance: {self.smt_file}\n{e}"
                 )
-                return self.id, "error", self.time_after - self.time_before, self.smt_file
+                return self.run_id, "error", self.time_after - self.time_before, self.smt_file
 
             lines = text.rstrip("\n").split("\n")
             if not lines or not lines[0].strip():
                 logger.warning(
                     f"No lines in solver output: {self.solver_path}\ninstance: {self.smt_file}"
                 )
-                return self.id, "error", self.time_after - self.time_before, self.smt_file
+                return self.run_id, "error", self.time_after - self.time_before, self.smt_file
 
             res = lines[0]
             runtime = self.time_after - self.time_before
@@ -119,9 +119,9 @@ class SolverRunner(threading.Thread):
                 logger.warning(
                     f"Error occurred when solver: {self.solver_path}\n strategy: {self.strategy}\ninstance: {self.smt_file}\nMessage: {res}"
                 )
-                return self.id, "error", runtime, self.smt_file
+                return self.run_id, "error", runtime, self.smt_file
 
-            return self.id, res, runtime, self.smt_file
+            return self.run_id, res, runtime, self.smt_file
         finally:
             self._remove_tmp_file()
 
@@ -169,13 +169,13 @@ class SolverEvaluator:
         for i in range(0, size, self.batchSize):
             batch_instance_ids = range(i, min(i + self.batchSize, size))
             threads = []
-            for id in batch_instance_ids:
-                smtfile = self.benchmarkLst[id]
+            for run_id in batch_instance_ids:
+                smtfile = self.benchmarkLst[run_id]
                 runnerThread = SolverRunner(
                     self.solverPath,
                     smtfile,
                     self.timeout,
-                    id,
+                    run_id,
                     strat_str,
                     self.tmpDir,
                     timeout_solver_arg=self.timeout_solver_arg,
@@ -186,9 +186,9 @@ class SolverEvaluator:
             for task in threads:
                 time_left = max(0, self.timeout - (time.time() - time_start))
                 task.join(time_left)
-                id, resTask, timeTask, pathTask = task.collect()
+                run_id, resTask, timeTask, pathTask = task.collect()
                 solved = True if (resTask == "sat" or resTask == "unsat") else False
-                results[id] = (solved, timeTask, resTask)
+                results[run_id] = (solved, timeTask, resTask)
         # assert no entries in results is still -1
         for i in range(size):
             assert results[i] is not None

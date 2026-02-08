@@ -31,7 +31,7 @@ class TestSolverRunnerCollect(unittest.TestCase):
             "/usr/bin/z3",
             SAMPLE_SMT,
             timeout=10,
-            id=0,
+            run_id=0,
             strategy=None,
         )
         run_id, res, runtime, path = _run_then_collect(runner, (b"", b""))
@@ -46,7 +46,7 @@ class TestSolverRunnerCollect(unittest.TestCase):
             "/usr/bin/z3",
             SAMPLE_SMT,
             timeout=10,
-            id=1,
+            run_id=1,
             strategy=None,
         )
         run_id, res, runtime, path = _run_then_collect(runner, (None, b""))
@@ -60,7 +60,7 @@ class TestSolverRunnerCollect(unittest.TestCase):
             "/usr/bin/z3",
             SAMPLE_SMT,
             timeout=10,
-            id=2,
+            run_id=2,
             strategy=None,
         )
         run_id, res, runtime, path = _run_then_collect(runner, (b"\n\n", b""))
@@ -74,7 +74,7 @@ class TestSolverRunnerCollect(unittest.TestCase):
             "/usr/bin/z3",
             SAMPLE_SMT,
             timeout=10,
-            id=3,
+            run_id=3,
             strategy=None,
         )
         run_id, res, runtime, path = _run_then_collect(runner, (b"sat\n", b""))
@@ -89,7 +89,7 @@ class TestSolverRunnerCollect(unittest.TestCase):
             "/usr/bin/z3",
             SAMPLE_SMT,
             timeout=10,
-            id=4,
+            run_id=4,
             strategy=None,
         )
         run_id, res, runtime, path = _run_then_collect(runner, (b"unsat\n", b""))
@@ -103,7 +103,7 @@ class TestSolverRunnerCollect(unittest.TestCase):
             "/usr/bin/z3",
             SAMPLE_SMT,
             timeout=10,
-            id=5,
+            run_id=5,
             strategy=None,
         )
         run_id, res, runtime, path = _run_then_collect(
