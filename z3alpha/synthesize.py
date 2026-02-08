@@ -10,6 +10,7 @@ import datetime
 
 from z3 import parse_smt2_file, Probe, Goal
 
+from z3alpha.logging_config import setup_logging
 from z3alpha.evaluator import SolverEvaluator
 from z3alpha.mcts import MCTS_RUN
 from z3alpha.selector import linear_strategy_select, convert_strats_to_act_lists
@@ -335,16 +336,11 @@ def main():
     )
     args = parser.parse_args()
     config = json.load(open(args.json_config, "r"))
-    
-    # Setup logger
+
+    level = config.get("log_level", "INFO")
+    setup_logging(level=level)
     stream_logger = logging.getLogger(__name__)
-    stream_logger.setLevel(logging.INFO)
-    log_handler = logging.StreamHandler()
-    log_handler.setFormatter(
-        logging.Formatter("%(asctime)s:%(levelname)s:%(message)s", "%Y-%m-%d %H:%M:%S")
-    )
-    stream_logger.addHandler(log_handler)
-    
+
     # Use log_parent_dir if provided, otherwise use default experiments/synthesis
     parent_dir = Path(config.get("parent_log_dir", "experiments/synthesis"))
     log_folder = parent_dir / f"out-{datetime.datetime.now():%Y-%m-%d_%H-%M-%S}"

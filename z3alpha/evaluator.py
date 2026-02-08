@@ -8,11 +8,7 @@ import csv
 
 from z3alpha.utils import solvedNum, parN
 
-log = logging.getLogger(__name__)
-log.setLevel(logging.INFO)
-log_handler = logging.StreamHandler()
-log_handler.setFormatter(logging.Formatter("%(asctime)s:%(levelname)s:%(message)s"))
-log.addHandler(log_handler)
+logger = logging.getLogger(__name__)
 
 
 class SolverRunner(threading.Thread):
@@ -71,7 +67,7 @@ class SolverRunner(threading.Thread):
 
         # this error format may not be the same with solvers other than z3
         if res.startswith("(error"):
-            log.warn(
+            logger.warning(
                 f"Error occurred when solver: {self.solver_path}\n strategy: {self.strategy}\ninstance: {self.smt_file}\nMessage: {res}"
             )
             return self.id, "error", runtime, self.smt_file

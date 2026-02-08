@@ -2,15 +2,10 @@ import logging
 import math
 import copy
 from z3alpha.environment import StrategyGame
+from z3alpha.logging_config import get_formatter
 from z3alpha.params import create_params_dict
 
-log = logging.getLogger(__name__)
-log.setLevel(logging.INFO)
-log_handler = logging.StreamHandler()
-log_handler.setFormatter(
-    logging.Formatter("%(asctime)s:%(levelname)s:%(message)s", "%Y-%m-%d %H:%M:%S")
-)
-log.addHandler(log_handler)
+logger = logging.getLogger(__name__)
 
 INIT_Q = 0
 IS_MEAN_EST = False
@@ -154,15 +149,16 @@ class MCTS_RUN:
             self.c_ucb = None
             self.resS1Database = config["s2dict"]["res_cache"]
 
-        # Setup logging only if self.is_log is True
-        self.sim_log = logging.getLogger(f"s{self.stage}mcts")
+        # Optional file logging for MCTS detail (when is_log is True)
+        self.sim_log = logging.getLogger(f"z3alpha.s{self.stage}mcts")
         self.sim_log.propagate = False
         if self.is_log:
             self.sim_log.setLevel(logging.INFO)
-            simlog_handler = logging.FileHandler(f"{log_folder}/s{self.stage}mcts.log")
-            self.sim_log.addHandler(simlog_handler)
+            file_handler = logging.FileHandler(f"{log_folder}/s{self.stage}mcts.log")
+            file_handler.setFormatter(get_formatter())
+            self.sim_log.addHandler(file_handler)
         else:
-            self.sim_log.setLevel(logging.ERROR)  # Set to ERROR to prevent any logging
+            self.sim_log.setLevel(logging.ERROR)
 
         self.tmpFolder = tmp_folder
         if not root:
@@ -278,7 +274,7 @@ class MCTS_RUN:
         for i in range(3):
             if value > self.topRewards[i]:
                 if i == 0:
-                    log.info(
+                    logger.info(
                         f"At sim {self.num_sim}, new best reward found: {value:.5f}"
                     )
                 self.topRewards.insert(i, value)
@@ -291,7 +287,7 @@ class MCTS_RUN:
         for i in range(self.numSimulations):
             self.num_sim = i
             if self.stage == 1:
-                log.info(f"Simulation {i} starts")
+                logger.info(f"Simulation {i} starts")
             if self.is_log:
                 self.sim_log.info(f"Simulation {i} starts")
             self._oneSimulation()
