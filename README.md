@@ -65,10 +65,10 @@ Before running the script, ensure to adjust the JSON configuration file to match
 
 ### Evaluation
 
-We provide the script `scripts/exp_tester.py` for evaluating solvers and strategies. Sample configuration files for evaluating our synthesized strategies are provided in `data/ijcai24/configs/eval`. For example, to evaluate all solvers on the *leipzig* test, run:
+We provide the script `scripts/eval_solvers.py` for evaluating solvers and strategies. Sample configuration files for evaluating our synthesized strategies are provided in `data/ijcai24/configs/eval`. For example, to evaluate all solvers on the *leipzig* test, run:
 
 ```bash
-python scripts/exp_tester.py data/ijcai24/configs/eval/leipzig.json
+python scripts/eval_solvers.py data/ijcai24/configs/eval/leipzig.json
 ```
 
 The evaluation outcomes are saved in the directory specified by the `res_dir` entry in the configuration JSON file.
