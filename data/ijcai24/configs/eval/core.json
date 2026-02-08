@@ -11,6 +11,6 @@
   "timeout": 10,
   "batch_size": 30,
   "res_dir": "experiments/evaluation/core",
-  "test_dir": "data/ijcai24/benchmarks/fastsmt_benchmarks/qf_bv/bruttomesso/core/test",
+  "eval_dir": "data/ijcai24/benchmarks/fastsmt_benchmarks/qf_bv/bruttomesso/core/test",
   "tmp_dir": "/tmp/"
 }

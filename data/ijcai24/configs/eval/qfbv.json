@@ -11,6 +11,6 @@
   "timeout": 10,
   "batch_size": 50,
   "res_dir": "experiments/evaluation/QF_BV",
-  "test_dir": "data/ijcai24/benchmarks/QF_BV/test",
+  "eval_dir": "data/ijcai24/benchmarks/QF_BV/test",
   "tmp_dir": "/tmp/"
 }

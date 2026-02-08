@@ -11,6 +11,6 @@
   "timeout": 10,
   "batch_size": 60,
   "res_dir": "experiments/evaluation/QF_NIA",
-  "test_dir": "data/ijcai24/benchmarks/QF_NIA/test",
+  "eval_dir": "data/ijcai24/benchmarks/QF_NIA/test",
   "tmp_dir": "/tmp/"
 }

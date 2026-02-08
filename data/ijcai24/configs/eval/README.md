@@ -10,7 +10,9 @@
 
 **"res_dir"**: the directory where the results are saved
 
-**"test_dir"**: the test instance set directory
+**"eval_dir"**: directory to search for `*.smt2` (exactly one of eval_dir or eval_list_file)
+
+**"eval_list_file"**: path to a text file listing instance paths, one per line (blank lines and lines starting with `#` are ignored). Use this for large instance sets.
 
 **"tmp_dir"**: the temp file directory
 
