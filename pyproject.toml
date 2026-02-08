@@ -7,25 +7,24 @@ name = "z3alpha"
 version = "0.1.0"
 description = "A tool for synthesizing efficient Z3 strategies. Requires both Z3 command-line tool and z3-solver Python package."
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
     "z3-solver",
 ]
+license = {file = "LICENSE"}
 authors = [
     { name = "John Lu", email = "z52lu@uwaterloo.ca" },
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "License :: OSI Approved :: Apache Software License"
 ]
 
 [project.scripts]
-z3alpha-synthesize-full = "z3alpha.scripts.synthesize_full:main"
-z3alpha-synthesize-s1 = "z3alpha.scripts.synthesize_s1:main"
-z3alpha-synthesize-s2 = "z3alpha.scripts.synthesize_s2:main"
+z3alpha-synthesize = "z3alpha.synthesize:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["z3alpha"]
