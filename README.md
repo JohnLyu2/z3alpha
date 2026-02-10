@@ -88,8 +88,10 @@ Z3alpha is licensed under the [Apache 2.0 License](https://www.apache.org/licens
 
 
 ### Citing this Work
+
+**IJCAI'24 (conference):**
 ```bibtex
-@inproceedings{ijcai2024p211,
+@inproceedings{z3alpha_ijcai2024,
   title     = {Layered and Staged Monte Carlo Tree Search for SMT Strategy Synthesis},
   author    = {Lu, Zhengyang and Siemer, Stefan and Jha, Piyush and Day, Joel and Manea, Florin and Ganesh, Vijay},
   booktitle = {Proceedings of the Thirty-Third International Joint Conference on
@@ -103,4 +105,20 @@ Z3alpha is licensed under the [Apache 2.0 License](https://www.apache.org/licens
   doi       = {10.24963/ijcai.2024/211},
   url       = {https://doi.org/10.24963/ijcai.2024/211},
 }
+```
+
+**Acta Informatica (journal, 2025):**
+```bibtex
+@article{z3alpha_acta_informatica_2025,
+  title   = {Novel tree-search method for synthesizing SMT strategies},
+  author  = {Lu, Zhengyang John and Day, Joel and Jha, Piyush and Sarnighausen-Cahn, Paul and Siemer, Stefan and Manea, Florin and Ganesh, Vijay},
+  journal = {Acta Informatica},
+  volume  = {62},
+  number  = {3},
+  pages   = {28},
+  year    = {2025},
+  doi     = {10.1007/s00236-025-00495-x},
+  url     = {https://doi.org/10.1007/s00236-025-00495-x},
+}
+```
 
