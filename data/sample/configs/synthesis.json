@@ -8,8 +8,7 @@
     "sim_num": 15,
     "timeout": 1,
     "c_uct": 0.5,
-    "c_ucb": 0.2,
-    "is_log": true
+    "c_ucb": 0.2
   },
   "s2config": {
     "bench_dirs": [
@@ -17,8 +16,7 @@
     ],
     "sim_num": 50,
     "timeout": 5,
-    "c_uct": 0.6,
-    "is_log": true
+    "c_uct": 0.6
   },
   "ln_strat_num": 5,
   "random_seed": 0

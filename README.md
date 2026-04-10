@@ -40,7 +40,13 @@ python -m z3alpha.synthesize data/sample/configs/synthesis.json
 
 The configuration file specifies settings such as the number of MCTS simulations, training datasets, and timeouts. A sample configuration is provided at `data/sample/configs/synthesis.json`.
 
-After this command finishes, the synthesized strategy is saved under `experiments/synthesis/` in a directory named `out-<starting time:%Y-%m-%d_%H-%M-%S>`.
+After this command finishes, outputs are saved under `experiments/synthesis/` in a directory named `out-<starting time:%Y-%m-%d_%H-%M-%S>`. Typical files:
+
+- `stage1_mcts_trace.log` / `stage2_mcts_trace.log` — MCTS search traces  
+- `stage1_strategy_results.csv` — every stage-1 strategy evaluated, with per-benchmark times  
+- `stage1_selected_strategies.csv` — shortlist passed to stage 2  
+- `stage2_strategy_cache.csv` — cached per-benchmark results for that shortlist (feeds stage-2 MCTS)  
+- `synthesized_strategy.txt` — final synthesized tactic string (branched mode; parallel mode uses the same name in the run folder)
 
 ## IJCAI-24 Reproduction
 

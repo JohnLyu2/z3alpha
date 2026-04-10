@@ -1,4 +1,9 @@
 import csv
+import logging
+
+from z3alpha.logging_config import setup_logging
+
+log = logging.getLogger(__name__)
 
 TARGET_CSV = "/Users/zhengyanglu/Desktop/z3alpha/smtcomp24/results/QF_AX/z3.csv"
 
@@ -39,15 +44,21 @@ def compare_two_csv(target_csv, compare_csv):
         if solved and (instance_path in compare_dict):
             compare_solved, compare_sat = compare_dict[instance_path]
             if compare_solved and (sat != compare_sat):
-                print(
-                    f"{instance_path} result mismatch: {sat} in {target_csv} vs {compare_sat} in {compare_csv}"
+                log.warning(
+                    "%s result mismatch: %s in %s vs %s in %s",
+                    instance_path,
+                    sat,
+                    target_csv,
+                    compare_sat,
+                    compare_csv,
                 )
                 mismatch = True
     if not mismatch:
-        print(f"Match: {target_csv} and {compare_csv}")
+        log.info("Match: %s and %s", target_csv, compare_csv)
 
 
 def main():
+    setup_logging()
     for compare_csv in COMPARE_CSV_LST:
         compare_two_csv(TARGET_CSV, compare_csv)
 

@@ -18,8 +18,6 @@
 
 **"c_ucb"**: the c constant in UCB1 of the layered search
 
-**"is_log"**: whether log the info
-
 **"ln_strat_num"**: number of linear strategies to be selected after the Stage-1 MCTS
 
 **"random_seed"**: the random seed for rollout

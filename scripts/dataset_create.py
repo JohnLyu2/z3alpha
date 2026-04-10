@@ -1,20 +1,24 @@
 import argparse
 import csv
+import logging
 import random
-import shutil
 from pathlib import Path
+
+from z3alpha.logging_config import setup_logging
+
+log = logging.getLogger(__name__)
 
 
 def create_dir(target_dir, files):
     counter = 0
     target_dir = Path(target_dir)
-    print(f"Creating symlinks in {target_dir} ({len(files)} files)...")
+    log.info("Creating symlinks in %s (%s files)...", target_dir, len(files))
     for source_filepath in files:
         source_path = Path(source_filepath).resolve()  # Get absolute path
         target_filepath = target_dir / f"benchmark{counter}.smt2"
         target_filepath.symlink_to(source_path)
         counter += 1
-    print(f"Created {counter} symlinks in {target_dir}")
+    log.info("Created %s symlinks in %s", counter, target_dir)
 
 
 def main():
@@ -50,19 +54,20 @@ def main():
         help="Prefix to prepend to CSV paths (only used when --csv_file is provided)",
     )
     args = parser.parse_args()
+    setup_logging()
 
-    print("=" * 60)
-    print("Dataset Creation Script")
-    print("=" * 60)
-    print(f"Split sizes: {args.split_size}")
-    print(f"Dataset directory: {args.dataset_dir}")
-    print(f"Random seed: {args.seed}")
+    log.info("%s", "=" * 60)
+    log.info("Dataset Creation Script")
+    log.info("%s", "=" * 60)
+    log.info("Split sizes: %s", args.split_size)
+    log.info("Dataset directory: %s", args.dataset_dir)
+    log.info("Random seed: %s", args.seed)
     if args.csv_file:
-        print(f"CSV file: {args.csv_file}")
-        print(f"Prefix: {args.prefix}")
+        log.info("CSV file: %s", args.csv_file)
+        log.info("Prefix: %s", args.prefix)
     else:
-        print(f"Benchmark directory: {args.benchmark_dir}")
-    print("=" * 60)
+        log.info("Benchmark directory: %s", args.benchmark_dir)
+    log.info("%s", "=" * 60)
 
     random.seed(args.seed)
 
@@ -73,7 +78,7 @@ def main():
         assert csv_path.exists(), f"The specified CSV file does not exist: {args.csv_file}"
         assert args.prefix is not None, "--prefix is required when --csv_file is provided"
         
-        print(f"Reading file paths from CSV: {csv_path}")
+        log.info("Reading file paths from CSV: %s", csv_path)
         prefix = Path(args.prefix)
         missing_files = 0
         with open(csv_path, "r") as f:
@@ -85,23 +90,24 @@ def main():
                         all_files.append(str(full_path.resolve()))
                     else:
                         missing_files += 1
-                        print(f"Warning: File not found: {full_path}")
-        print(f"Found {len(all_files)} files from CSV")
+                        log.warning("File not found: %s", full_path)
+        log.info("Found %s files from CSV", len(all_files))
         if missing_files > 0:
-            print(f"Warning: {missing_files} files from CSV were not found")
+            log.warning("%s files from CSV were not found", missing_files)
     else:
         # Original behavior: scan benchmark_dir for all .smt2 files
         assert args.benchmark_dir is not None, "--benchmark_dir is required when --csv_file is not provided"
         benchmark_dir = Path(args.benchmark_dir)
         assert benchmark_dir.exists(), "The specified benchmark folder does not exist!"
-        print(f"Scanning benchmark directory: {benchmark_dir}")
+        log.info("Scanning benchmark directory: %s", benchmark_dir)
         for file in sorted(benchmark_dir.rglob("*.smt2")):
             all_files.append(str(file))
-        print(f"Found {len(all_files)} .smt2 files")
-    
+        log.info("Found %s .smt2 files", len(all_files))
+
     all_file_size = len(all_files)
-    print(f"\nTotal files to process: {all_file_size}")
-    print("Shuffling files...")
+    log.info("")
+    log.info("Total files to process: %s", all_file_size)
+    log.info("Shuffling files...")
     random.shuffle(all_files)
 
     train_size, valid_size = list(map(int, args.split_size.split(" ")))
@@ -110,24 +116,27 @@ def main():
     )
     test_size = all_file_size - train_size - valid_size
 
-    print(f"\nDataset split:")
-    print(f"  Train: {train_size} files")
-    print(f"  Valid: {valid_size} files")
-    print(f"  Test:  {test_size} files")
+    log.info("")
+    log.info("Dataset split:")
+    log.info("  Train: %s files", train_size)
+    log.info("  Valid: %s files", valid_size)
+    log.info("  Test:  %s files", test_size)
 
     dataset_dir = Path(args.dataset_dir)
-    print(f"\nCreating dataset directory: {dataset_dir}")
+    log.info("")
+    log.info("Creating dataset directory: %s", dataset_dir)
     dataset_dir.mkdir(parents=True, exist_ok=True)
     train_dir = dataset_dir / "train1"
     valid_dir = dataset_dir / "train2"
     test_dir = dataset_dir / "test"
 
-    print(f"Creating subdirectories...")
+    log.info("Creating subdirectories...")
     train_dir.mkdir()
     valid_dir.mkdir()
     test_dir.mkdir()
 
-    print(f"\nCreating symlinks...")
+    log.info("")
+    log.info("Creating symlinks...")
     create_dir(train_dir, all_files[:train_size])
     create_dir(valid_dir, all_files[train_size : train_size + valid_size])
     create_dir(
@@ -135,10 +144,11 @@ def main():
         all_files[train_size + valid_size : train_size + valid_size + test_size],
     )
     
-    print("\n" + "=" * 60)
-    print("Dataset creation completed successfully!")
-    print(f"Dataset location: {dataset_dir}")
-    print("=" * 60)
+    log.info("")
+    log.info("%s", "=" * 60)
+    log.info("Dataset creation completed successfully!")
+    log.info("Dataset location: %s", dataset_dir)
+    log.info("%s", "=" * 60)
 
 
 # sample usage: python dataset_create.py --split_size "250 500" --benchmark_dir smtlib/QF_S/2019-Jiang/slog --dataset_dir smtlib/QF_S/2019-Jiang/slog_exp

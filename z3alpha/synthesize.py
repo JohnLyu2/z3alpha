@@ -18,6 +18,8 @@ from z3alpha.utils import calculatePercentile, write_strat_res_to_csv
 
 from z3alpha.strat_tree import PERCENTILES
 
+log = logging.getLogger(__name__)
+
 VALUE_TYPE = "par10"  # hard code for now
 
 
@@ -80,7 +82,7 @@ def createProbeStats(bench_lst):
     return probeStats, probeRecords
 
 
-def stage1_synthesize(config, stream_logger, log_folder):
+def stage1_synthesize(config, log_folder):
     startTime = time.time()
     logic = config["logic"]
     z3path = config["z3path"] if "z3path" in config else "z3"
@@ -93,7 +95,7 @@ def stage1_synthesize(config, stream_logger, log_folder):
     # Stage 1
     s1_bench_dirs = s1config["bench_dirs"]
     s1BenchLst = createBenchmarkList(s1_bench_dirs)
-    stream_logger.info("S1 MCTS Simulations Start")
+    log.info("S1 MCTS Simulations Start")
     run1 = MCTS_RUN(
         1,
         s1config,
@@ -110,8 +112,8 @@ def stage1_synthesize(config, stream_logger, log_folder):
     selected_strat, ln_select_logs = linear_strategy_select(
         num_ln_strat, s1_res_dict, s1config["timeout"]
     )
-    stream_logger.info(ln_select_logs)
-    lnStratCandidatsPath = Path(log_folder) / "ln_strat_candidates.csv"
+    log.info(ln_select_logs)
+    lnStratCandidatsPath = Path(log_folder) / "stage1_selected_strategies.csv"
     with open(lnStratCandidatsPath, "w") as f:
         # write one strategy per line as a csv file
         cwriter = csv.writer(f)
@@ -119,13 +121,13 @@ def stage1_synthesize(config, stream_logger, log_folder):
         cwriter.writerow(["strat"])
         for strat in selected_strat:
             cwriter.writerow([strat])
-    stream_logger.info(
+    log.info(
         f"Selected {len(selected_strat)} strategies: {selected_strat}, saved to {lnStratCandidatsPath}"
     )
 
     endTime = time.time()
     s1time = endTime - startTime
-    stream_logger.info(f"Stage 1 Time: {s1time:.0f}")
+    log.info(f"Stage 1 Time: {s1time:.0f}")
     return selected_strat
 
 def add_fail_if_undecided(strat):
@@ -143,7 +145,7 @@ def parallel_linear_strategies(ln_strat_lst, fail_if_undecided=True):
     parallel_strats += ")"
     return parallel_strats
 
-def cache4stage2(selected_strat, config, stream_logger, log_folder, benchlst=None):
+def cache4stage2(selected_strat, config, log_folder, benchlst=None):
     startTime = time.time()
     num_strat = config["ln_strat_num"]
     # assert len(selected_strat) >= num_strat
@@ -167,19 +169,19 @@ def cache4stage2(selected_strat, config, stream_logger, log_folder, benchlst=Non
     )
     for i in range(len(selected_strat)):
         strat = selected_strat[i]
-        stream_logger.info(f"Stage 2 Caching: {i + 1}/{len(selected_strat)}")
+        log.info(f"Stage 2 Caching: {i + 1}/{len(selected_strat)}")
         strat_res = s2evaluator.getResLst(strat)
         s2_res_lst.append((strat, strat_res))
-    ln_res_csv = Path(log_folder) / "ln_res.csv"
+    ln_res_csv = Path(log_folder) / "stage2_strategy_cache.csv"
     write_strat_res_to_csv(s2_res_lst, ln_res_csv, s2benchLst)
-    stream_logger.info(f"Cached results saved to {ln_res_csv}")
+    log.info(f"Cached results saved to {ln_res_csv}")
     endTime = time.time()
     cacheTime = endTime - startTime
-    stream_logger.info(f"Stage 2 Cache Time: {cacheTime:.0f}")
+    log.info(f"Stage 2 Cache Time: {cacheTime:.0f}")
     return s2_res_lst, s2benchLst
 
 
-def stage2_synthesize(results, bench_lst, config, stream_logger, log_folder):
+def stage2_synthesize(results, bench_lst, config, log_folder):
     num_strat = config["ln_strat_num"]
     # assert len(results) >= num_strat
     # results is a list of (strat, res_lst); get the first num_strat strat
@@ -191,9 +193,9 @@ def stage2_synthesize(results, bench_lst, config, stream_logger, log_folder):
     act_lst, solver_dict, preprocess_dict, s1strat2acts = convert_strats_to_act_lists(
         selected_strat
     )
-    stream_logger.info(f"preprocess dict: {preprocess_dict}")
-    stream_logger.info(f"solver dict: {solver_dict}")
-    stream_logger.info(f"converted selected strategies: {act_lst}")
+    log.info(f"preprocess dict: {preprocess_dict}")
+    log.info(f"solver dict: {solver_dict}")
+    log.info(f"converted selected strategies: {act_lst}")
 
     s2_res_dict_acts = {}
     for strat in s1strat2acts:
@@ -210,7 +212,7 @@ def stage2_synthesize(results, bench_lst, config, stream_logger, log_folder):
         z3path = config["z3path"]
 
     s2startTime = time.time()
-    stream_logger.info("S2 MCTS Simulations Start")
+    log.info("S2 MCTS Simulations Start")
 
     probeStats, probeRecords = createProbeStats(bench_lst)
     s2dict["probe_stats"] = probeStats
@@ -230,69 +232,62 @@ def stage2_synthesize(results, bench_lst, config, stream_logger, log_folder):
     run_stage_two.start()
     best_strategy = run_stage_two.getBestStrat()
 
-    stratPath = Path(log_folder) / "synthesized_.txt"
+    stratPath = Path(log_folder) / "synthesized_strategy.txt"
     with open(stratPath, "w") as f:
         f.write(best_strategy)
-    stream_logger.info(f"Best final strategy saved to: {stratPath}")
+    log.info(f"Best final strategy saved to: {stratPath}")
 
     s2endTime = time.time()
     s2time = s2endTime - s2startTime
-    stream_logger.info(f"Stage 2 MCTS Time: {s2time:.0f}")
+    log.info(f"Stage 2 MCTS Time: {s2time:.0f}")
     return best_strategy
 
 
-def parallel_synthesize(config, log_folder, stream_logger):
+def parallel_synthesize(config, log_folder):
     """
     Perform parallel strategy synthesis.
-    
+
     Args:
         config: Configuration dictionary containing synthesis parameters
         log_folder: Log folder path for output files
-        stream_logger: Logger for output messages
     """
     start_time = time.time()
-    
-    selected_strats = stage1_synthesize(config, stream_logger, log_folder)
-    
+
+    selected_strats = stage1_synthesize(config, log_folder)
+
     parallel_strat = parallel_linear_strategies(selected_strats)
-    
+
     parallel_strat_path = Path(log_folder) / "synthesized_strategy.txt"
     with open(parallel_strat_path, "w") as f:
         f.write(parallel_strat)
-    stream_logger.info(f"Final parallel strategy saved to {parallel_strat_path}")
+    log.info(f"Final parallel strategy saved to {parallel_strat_path}")
 
     total_time = time.time() - start_time
-    stream_logger.info(f"Total synthesis time: {total_time:.0f} seconds")
+    log.info(f"Total synthesis time: {total_time:.0f} seconds")
 
 
 
-def branched_synthesize(config, log_folder, stream_logger):
+def branched_synthesize(config, log_folder):
     """
     Perform the complete synthesis for branched strategy [IJCAI 2024].
-    
+
     Args:
         config: Configuration dictionary containing synthesis parameters
         log_folder: Log folder path for output files
-        stream_logger: Logger for output messages
-    
     """
     start_time = time.time()
-    
+
     # Step 1: Initial strategy synthesis
-    selected_strats = stage1_synthesize(config, stream_logger, log_folder)
-    
+    selected_strats = stage1_synthesize(config, log_folder)
+
     # Step 2: Cache results for selected strategies
-    res_dict, bench_lst = cache4stage2(
-        selected_strats, config, stream_logger, log_folder
-    )
-    
+    res_dict, bench_lst = cache4stage2(selected_strats, config, log_folder)
+
     # Step 3: Branched strategy synthesis
-    stage2_synthesize(
-        res_dict, bench_lst, config, stream_logger, log_folder
-    )
+    stage2_synthesize(res_dict, bench_lst, config, log_folder)
 
     total_time = time.time() - start_time
-    stream_logger.info(f"Total synthesis time: {total_time:.0f} seconds")
+    log.info(f"Total synthesis time: {total_time:.0f} seconds")
 
 def main():
     parser = argparse.ArgumentParser()
@@ -305,11 +300,11 @@ def main():
         help="Synthesize parallel strategy instead of branched strategy"
     )
     args = parser.parse_args()
-    config = json.load(open(args.json_config, "r"))
+    with open(args.json_config, encoding="utf-8") as f:
+        config = json.load(f)
 
     level = config.get("log_level", "INFO")
     setup_logging(level=level)
-    stream_logger = logging.getLogger(__name__)
 
     # Use log_parent_dir if provided, otherwise use default experiments/synthesis
     parent_dir = Path(config.get("parent_log_dir", "experiments/synthesis"))
@@ -320,9 +315,9 @@ def main():
     
 
     if args.parallel:
-        parallel_synthesize(config, log_folder, stream_logger)
+        parallel_synthesize(config, log_folder)
     else:
-        branched_synthesize(config, log_folder, stream_logger)
+        branched_synthesize(config, log_folder)
 
 
 if __name__ == "__main__":

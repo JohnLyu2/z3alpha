@@ -4,7 +4,7 @@ import math
 import copy
 from pathlib import Path
 from z3alpha.environment import StrategyGame
-from z3alpha.logging_config import get_formatter
+from z3alpha.logging_config import attach_file_logger
 from z3alpha.params import create_params_dict
 
 logger = logging.getLogger(__name__)
@@ -14,19 +14,18 @@ IS_MEAN_EST = False
 
 
 class MCTSNode:
-    def __init__(self, logic, is_mean, logger, c_ucb, is_log, action_history=[]):
+    def __init__(self, logic, is_mean, trace_log, c_ucb, action_history=None):
         self.param_dict = create_params_dict(logic)
         self.isMean = is_mean
         self.c_ucb = c_ucb
         # self.alpha = alpha
         self.visitCount = 0
-        self.actionHistory = action_history  #
+        self.actionHistory = [] if action_history is None else list(action_history)
         self.valueEst = 0
         self.children = {}
         self.reward = 0  # always 0 for now
         self._setParamMABs()
-        self.logger = logger
-        self.is_log = is_log
+        self.trace_log = trace_log
 
     def __str__(self):
         return str(self.actionHistory)
@@ -62,10 +61,9 @@ class MCTSNode:
             / (visitCount + 0.001)
         )
         ucb = qScore + exploreScore
-        if self.is_log:
-            self.logger.debug(
-                f"  Value of {action}: Q value: {qScore:.05f}; Exp: {exploreScore:.05f} ({visitCount}/{self.visitCount}); UCB: {ucb:.05f}"
-            )
+        self.trace_log.debug(
+            f"  Value of {action}: Q value: {qScore:.05f}; Exp: {exploreScore:.05f} ({visitCount}/{self.visitCount}); UCB: {ucb:.05f}"
+        )
         return ucb
 
     # rename parameter values; easily confuesed with the value of a node
@@ -85,11 +83,9 @@ class MCTSNode:
 
     def selectMABs(self):
         for param in self.params.keys():
-            if self.is_log:
-                self.logger.debug(f"\n  Select MAB of {param}")
+            self.trace_log.debug(f"\n  Select MAB of {param}")
             selectV = self._selectMAB(param)
-            if self.is_log:
-                self.logger.debug(f"  Selected value: {selectV}\n")
+            self.trace_log.debug(f"  Selected value: {selectV}\n")
             self.selected[param] = selectV
         return self.selected
 
@@ -140,13 +136,12 @@ class MCTS_RUN:
         self.trainingLst = bench_lst
         self.logic = logic
         self.timeout = config["timeout"]
-        self.is_log = config["is_log"]
         self.valueType = value_type
         self.batchSize = batch_size
         if self.stage == 1:
             self.c_ucb = config["c_ucb"]
             self.resS1Database = {}
-            self._s1_csv_path = Path(log_folder) / "s1_res.csv"
+            self._s1_csv_path = Path(log_folder) / "stage1_strategy_results.csv"
             self._written_strats = set()
             with open(self._s1_csv_path, "w", newline="") as f:
                 writer = csv.writer(f)
@@ -155,21 +150,13 @@ class MCTS_RUN:
             self.c_ucb = None
             self.resS1Database = config["s2dict"]["res_cache"]
 
-        # Optional file logging for MCTS detail (when is_log is True)
-        self.sim_log = logging.getLogger(f"z3alpha.s{self.stage}mcts")
-        self.sim_log.propagate = False
-        if self.is_log:
-            self.sim_log.setLevel(logging.INFO)
-            file_handler = logging.FileHandler(f"{log_folder}/s{self.stage}mcts.log")
-            file_handler.setFormatter(get_formatter())
-            self.sim_log.addHandler(file_handler)
-        else:
-            self.sim_log.setLevel(logging.ERROR)
+        self.trace_log = attach_file_logger(
+            f"z3alpha.s{self.stage}mcts",
+            Path(log_folder) / f"stage{self.stage}_mcts_trace.log",
+        )
 
         if not root:
-            root = MCTSNode(
-                self.logic, self.isMean, self.sim_log, self.c_ucb, self.is_log
-            )
+            root = MCTSNode(self.logic, self.isMean, self.trace_log, self.c_ucb)
         self.root = root
         self.bestReward = -1
         self.topStrategies = [None, None, None] # top 3 strategies
@@ -181,10 +168,9 @@ class MCTS_RUN:
             math.log(parentNode.visitCount) / (childNode.visitCount + 0.001)
         )
         uct = valueScore + exploreScore
-        if self.is_log:
-            self.sim_log.debug(
-                f"  Value of {action}: Q value: {valueScore:.05f}; Exp: {exploreScore:.05f} ({childNode.visitCount}/{parentNode.visitCount}); UCT: {uct:.05f}"
-            )
+        self.trace_log.debug(
+            f"  Value of {action}: Q value: {valueScore:.05f}; Exp: {exploreScore:.05f} ({childNode.visitCount}/{parentNode.visitCount}); UCT: {uct:.05f}"
+        )
         return uct
 
     def _select(self):
@@ -192,8 +178,7 @@ class MCTS_RUN:
         node = self.root
         # does not consider the root has MABs
         while node.isExpanded() and not self.env.isTerminal():
-            if self.is_log:
-                self.sim_log.debug(f"\n  Select at {node}")
+            self.trace_log.debug(f"\n  Select at {node}")
             # may add randomness when the UCTs are the same
 
             # select in the order as in the list if the same UCT values; put more promising/safer actions earlier in legalActions()
@@ -208,8 +193,7 @@ class MCTS_RUN:
                     nextNode = childNode
             assert bestUCT >= 0
             node = nextNode
-            if self.is_log:
-                self.sim_log.debug(f"  Selected action {selected}")
+            self.trace_log.debug(f"  Selected action {selected}")
             # remainTime = self.env.getRemainTime() if selected == 2 else None
             params = node.selectMABs() if node.hasParamMABs() else None
             searchPath.append(node)
@@ -222,7 +206,7 @@ class MCTS_RUN:
             history = copy.deepcopy(node.actionHistory)
             history.append(action)
             node.children[action] = MCTSNode(
-                self.logic, self.isMean, self.sim_log, self.c_ucb, self.is_log, history
+                self.logic, self.isMean, self.trace_log, self.c_ucb, history
             )
 
     def _rollout(self):
@@ -254,33 +238,29 @@ class MCTS_RUN:
             z3path=self.z3path,
         )
         selectNode, searchPath = self._select()
-        if self.is_log:
-            self.sim_log.info("Selected Node: " + str(selectNode))
-            self.sim_log.info("Selected Strategy ParseTree: " + str(self.env))
+        self.trace_log.info("Selected Node: " + str(selectNode))
+        self.trace_log.info("Selected Strategy ParseTree: " + str(self.env))
         if self.env.isTerminal():
-            if self.is_log:
-                self.sim_log.info("Terminal Strategy: no rollout")
+            self.trace_log.info("Terminal Strategy: no rollout")
             value = self.env.getValue(self.resS1Database, self.valueType)
         else:
             actions = self.env.legalActions()
             # now reward is always 0 at each step
             self._expandNode(selectNode, actions, 0)
             self._rollout()
-            if self.is_log:
-                self.sim_log.info(f"Rollout Strategy: {self.env}")
+            self.trace_log.info(f"Rollout Strategy: {self.env}")
             value = self.env.getValue(self.resS1Database, self.valueType)
         self._updateTopStrategies(value, str(self.env))
-        if self.is_log:
-            self.sim_log.info(f"Final Return: {value}\n")
+        self.trace_log.info(f"Final Return: {value}\n")
         self._backup(searchPath, value)
 
     def _updateTopStrategies(self, value, stratetgy):
         for i in range(3):
             if value > self.topRewards[i]:
                 if i == 0:
-                    logger.info(
-                        f"At sim {self.num_sim}, new best reward found: {value:.5f}"
-                    )
+                    msg = f"At sim {self.num_sim}, new best reward found: {value:.5f}"
+                    logger.info(msg)
+                    self.trace_log.info(msg)
                 self.topRewards.insert(i, value)
                 self.topRewards.pop()
                 self.topStrategies.insert(i, stratetgy)
@@ -303,10 +283,10 @@ class MCTS_RUN:
     def start(self):
         for i in range(self.numSimulations):
             self.num_sim = i
+            # Console: progress for stage 1 only (stage 2 can have huge sim_num).
             if self.stage == 1:
                 logger.info(f"Simulation {i} starts")
-            if self.is_log:
-                self.sim_log.info(f"Simulation {i} starts")
+            self.trace_log.info(f"Simulation {i} starts")
             self._oneSimulation()
             if self.stage == 1:
                 self._write_new_results()

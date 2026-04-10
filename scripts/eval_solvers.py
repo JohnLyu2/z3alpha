@@ -1,14 +1,18 @@
 import argparse
 import csv
 import json
+import logging
 import os
 import pathlib
 import sys
 from datetime import datetime
 
 from z3alpha.evaluator import SolverEvaluator
+from z3alpha.logging_config import setup_logging
 
 _REQUIRED_KEYS = ("solvers", "timeout", "batch_size", "res_dir")
+
+log = logging.getLogger(__name__)
 
 
 def main():
@@ -21,6 +25,7 @@ def main():
         help="Path to the experiment configuration JSON file",
     )
     args = parser.parse_args()
+    setup_logging()
 
     with open(args.json_config) as f:
         config = json.load(f)
@@ -105,8 +110,12 @@ def main():
             )
             solved, par2, par10 = evaluator.evaluate(strat)
             csvwriter.writerow([solver, solved, par2, par10])
-            print(
-                f"{solver} test results: solved {solved} instances with par2 {par2:.2f} and par10 {par10:.2f}"
+            log.info(
+                "%s test results: solved %s instances with par2 %.2f and par10 %.2f",
+                solver,
+                solved,
+                par2,
+                par10,
             )
 
 
