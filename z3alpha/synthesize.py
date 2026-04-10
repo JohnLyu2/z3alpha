@@ -21,15 +21,8 @@ from z3alpha.strat_tree import PERCENTILES
 VALUE_TYPE = "par10"  # hard code for now
 
 
-def createBenchmarkList(
-    benchmark_directories, timeout, batchSize, tmp_folder, z3path, is_sorted
-):
-    """
-    Create and optionally sort a list of SMT benchmark files for strategy synthesis.
-    This function performs two main tasks:
-    1. Discovers all .smt2 files from a specified list of directories
-    2. Optionally evaluates and sorts benchmarks by difficulty (PAR2 score)
-    """
+def createBenchmarkList(benchmark_directories):
+    """Collect all .smt2 files from the given directories."""
     benchmarkLst = []
     for dir in benchmark_directories:
         assert Path(dir).exists()
@@ -37,20 +30,6 @@ def createBenchmarkList(
             str(p) for p in sorted(list(Path(dir).rglob("*.smt2")))
         ]
     benchmarkLst.sort()
-    if not is_sorted:
-        return benchmarkLst
-    evaluator = SolverEvaluator(
-        z3path,
-        benchmarkLst,
-        timeout,
-        batchSize,
-        tmp_dir=tmp_folder,
-    )
-    resLst = evaluator.getResLst(None)
-    # par2 list from resLst; for each entry (solved, time) in resLst, if solved, return time; else return 2 * timeout
-    par2Lst = [2 * timeout if not res[0] else res[1] for res in resLst]
-    # sort benchmarkLst resLst into a descending list by par2Lst
-    benchmarkLst = [x for _, x in sorted(zip(par2Lst, benchmarkLst), reverse=True)]
     return benchmarkLst
 
 
@@ -115,14 +94,7 @@ def stage1_synthesize(config, stream_logger, log_folder):
 
     # Stage 1
     s1_bench_dirs = s1config["bench_dirs"]
-    s1BenchLst = createBenchmarkList(
-        s1_bench_dirs,
-        s1config["timeout"],
-        batch_size,
-        tmp_folder,
-        z3path,
-        is_sorted=True,
-    )
+    s1BenchLst = createBenchmarkList(s1_bench_dirs)
     stream_logger.info("S1 MCTS Simulations Start")
     run1 = MCTS_RUN(
         1,
@@ -188,9 +160,7 @@ def cache4stage2(selected_strat, config, stream_logger, log_folder, benchlst=Non
     s2benchLst = (
         benchlst
         if benchlst
-        else createBenchmarkList(
-            s2benchDirs, s2timeout, batch_size, tmp_folder, z3path, is_sorted=True
-        )
+        else createBenchmarkList(s2benchDirs)
     )
     # s2benchLst = createBenchmarkList(s2benchDirs, s2timeout, batch_size, tmp_folder, z3path, is_sorted=True)
     s2_res_lst = []
