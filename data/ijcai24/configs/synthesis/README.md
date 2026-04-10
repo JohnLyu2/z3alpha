@@ -22,6 +22,4 @@
 
 **"ln_strat_num"**: number of linear strategies to be selected after the Stage-1 MCTS
 
-**"temp_folder"**: the temp file directory
-
 **"random_seed"**: the random seed for rollout

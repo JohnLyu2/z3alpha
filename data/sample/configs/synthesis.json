@@ -21,6 +21,5 @@
     "is_log": true
   },
   "ln_strat_num": 5,
-  "temp_folder": "/tmp/",
   "random_seed": 0
 }

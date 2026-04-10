@@ -1,5 +1,3 @@
-import os
-import threading
 import subprocess
 import time
 import logging
@@ -13,45 +11,26 @@ logger = logging.getLogger(__name__)
 __all__ = ["SolverEvaluator", "SolverRunner"]
 
 
-class SolverRunner(threading.Thread):
+class SolverRunner:
     """Runner which executes a solver on a single formula via subprocess.
 
-    If z3_strategy is not None, the solver is assumed to be Z3 and the input
-    file is rewritten to use (check-sat-using <z3_strategy>).
+    If z3_strategy is not None, the solver is assumed to be Z3 and the
+    strategy is passed via the tactic.default_tactic parameter.
     """
 
-    def __init__(
-        self,
-        solver_path,
-        smt_file,
-        timeout,
-        run_id,
-        z3_strategy=None,
-        tmp_dir="/tmp/",
-    ):
-        super().__init__()
+    def __init__(self, solver_path, smt_file, timeout, run_id, z3_strategy=None):
         self.solver_path = solver_path
         self.smt_file = smt_file
         self.timeout = timeout
         self.z3_strategy = z3_strategy
         self.run_id = run_id
-        self.tmpDir = tmp_dir
-
-        if self.z3_strategy is not None:
-            os.makedirs(self.tmpDir, exist_ok=True)
-            unique_id = f"{os.getpid()}_{int(time.time() * 1000)}_{run_id}"
-            self.new_file_name = os.path.join(self.tmpDir, f"tmp_{unique_id}.smt2")
-            with open(self.new_file_name, "w") as tmp_file, open(self.smt_file, "r") as f:
-                for line in f:
-                    if "check-sat" in line:
-                        tmp_file.write(f"(check-sat-using {z3_strategy})\n")
-                    else:
-                        tmp_file.write(line)
-        else:
-            self.new_file_name = self.smt_file
 
     def _build_cmd(self) -> list[str]:
-        return [self.solver_path, self.new_file_name]
+        cmd = [self.solver_path]
+        if self.z3_strategy is not None:
+            cmd.append(f"tactic.default_tactic={self.z3_strategy}")
+        cmd.append(self.smt_file)
+        return cmd
 
     def _parse_output(self, out: bytes | None, runtime: float):
         """Parse solver stdout into a result tuple (run_id, result_str, runtime, smt_file)."""
@@ -85,20 +64,6 @@ class SolverRunner(threading.Thread):
 
         return self.run_id, res, runtime, self.smt_file
 
-    def run(self):
-        self.time_before = time.time()
-        self.p = subprocess.Popen(self._build_cmd(), stdout=subprocess.PIPE)
-        self.p.wait()
-        self.time_after = time.time()
-
-    def _remove_tmp_file(self) -> None:
-        """Remove temp SMT file if we created one (z3_strategy was not None)."""
-        if self.z3_strategy is not None and os.path.isfile(self.new_file_name):
-            try:
-                os.remove(self.new_file_name)
-            except OSError:
-                pass
-
     def execute(self):
         """Run solver synchronously with self-managed timeout.
 
@@ -106,37 +71,18 @@ class SolverRunner(threading.Thread):
         Suitable for use inside a ThreadPoolExecutor.
         """
         time_before = time.time()
+        p = subprocess.Popen(self._build_cmd(), stdout=subprocess.PIPE)
         try:
-            p = subprocess.Popen(self._build_cmd(), stdout=subprocess.PIPE)
+            out, _ = p.communicate(timeout=self.timeout)
+        except subprocess.TimeoutExpired:
+            p.terminate()
             try:
-                out, _ = p.communicate(timeout=self.timeout)
+                p.communicate(timeout=5)
             except subprocess.TimeoutExpired:
-                p.terminate()
-                try:
-                    p.communicate(timeout=5)
-                except subprocess.TimeoutExpired:
-                    p.kill()
-                    p.communicate()
-                return self.run_id, "timeout", self.timeout, self.smt_file
-            return self._parse_output(out, time.time() - time_before)
-        finally:
-            self._remove_tmp_file()
-
-    def collect(self):
-        if self.is_alive():
-            try:
-                self.p.terminate()
-                self.join()
-            except OSError:
-                pass
-            self._remove_tmp_file()
+                p.kill()
+                p.communicate()
             return self.run_id, "timeout", self.timeout, self.smt_file
-
-        try:
-            out, _ = self.p.communicate()
-            return self._parse_output(out, self.time_after - self.time_before)
-        finally:
-            self._remove_tmp_file()
+        return self._parse_output(out, time.time() - time_before)
 
 
 class SolverEvaluator:
@@ -152,7 +98,6 @@ class SolverEvaluator:
         benchmark_lst,
         timeout,
         batch_size,
-        tmp_dir="/tmp/",
         is_write_res=False,
         res_path=None,
     ):
@@ -162,7 +107,6 @@ class SolverEvaluator:
         self.timeout = timeout
         assert self.timeout > 0
         self.batchSize = batch_size
-        self.tmpDir = tmp_dir
         self.isWriteRes = is_write_res
         self.resPath = res_path
 
@@ -177,7 +121,6 @@ class SolverEvaluator:
             self.timeout,
             run_id,
             strat_str,
-            self.tmpDir,
         )
         return runner.execute()
 

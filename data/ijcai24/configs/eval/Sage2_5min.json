@@ -11,6 +11,5 @@
   "timeout": 300,
   "batch_size": 30,
   "res_dir": "experiments/evaluation/Sage2_5min",
-  "eval_dir": "data/ijcai24/benchmarks/fastsmt_benchmarks/sage2/test",
-  "tmp_dir": "/tmp/"
+  "eval_dir": "data/ijcai24/benchmarks/fastsmt_benchmarks/sage2/test"
 }

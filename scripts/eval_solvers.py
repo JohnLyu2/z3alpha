@@ -34,7 +34,6 @@ def main():
     timeout = config["timeout"]
     batch_size = config["batch_size"]
     res_dir = config["res_dir"]
-    tmp_dir = config.get("tmp_dir", "/tmp/")
 
     eval_list_file = config.get("eval_list_file")
     eval_dir = config.get("eval_dir")
@@ -103,7 +102,6 @@ def main():
                 batch_size,
                 is_write_res=True,
                 res_path=csv_path,
-                tmp_dir=tmp_dir,
             )
             solved, par2, par10 = evaluator.evaluate(strat)
             csvwriter.writerow([solver, solved, par2, par10])

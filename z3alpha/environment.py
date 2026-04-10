@@ -6,7 +6,7 @@ from z3alpha.utils import solvedNumReward, parNReward
 
 class StrategyGame:
     def __init__(
-        self, stage, training_lst, logic, timeout, sconfig, batch_size, tmp_dir, z3path
+        self, stage, training_lst, logic, timeout, sconfig, batch_size, z3path
     ):
         self.stage = stage
         self.benchmarks = training_lst
@@ -20,8 +20,7 @@ class StrategyGame:
             training_lst,
             timeout,
             batch_size,
-            tmp_dir,
-        )  # shallow copy for clone
+        )
         self.timeout = timeout
 
     def __str__(self) -> str:

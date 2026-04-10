@@ -126,7 +126,6 @@ class MCTS_RUN:
         z3path,
         value_type,
         log_folder,
-        tmp_folder,
         batch_size=1,
         root=None,
     ):
@@ -167,7 +166,6 @@ class MCTS_RUN:
         else:
             self.sim_log.setLevel(logging.ERROR)
 
-        self.tmpFolder = tmp_folder
         if not root:
             root = MCTSNode(
                 self.logic, self.isMean, self.sim_log, self.c_ucb, self.is_log
@@ -253,7 +251,6 @@ class MCTS_RUN:
             self.timeout,
             self.config,
             self.batchSize,
-            tmp_dir=self.tmpFolder,
             z3path=self.z3path,
         )
         selectNode, searchPath = self._select()

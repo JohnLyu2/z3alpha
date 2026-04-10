@@ -84,11 +84,9 @@ def stage1_synthesize(config, stream_logger, log_folder):
     startTime = time.time()
     logic = config["logic"]
     z3path = config["z3path"] if "z3path" in config else "z3"
-    tmp_folder = config["temp_folder"]
     batch_size = config["batch_size"]
     s1config = config["s1config"]
     num_ln_strat = config["ln_strat_num"]
-    tmp_folder = config["temp_folder"]
     random_seed = config["random_seed"]
     random.seed(random_seed)
 
@@ -104,7 +102,6 @@ def stage1_synthesize(config, stream_logger, log_folder):
         z3path,
         VALUE_TYPE,
         log_folder,
-        tmp_folder=tmp_folder,
         batch_size=batch_size,
     )
     run1.start()
@@ -156,20 +153,17 @@ def cache4stage2(selected_strat, config, stream_logger, log_folder, benchlst=Non
     s2benchDirs = s2config["bench_dirs"]
     s2timeout = s2config["timeout"]
     batch_size = config["batch_size"]
-    tmp_folder = config["temp_folder"]
     s2benchLst = (
         benchlst
         if benchlst
         else createBenchmarkList(s2benchDirs)
     )
-    # s2benchLst = createBenchmarkList(s2benchDirs, s2timeout, batch_size, tmp_folder, z3path, is_sorted=True)
     s2_res_lst = []
     s2evaluator = SolverEvaluator(
         z3path,
         s2benchLst,
         s2timeout,
         batch_size,
-        tmp_dir=tmp_folder,
     )
     for i in range(len(selected_strat)):
         strat = selected_strat[i]
@@ -214,7 +208,6 @@ def stage2_synthesize(results, bench_lst, config, stream_logger, log_folder):
     z3path = "z3"
     if "z3path" in config:
         z3path = config["z3path"]
-    tmp_folder = config["temp_folder"]
 
     s2startTime = time.time()
     stream_logger.info("S2 MCTS Simulations Start")
@@ -233,7 +226,6 @@ def stage2_synthesize(results, bench_lst, config, stream_logger, log_folder):
         z3path,
         VALUE_TYPE,
         log_folder,
-        tmp_folder=tmp_folder,
     )
     run_stage_two.start()
     best_strategy = run_stage_two.getBestStrat()
