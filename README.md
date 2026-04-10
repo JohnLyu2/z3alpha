@@ -81,7 +81,7 @@ All experimental result data are included in `data/ijcai24/`. For each experimen
 
 
 ## SMT-COMP'24
-As a derived solver, Z3alpha entered [SMT-COMP 2024 (Single Query Track)](https://smt-comp.github.io/2024/results/results-single-query/)  and won [some awards](https://drive.google.com/file/d/1dEeJFfzjJz4vp-mU5XiGnR-hHJdsU1QZ/view?usp=sharing). See our submitted solver along with synthesized strategies in `smtcomp24/`. Note that the executables in `smtcomp24/z3bin/` are compiled for the [competition evnvironment](https://smt-comp.github.io/2024/specs/).
+As a derived solver, Z3alpha participated in [SMT-COMP 2024 (Single Query Track)](https://smt-comp.github.io/2024/results/results-single-query/) and won [some awards](https://drive.google.com/file/d/1dEeJFfzjJz4vp-mU5XiGnR-hHJdsU1QZ/view?usp=sharing).
 
 ## License
 Z3alpha is licensed under the [Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0).

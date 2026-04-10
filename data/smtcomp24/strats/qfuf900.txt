@@ -1,1 +1,0 @@
-(if (> num-consts 31) qfuf (if (> num-consts 5) (then symmetry-reduce propagate-values propagate-values qfuf) qfuf))
