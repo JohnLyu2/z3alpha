@@ -4,22 +4,21 @@ import subprocess
 import time
 import logging
 import csv
-from typing import Callable
+import concurrent.futures
 
 from z3alpha.utils import solvedNum, parN
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["SolverEvaluator", "SolverRunner", "_z3_timeout_arg"]
-
-
-def _z3_timeout_arg(seconds: float) -> list[str]:
-    """Timeout CLI args for Z3: -T:seconds (hard timeout)."""
-    return [f"-T:{int(seconds)}"]
+__all__ = ["SolverEvaluator", "SolverRunner"]
 
 
 class SolverRunner(threading.Thread):
-    """Runner which executes (a single strategy) on a single formula by calling a solver in shell"""
+    """Runner which executes a solver on a single formula via subprocess.
+
+    If z3_strategy is not None, the solver is assumed to be Z3 and the input
+    file is rewritten to use (check-sat-using <z3_strategy>).
+    """
 
     def __init__(
         self,
@@ -27,55 +26,101 @@ class SolverRunner(threading.Thread):
         smt_file,
         timeout,
         run_id,
-        strategy=None,
+        z3_strategy=None,
         tmp_dir="/tmp/",
-        timeout_solver_arg: Callable[[float], list[str]] | None = None,
     ):
-        threading.Thread.__init__(self)
+        super().__init__()
         self.solver_path = solver_path
         self.smt_file = smt_file
-        self.timeout = (
-            timeout  # seconds; optionally passed to solver, used for PAR scoring
-        )
-        self.strategy = strategy
+        self.timeout = timeout
+        self.z3_strategy = z3_strategy
         self.run_id = run_id
         self.tmpDir = tmp_dir
-        self.timeout_solver_arg = timeout_solver_arg
 
-        if self.strategy is not None:
-            if not os.path.exists(self.tmpDir):
-                os.makedirs(self.tmpDir)
-            # Create a unique filename using process ID and timestamp
+        if self.z3_strategy is not None:
+            os.makedirs(self.tmpDir, exist_ok=True)
             unique_id = f"{os.getpid()}_{int(time.time() * 1000)}_{run_id}"
             self.new_file_name = os.path.join(self.tmpDir, f"tmp_{unique_id}.smt2")
-            self.tmp_file = open(self.new_file_name, "w")
-            with open(self.smt_file, "r") as f:
+            with open(self.new_file_name, "w") as tmp_file, open(self.smt_file, "r") as f:
                 for line in f:
-                    new_line = line
                     if "check-sat" in line:
-                        new_line = f"(check-sat-using {strategy})\n"
-                    self.tmp_file.write(new_line)
-            self.tmp_file.close()
+                        tmp_file.write(f"(check-sat-using {z3_strategy})\n")
+                    else:
+                        tmp_file.write(line)
         else:
             self.new_file_name = self.smt_file
 
+    def _build_cmd(self) -> list[str]:
+        return [self.solver_path, self.new_file_name]
+
+    def _parse_output(self, out: bytes | None, runtime: float):
+        """Parse solver stdout into a result tuple (run_id, result_str, runtime, smt_file)."""
+        if not out:
+            logger.warning(
+                f"Empty output from solver: {self.solver_path}\n strategy: {self.z3_strategy}\ninstance: {self.smt_file}"
+            )
+            return self.run_id, "error", runtime, self.smt_file
+
+        try:
+            text = out.decode("utf-8", errors="replace")
+        except Exception as e:
+            logger.warning(
+                f"Failed to decode solver output: {self.solver_path}\ninstance: {self.smt_file}\n{e}"
+            )
+            return self.run_id, "error", runtime, self.smt_file
+
+        lines = text.rstrip("\n").split("\n")
+        if not lines or not lines[0].strip():
+            logger.warning(
+                f"No lines in solver output: {self.solver_path}\ninstance: {self.smt_file}"
+            )
+            return self.run_id, "error", runtime, self.smt_file
+
+        res = lines[0]
+        if res.startswith("(error"):
+            logger.warning(
+                f"Error occurred when solver: {self.solver_path}\n strategy: {self.z3_strategy}\ninstance: {self.smt_file}\nMessage: {res}"
+            )
+            return self.run_id, "error", runtime, self.smt_file
+
+        return self.run_id, res, runtime, self.smt_file
+
     def run(self):
         self.time_before = time.time()
-        cmd_list = [self.solver_path]
-        if self.timeout_solver_arg is not None:
-            cmd_list.extend(self.timeout_solver_arg(self.timeout))
-        cmd_list.append(self.new_file_name)
-        self.p = subprocess.Popen(cmd_list, stdout=subprocess.PIPE)
+        self.p = subprocess.Popen(self._build_cmd(), stdout=subprocess.PIPE)
         self.p.wait()
         self.time_after = time.time()
 
     def _remove_tmp_file(self) -> None:
-        """Remove temp SMT file if we created one (strategy was not None)."""
-        if self.strategy is not None and os.path.isfile(self.new_file_name):
+        """Remove temp SMT file if we created one (z3_strategy was not None)."""
+        if self.z3_strategy is not None and os.path.isfile(self.new_file_name):
             try:
                 os.remove(self.new_file_name)
             except OSError:
                 pass
+
+    def execute(self):
+        """Run solver synchronously with self-managed timeout.
+
+        Returns (run_id, result_str, runtime, smt_file).
+        Suitable for use inside a ThreadPoolExecutor.
+        """
+        time_before = time.time()
+        try:
+            p = subprocess.Popen(self._build_cmd(), stdout=subprocess.PIPE)
+            try:
+                out, _ = p.communicate(timeout=self.timeout)
+            except subprocess.TimeoutExpired:
+                p.terminate()
+                try:
+                    p.communicate(timeout=5)
+                except subprocess.TimeoutExpired:
+                    p.kill()
+                    p.communicate()
+                return self.run_id, "timeout", self.timeout, self.smt_file
+            return self._parse_output(out, time.time() - time_before)
+        finally:
+            self._remove_tmp_file()
 
     def collect(self):
         if self.is_alive():
@@ -89,52 +134,16 @@ class SolverRunner(threading.Thread):
 
         try:
             out, _ = self.p.communicate()
-
-            if not out:
-                logger.warning(
-                    f"Empty output from solver: {self.solver_path}\n strategy: {self.strategy}\ninstance: {self.smt_file}"
-                )
-                return self.run_id, "error", self.time_after - self.time_before, self.smt_file
-
-            try:
-                text = out.decode("utf-8", errors="replace")
-            except Exception as e:
-                logger.warning(
-                    f"Failed to decode solver output: {self.solver_path}\ninstance: {self.smt_file}\n{e}"
-                )
-                return self.run_id, "error", self.time_after - self.time_before, self.smt_file
-
-            lines = text.rstrip("\n").split("\n")
-            if not lines or not lines[0].strip():
-                logger.warning(
-                    f"No lines in solver output: {self.solver_path}\ninstance: {self.smt_file}"
-                )
-                return self.run_id, "error", self.time_after - self.time_before, self.smt_file
-
-            res = lines[0]
-            runtime = self.time_after - self.time_before
-
-            # this error format may not be the same with solvers other than z3
-            if res.startswith("(error"):
-                logger.warning(
-                    f"Error occurred when solver: {self.solver_path}\n strategy: {self.strategy}\ninstance: {self.smt_file}\nMessage: {res}"
-                )
-                return self.run_id, "error", runtime, self.smt_file
-
-            return self.run_id, res, runtime, self.smt_file
+            return self._parse_output(out, self.time_after - self.time_before)
         finally:
             self._remove_tmp_file()
 
 
 class SolverEvaluator:
-    """
-    Evaluates a solver on a benchmark list. Timeout (seconds) is always used for
-    join and PAR scoring.
+    """Evaluates a solver on a benchmark list.
 
-    timeout_solver_arg: optional callable (timeout_seconds) -> list of CLI args
-    to pass the timeout to the solver so it can exit on its own. Example for Z3:
-    _z3_timeout_arg or lambda s: [f\"-T:{int(s)}\"]. If None, the solver process
-    is not given a timeout (we still enforce via join + terminate).
+    Timeout (seconds) is enforced per instance via subprocess and used for
+    PAR scoring.
     """
 
     def __init__(
@@ -146,7 +155,6 @@ class SolverEvaluator:
         tmp_dir="/tmp/",
         is_write_res=False,
         res_path=None,
-        timeout_solver_arg: Callable[[float], list[str]] | None = None,
     ):
         self.solverPath = solver_path
         self.benchmarkLst = benchmark_lst
@@ -157,45 +165,41 @@ class SolverEvaluator:
         self.tmpDir = tmp_dir
         self.isWriteRes = is_write_res
         self.resPath = res_path
-        self.timeout_solver_arg = timeout_solver_arg
 
     def getBenchmarkSize(self):
         return len(self.benchmarkLst)
 
-    # now returns a list of (solved, timeTask, resTask) for each instance
+    def _run_single(self, run_id, strat_str):
+        """Create a SolverRunner and execute it synchronously (for pool use)."""
+        runner = SolverRunner(
+            self.solverPath,
+            self.benchmarkLst[run_id],
+            self.timeout,
+            run_id,
+            strat_str,
+            self.tmpDir,
+        )
+        return runner.execute()
+
     def getResLst(self, strat_str):
         size = self.getBenchmarkSize()
         results = [None] * size
-        for i in range(0, size, self.batchSize):
-            batch_instance_ids = range(i, min(i + self.batchSize, size))
-            threads = []
-            for run_id in batch_instance_ids:
-                smtfile = self.benchmarkLst[run_id]
-                runnerThread = SolverRunner(
-                    self.solverPath,
-                    smtfile,
-                    self.timeout,
-                    run_id,
-                    strat_str,
-                    self.tmpDir,
-                    timeout_solver_arg=self.timeout_solver_arg,
-                )
-                runnerThread.start()
-                threads.append(runnerThread)
-            time_start = time.time()
-            for task in threads:
-                time_left = max(0, self.timeout - (time.time() - time_start))
-                task.join(time_left)
-                run_id, resTask, timeTask, pathTask = task.collect()
-                solved = True if (resTask == "sat" or resTask == "unsat") else False
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self.batchSize) as executor:
+            futures = {
+                executor.submit(self._run_single, i, strat_str): i
+                for i in range(size)
+            }
+            for future in concurrent.futures.as_completed(futures):
+                run_id, resTask, timeTask, pathTask = future.result()
+                solved = resTask == "sat" or resTask == "unsat"
                 results[run_id] = (solved, timeTask, resTask)
-        # assert no entries in results is still -1
+
         for i in range(size):
             assert results[i] is not None
         return results
 
-    # returns a tuple (#solved, par2, par10)
-    def testing(self, strat_str):
+    def evaluate(self, strat_str):
         results = self.getResLst(strat_str)
         if self.isWriteRes:
             with open(self.resPath, "w") as f:

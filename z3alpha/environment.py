@@ -1,6 +1,6 @@
 import random
 from z3alpha.strat_tree import StrategyAST
-from z3alpha.evaluator import SolverEvaluator, _z3_timeout_arg
+from z3alpha.evaluator import SolverEvaluator
 from z3alpha.utils import solvedNumReward, parNReward
 
 
@@ -21,7 +21,6 @@ class StrategyGame:
             timeout,
             batch_size,
             tmp_dir,
-            timeout_solver_arg=_z3_timeout_arg,
         )  # shallow copy for clone
         self.timeout = timeout
 

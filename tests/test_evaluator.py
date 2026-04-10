@@ -3,10 +3,10 @@ import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from z3alpha.evaluator import SolverRunner, _z3_timeout_arg
+from z3alpha.evaluator import SolverRunner
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
-# strategy=None so runner uses path as-is; we mock Popen so solver is not executed.
+# z3_strategy=None so runner uses path as-is; we mock Popen so solver is not executed.
 SAMPLE_SMT = str(_PROJECT_ROOT / "data" / "sample" / "benchmarks" / "0.smt2")
 
 
@@ -32,7 +32,7 @@ class TestSolverRunnerCollect(unittest.TestCase):
             SAMPLE_SMT,
             timeout=10,
             run_id=0,
-            strategy=None,
+            z3_strategy=None,
         )
         run_id, res, runtime, path = _run_then_collect(runner, (b"", b""))
         self.assertEqual(run_id, 0)
@@ -47,7 +47,7 @@ class TestSolverRunnerCollect(unittest.TestCase):
             SAMPLE_SMT,
             timeout=10,
             run_id=1,
-            strategy=None,
+            z3_strategy=None,
         )
         run_id, res, runtime, path = _run_then_collect(runner, (None, b""))
         self.assertEqual(run_id, 1)
@@ -61,7 +61,7 @@ class TestSolverRunnerCollect(unittest.TestCase):
             SAMPLE_SMT,
             timeout=10,
             run_id=2,
-            strategy=None,
+            z3_strategy=None,
         )
         run_id, res, runtime, path = _run_then_collect(runner, (b"\n\n", b""))
         self.assertEqual(run_id, 2)
@@ -75,7 +75,7 @@ class TestSolverRunnerCollect(unittest.TestCase):
             SAMPLE_SMT,
             timeout=10,
             run_id=3,
-            strategy=None,
+            z3_strategy=None,
         )
         run_id, res, runtime, path = _run_then_collect(runner, (b"sat\n", b""))
         self.assertEqual(run_id, 3)
@@ -90,7 +90,7 @@ class TestSolverRunnerCollect(unittest.TestCase):
             SAMPLE_SMT,
             timeout=10,
             run_id=4,
-            strategy=None,
+            z3_strategy=None,
         )
         run_id, res, runtime, path = _run_then_collect(runner, (b"unsat\n", b""))
         self.assertEqual(run_id, 4)
@@ -104,7 +104,7 @@ class TestSolverRunnerCollect(unittest.TestCase):
             SAMPLE_SMT,
             timeout=10,
             run_id=5,
-            strategy=None,
+            z3_strategy=None,
         )
         run_id, res, runtime, path = _run_then_collect(
             runner, (b"(error \"something went wrong\")\n", b"")
@@ -114,10 +114,3 @@ class TestSolverRunnerCollect(unittest.TestCase):
         self.assertEqual(path, SAMPLE_SMT)
 
 
-class TestZ3TimeoutArg(unittest.TestCase):
-    """Test _z3_timeout_arg helper."""
-
-    def test_returns_T_flag_seconds(self) -> None:
-        self.assertEqual(_z3_timeout_arg(10), ["-T:10"])
-        self.assertEqual(_z3_timeout_arg(300), ["-T:300"])
-        self.assertEqual(_z3_timeout_arg(1.7), ["-T:1"])

@@ -6,7 +6,7 @@ import pathlib
 import sys
 from datetime import datetime
 
-from z3alpha.evaluator import SolverEvaluator, _z3_timeout_arg
+from z3alpha.evaluator import SolverEvaluator
 
 _REQUIRED_KEYS = ("solvers", "timeout", "batch_size", "res_dir")
 
@@ -95,11 +95,6 @@ def main():
         for solver in test_solvers.keys():
             solver_path, strat_path = test_solvers[solver]
             strat = pathlib.Path(strat_path).read_text() if strat_path else None
-            timeout_solver_arg = (
-                _z3_timeout_arg
-                if (solver == "z3" or (z3strats and solver in z3strats))
-                else None
-            )
             csv_path = os.path.join(res_dir, f"{solver}.csv")
             evaluator = SolverEvaluator(
                 solver_path,
@@ -109,9 +104,8 @@ def main():
                 is_write_res=True,
                 res_path=csv_path,
                 tmp_dir=tmp_dir,
-                timeout_solver_arg=timeout_solver_arg,
             )
-            solved, par2, par10 = evaluator.testing(strat)
+            solved, par2, par10 = evaluator.evaluate(strat)
             csvwriter.writerow([solver, solved, par2, par10])
             print(
                 f"{solver} test results: solved {solved} instances with par2 {par2:.2f} and par10 {par10:.2f}"
