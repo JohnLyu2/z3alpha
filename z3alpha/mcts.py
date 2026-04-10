@@ -1,6 +1,8 @@
+import csv
 import logging
 import math
 import copy
+from pathlib import Path
 from z3alpha.environment import StrategyGame
 from z3alpha.logging_config import get_formatter
 from z3alpha.params import create_params_dict
@@ -145,6 +147,11 @@ class MCTS_RUN:
         if self.stage == 1:
             self.c_ucb = config["c_ucb"]
             self.resS1Database = {}
+            self._s1_csv_path = Path(log_folder) / "s1_res.csv"
+            self._written_strats = set()
+            with open(self._s1_csv_path, "w", newline="") as f:
+                writer = csv.writer(f)
+                writer.writerow(["strat"] + bench_lst)
         else:
             self.c_ucb = None
             self.resS1Database = config["s2dict"]["res_cache"]
@@ -283,6 +290,19 @@ class MCTS_RUN:
                 self.topStrategies.pop()
                 break
 
+    def _write_new_results(self):
+        """Append any newly evaluated strategies to the S1 results CSV."""
+        new_strats = set(self.resS1Database.keys()) - self._written_strats
+        if not new_strats:
+            return
+        with open(self._s1_csv_path, "a", newline="") as f:
+            writer = csv.writer(f)
+            for strat in new_strats:
+                res = self.resS1Database[strat]
+                row = [strat] + [r[1] if r[0] else -r[1] for r in res]
+                writer.writerow(row)
+        self._written_strats.update(new_strats)
+
     def start(self):
         for i in range(self.numSimulations):
             self.num_sim = i
@@ -291,6 +311,8 @@ class MCTS_RUN:
             if self.is_log:
                 self.sim_log.info(f"Simulation {i} starts")
             self._oneSimulation()
+            if self.stage == 1:
+                self._write_new_results()
 
     # def bestNS1Strategies(self, n):
     #     if n > len(self.resS1Database):
