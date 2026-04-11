@@ -105,8 +105,6 @@ def create_params_dict(logic):
         # "propagate-values"
         params[21] = {}
         params[21]["push_ite_bv"] = ["true", "false"]
-    elif logic == "QF_S":
-        pass
     else:
         raise NotImplementedError(f"Logic {logic} not implemented")
     return params

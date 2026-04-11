@@ -7,8 +7,6 @@ SOLVER_TACTICS = [
     "qfnra",
     "qflia",
     "qflra",
-    "arr",
-    "las",
 ]
 PREPROCESS_TACTICS = [
     "simplify",
@@ -32,10 +30,6 @@ PREPROCESS_TACTICS = [
     "add-bounds",
     "normalize-bounds",
     "lia2pb",
-    "ext_str",
-    "ext_strSimplify",
-    "ext_strToRegex",
-    "ext_strToWE",
 ]
 TACTIC_LST = SOLVER_TACTICS + PREPROCESS_TACTICS
 
