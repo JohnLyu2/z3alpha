@@ -125,13 +125,11 @@ class MCTS_RUN:
         batch_size=1,
         root=None,
         logic_config=None,
-        config_dir=None,
     ):
         self.stage = stage
         self.z3path = z3path
         self.config = config
         self.logic_config = logic_config
-        self.config_dir = config_dir
         self.numSimulations = config["sim_num"]
         self.isMean = IS_MEAN_EST
         self.discount = 1  # now set to 1
@@ -241,7 +239,6 @@ class MCTS_RUN:
             self.batchSize,
             z3path=self.z3path,
             logic_config=self.logic_config,
-            config_dir=self.config_dir,
         )
         selectNode, searchPath = self._select()
         self.trace_log.info("Selected Node: " + str(selectNode))

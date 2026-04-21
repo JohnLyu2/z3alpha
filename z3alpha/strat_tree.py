@@ -3,7 +3,6 @@ from z3alpha.selector import search_next_action
 from z3alpha.tactic_catalog import (
     SOLVER_CATALOG,
     PREPROCESS_CATALOG,
-    load_logic_config,
 )
 
 MAX_IF_DEPTH = 3
@@ -234,63 +233,11 @@ class TacticNode(ASTNode):
         return self.children[0].getLnStrats(precede_strats, probe_record)
 
 
-class PreprocessTactic(ASTNode):
-    def __init__(self, logic_config):
-        super().__init__()
-        self.logic_config = logic_config
-
-    def __str__(self):
-        return f"<PreprocessTactic> {self.children[0]}"
-
-    def isTerminal(self):
-        return False
-
-    def legalActions(self, rollout=False):
-        return list(self.logic_config["preprocess_tactics"])
-
-    def applyRule(self, action, params):
-        assert action in self.legalActions()
-        tactic_name = PREPROCESS_CATALOG[action]
-        selected = TacticNode(tactic_name, params, action)
-        self.parent.replaceChild(selected, self.pos)
-        selected.addChildren(self.children)
-
-
-class SolverTactic(ASTNode):
-    def __init__(self, logic_config):
-        super().__init__()
-        self.logic_config = logic_config
-
-    def __str__(self):
-        return f"<SolverTactic>"
-
-    def isTerminal(self):
-        return False
-
-    def legalActions(self, rollout=False):
-        return list(self.logic_config["solver_tactics"])
-
-    def applyRule(self, action, params):
-        assert self.isLeaf()
-        assert action in self.legalActions()
-        tactic_name = SOLVER_CATALOG[action]
-        selected = TacticNode(tactic_name, params, action)
-        self.parent.replaceChild(selected, self.pos)
-
-
 class S1Strategy(ASTNode):
-    def __init__(self, logic, logic_config, config_dir=None):
+    def __init__(self, logic, logic_config):
         super().__init__()
         self.logic = logic
         self.logic_config = logic_config
-        self.config_dir = config_dir
-        self.action_dict = {
-            0: self.applySolverRule,
-            1: self.applyThenRule,
-            5: self.applyNla2BVRule,
-            7: self.applyBitBlastRule,
-            8: self.applyPb2BvRule,
-        }
 
     def __str__(self):
         return f"<S1Strategy>({self.logic})"
@@ -299,51 +246,23 @@ class S1Strategy(ASTNode):
         return False
 
     def legalActions(self, rollout=False):
-        actions = [0, 1]
-        if (not rollout) and (self.logic == "QF_NIA" or self.logic == "QF_NRA"):
-            actions.append(5)
-        if self.logic == "QF_BV":
-            actions.append(7)
-        if self.logic == "QF_LIA":
-            # actions.append(8)
-            pass
-        return actions
-
-    def applySolverRule(self, params):
-        assert self.parent
-        self.parent.replaceChild(SolverTactic(self.logic_config), self.pos)
-
-    def applyThenRule(self, params):
-        assert self.parent
-        preprocessor = PreprocessTactic(self.logic_config)
-        self.parent.replaceChild(preprocessor, self.pos)
-        preprocessor.addChildren(
-            [S1Strategy(self.logic, self.logic_config, self.config_dir)]
+        return list(self.logic_config["solver_tactics"]) + list(
+            self.logic_config["preprocess_tactics"]
         )
 
-    def applyNla2BVRule(self, params):
-        nla2bv_node = TacticNode("nla2bv", params)
-        self.parent.replaceChild(nla2bv_node, self.pos)
-        qf_bv_config = load_logic_config("QF_BV", self.config_dir)
-        qf_bv_strat = S1Strategy("QF_BV", qf_bv_config, self.config_dir)
-        nla2bv_node.addChildren([qf_bv_strat])
-
-    def applyPb2BvRule(self, params):
-        pb2bv_node = TacticNode("pb2bv", params)
-        self.parent.replaceChild(pb2bv_node, self.pos)
-        qf_bv_config = load_logic_config("QF_BV", self.config_dir)
-        qf_bv_strat = S1Strategy("QF_BV", qf_bv_config, self.config_dir)
-        pb2bv_node.addChildren([qf_bv_strat])
-
-    def applyBitBlastRule(self, params):
-        simplify_node = TacticNode("simplify", None)
-        bit_blast_node = TacticNode("bit-blast", params)
-        self.parent.replaceChild(simplify_node, self.pos)
-        simplify_node.addChildren([bit_blast_node])
-        sat_config = load_logic_config("SAT", self.config_dir)
-        bit_blast_node.addChildren(
-            [S1Strategy("SAT", sat_config, self.config_dir)]
-        )
+    def applyRule(self, action, params):
+        assert self.isLeaf()
+        assert action in self.legalActions()
+        if action in SOLVER_CATALOG:
+            selected = TacticNode(SOLVER_CATALOG[action], params, action)
+            self.parent.replaceChild(selected, self.pos)
+            return
+        if action in PREPROCESS_CATALOG:
+            selected = TacticNode(PREPROCESS_CATALOG[action], params, action)
+            self.parent.replaceChild(selected, self.pos)
+            selected.addChildren([S1Strategy(self.logic, self.logic_config)])
+            return
+        raise Exception("unexpected action")
 
 
 class S2Strategy(ASTNode):
@@ -429,14 +348,14 @@ class S2Strategy(ASTNode):
 class StrategyAST:
     def __init__(
         self, stage, logic, timeout, s2config=None,
-        logic_config=None, config_dir=None,
+        logic_config=None,
     ):
         self.logic = logic
         self.timeout = timeout
         self.root = Root()
         if stage == 1:
             self.root.addChildren(
-                [S1Strategy(logic, logic_config, config_dir)]
+                [S1Strategy(logic, logic_config)]
             )
         else:
             assert s2config

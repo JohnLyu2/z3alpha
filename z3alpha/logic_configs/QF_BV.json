@@ -1,6 +1,7 @@
 {
   "solver_tactics": ["smt", "qfbv"],
   "preprocess_tactics": [
+    "bit-blast",
     "simplify",
     "propagate-values",
     "ctx-simplify",

@@ -7,14 +7,14 @@ from z3alpha.utils import solvedNumReward, parNReward
 class StrategyGame:
     def __init__(
         self, stage, training_lst, logic, timeout, sconfig, batch_size, z3path,
-        logic_config=None, config_dir=None,
+        logic_config=None,
     ):
         self.stage = stage
         self.benchmarks = training_lst
         if stage == 1:
             self.stratAST = StrategyAST(
                 1, logic, timeout,
-                logic_config=logic_config, config_dir=config_dir,
+                logic_config=logic_config,
             )
         else:
             self.stratAST = StrategyAST(2, logic, timeout, sconfig)

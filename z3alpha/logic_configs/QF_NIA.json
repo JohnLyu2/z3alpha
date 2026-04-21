@@ -1,6 +1,7 @@
 {
   "solver_tactics": ["smt", "qfnra-nlsat", "qfnia"],
   "preprocess_tactics": [
+    "nla2bv",
     "simplify",
     "propagate-values",
     "ctx-simplify",

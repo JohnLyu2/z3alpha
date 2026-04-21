@@ -110,7 +110,6 @@ def stage1_synthesize(config, log_folder):
         log_folder,
         batch_size=batch_size,
         logic_config=logic_config,
-        config_dir=config_dir,
     )
     run1.start()
     s1_res_dict = run1.getResDict()

@@ -1,6 +1,7 @@
 {
   "solver_tactics": ["smt", "qflia"],
   "preprocess_tactics": [
+    "pb2bv",
     "simplify",
     "propagate-values",
     "ctx-simplify",
