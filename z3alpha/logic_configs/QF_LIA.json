@@ -1,0 +1,37 @@
+{
+  "solver_tactics": ["smt", "qflia"],
+  "preprocess_tactics": [
+    "simplify",
+    "propagate-values",
+    "ctx-simplify",
+    "elim-uncnstr",
+    "solve-eqs",
+    "propagate-ineqs",
+    "add-bounds",
+    "normalize-bounds",
+    "lia2pb"
+  ],
+  "params": {
+    "smt": {
+      "random_seed": [0, 100, 200, 300, 400, 500]
+    },
+    "simplify": {
+      "elim_and": ["true", "false"],
+      "blast_distinct": ["true", "false"],
+      "local_ctx": ["true", "false"],
+      "pull_cheap_ite": ["true", "false"],
+      "som": ["true", "false"],
+      "flat": ["true", "false"],
+      "push_ite_arith": ["true", "false"],
+      "hoist_ite": ["true", "false"],
+      "arith_lhs": ["true", "false"]
+    },
+    "add-bounds": {
+      "add_bound_lower": [-2, -4, -8, -16, -32],
+      "add_bound_upper": [2, 4, 8, 16, 32]
+    },
+    "lia2pb": {
+      "lia2pb_max_bits": [16, 32, 64, 128]
+    }
+  }
+}

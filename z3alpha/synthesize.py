@@ -17,6 +17,7 @@ from z3alpha.selector import linear_strategy_select, convert_strats_to_act_lists
 from z3alpha.utils import calculatePercentile, write_strat_res_to_csv
 
 from z3alpha.strat_tree import PERCENTILES
+from z3alpha.tactic_catalog import load_logic_config
 
 log = logging.getLogger(__name__)
 
@@ -92,6 +93,9 @@ def stage1_synthesize(config, log_folder):
     random_seed = config["random_seed"]
     random.seed(random_seed)
 
+    config_dir = config.get("logic_config_dir", None)
+    logic_config = load_logic_config(logic, config_dir)
+
     # Stage 1
     s1_bench_dirs = s1config["bench_dirs"]
     s1BenchLst = createBenchmarkList(s1_bench_dirs)
@@ -105,6 +109,8 @@ def stage1_synthesize(config, log_folder):
         VALUE_TYPE,
         log_folder,
         batch_size=batch_size,
+        logic_config=logic_config,
+        config_dir=config_dir,
     )
     run1.start()
     s1_res_dict = run1.getResDict()

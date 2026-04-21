@@ -1,5 +1,10 @@
 import copy
 from z3alpha.selector import search_next_action
+from z3alpha.tactic_catalog import (
+    SOLVER_CATALOG,
+    PREPROCESS_CATALOG,
+    load_logic_config,
+)
 
 MAX_IF_DEPTH = 3
 TIMEOUTS = ["v2", "v8", "v32", "v128", "v512"]  # in seconds
@@ -230,125 +235,61 @@ class TacticNode(ASTNode):
 
 
 class PreprocessTactic(ASTNode):
-    def __init__(self, logic):
+    def __init__(self, logic_config):
         super().__init__()
-        self.logic = logic
-        self.action_dict = {
-            20: "simplify",
-            21: "propagate-values",
-            22: "ctx-simplify",
-            23: "elim-uncnstr",
-            24: "solve-eqs",
-            # 25 - 31 are QF_BV only
-            25: "purify-arith",
-            26: "max-bv-sharing",
-            27: "aig",
-            28: "reduce-bv-size",
-            29: "ackermannize_bv",
-            # 30: "bit-blast", # require simplification beforehand; otherwise report error
-            # 32 - 34 are QF_NIA only
-            32: "lia2card",
-            33: "card2bv",
-            34: "cofactor-term-ite",
-            # 35 - 38 are QF_LIA only
-            35: "propagate-ineqs",
-            36: "add-bounds",
-            37: "normalize-bounds",
-            38: "lia2pb",
-        }
+        self.logic_config = logic_config
 
     def __str__(self):
-        # if self.isLeaf():
-        #     return f"<PreprocessTactic>({self.logic})"
-        return f"<PreprocessTactic>({self.logic}) {self.children[0]}"
+        return f"<PreprocessTactic> {self.children[0]}"
 
     def isTerminal(self):
         return False
 
     def legalActions(self, rollout=False):
-        actions = [i for i in range(20, 25)]
-        if self.logic == "default":
-            return actions
-        elif self.logic == "QF_BV":
-            return actions + [i for i in range(25, 30)]
-        elif self.logic == "QF_NIA":
-            return actions + [i for i in range(32, 35)]
-        elif self.logic == "QF_NRA" or self.logic == "SAT":
-            return actions
-        elif self.logic == "QF_LIA":
-            return actions + [i for i in range(35, 39)]
-        elif self.logic == "QF_LRA":
-            return actions
-        else:
-            raise Exception("unexpected smt logic")
+        return list(self.logic_config["preprocess_tactics"])
 
     def applyRule(self, action, params):
         assert action in self.legalActions()
-        tactic_name = self.action_dict[action]
-        # params = TACTIC_PARAMS[tactic_name] if tactic_name in TACTIC_PARAMS else None
+        tactic_name = PREPROCESS_CATALOG[action]
         selected = TacticNode(tactic_name, params, action)
         self.parent.replaceChild(selected, self.pos)
         selected.addChildren(self.children)
 
 
 class SolverTactic(ASTNode):
-    def __init__(self, logic):
+    def __init__(self, logic_config):
         super().__init__()
-        self.logic = logic
-        self.action_dict = {
-            10: "smt",
-            11: "qfnra-nlsat",  # for QF_NIA and QF_NRA
-            12: "sat",
-            13: "qfbv",  # only for QF_BV
-            14: "qfnia",  # only for QF_NIA
-            15: "qfnra",  # only for QF_NRA
-            16: "qflia",  # only for QF_LIA
-            17: "qflra",  # only for QF_LRA
-        }
+        self.logic_config = logic_config
 
     def __str__(self):
-        return f"<SolverTactic>({self.logic})"
+        return f"<SolverTactic>"
 
     def isTerminal(self):
         return False
 
     def legalActions(self, rollout=False):
-        actions = [10]
-        if self.logic == "default":
-            return actions
-        elif self.logic == "QF_BV":
-            return actions + [13]
-        elif self.logic == "QF_NIA":
-            return actions + [11, 14]
-        elif self.logic == "QF_NRA":
-            return actions + [11, 15]
-        elif self.logic == "QF_LIA":
-            return actions + [16]
-        elif self.logic == "QF_LRA":
-            return actions + [17]
-        elif self.logic == "SAT":
-            return actions + [12]
-        else:
-            raise Exception("unexpected smt logic")
+        return list(self.logic_config["solver_tactics"])
 
     def applyRule(self, action, params):
         assert self.isLeaf()
         assert action in self.legalActions()
-        tactic_name = self.action_dict[action]
+        tactic_name = SOLVER_CATALOG[action]
         selected = TacticNode(tactic_name, params, action)
         self.parent.replaceChild(selected, self.pos)
 
 
 class S1Strategy(ASTNode):
-    def __init__(self, logic):
+    def __init__(self, logic, logic_config, config_dir=None):
         super().__init__()
         self.logic = logic
+        self.logic_config = logic_config
+        self.config_dir = config_dir
         self.action_dict = {
-            0: self.applySolverRule,  # <S1Strategy> := <SolverTactic>
-            1: self.applyThenRule,  # <S1Strategy> := (then <PreprocessTactic> <S1Strategy>)
-            5: self.applyNla2BVRule,  # <S1Strategy>(QF_NIA/QF_NRA) := (then nla2bv <S1Strategy>(QF_BV))
-            7: self.applyBitBlastRule,  # <S1Strategy>(BV) := (then simplify bit-blast <S1Strategy>(SAT))
-            8: self.applyPb2BvRule,  # <S1Strategy>(QF_LIA) := (then pb2bv <S1Strategy>(QF_BV))
+            0: self.applySolverRule,
+            1: self.applyThenRule,
+            5: self.applyNla2BVRule,
+            7: self.applyBitBlastRule,
+            8: self.applyPb2BvRule,
         }
 
     def __str__(self):
@@ -370,24 +311,28 @@ class S1Strategy(ASTNode):
 
     def applySolverRule(self, params):
         assert self.parent
-        self.parent.replaceChild(SolverTactic(self.logic), self.pos)
+        self.parent.replaceChild(SolverTactic(self.logic_config), self.pos)
 
     def applyThenRule(self, params):
         assert self.parent
-        preprocessor = PreprocessTactic(self.logic)
+        preprocessor = PreprocessTactic(self.logic_config)
         self.parent.replaceChild(preprocessor, self.pos)
-        preprocessor.addChildren([S1Strategy(self.logic)])
+        preprocessor.addChildren(
+            [S1Strategy(self.logic, self.logic_config, self.config_dir)]
+        )
 
     def applyNla2BVRule(self, params):
         nla2bv_node = TacticNode("nla2bv", params)
         self.parent.replaceChild(nla2bv_node, self.pos)
-        qf_bv_strat = S1Strategy("QF_BV")
+        qf_bv_config = load_logic_config("QF_BV", self.config_dir)
+        qf_bv_strat = S1Strategy("QF_BV", qf_bv_config, self.config_dir)
         nla2bv_node.addChildren([qf_bv_strat])
 
     def applyPb2BvRule(self, params):
         pb2bv_node = TacticNode("pb2bv", params)
         self.parent.replaceChild(pb2bv_node, self.pos)
-        qf_bv_strat = S1Strategy("QF_BV")
+        qf_bv_config = load_logic_config("QF_BV", self.config_dir)
+        qf_bv_strat = S1Strategy("QF_BV", qf_bv_config, self.config_dir)
         pb2bv_node.addChildren([qf_bv_strat])
 
     def applyBitBlastRule(self, params):
@@ -395,7 +340,10 @@ class S1Strategy(ASTNode):
         bit_blast_node = TacticNode("bit-blast", params)
         self.parent.replaceChild(simplify_node, self.pos)
         simplify_node.addChildren([bit_blast_node])
-        bit_blast_node.addChildren([S1Strategy("SAT")])
+        sat_config = load_logic_config("SAT", self.config_dir)
+        bit_blast_node.addChildren(
+            [S1Strategy("SAT", sat_config, self.config_dir)]
+        )
 
 
 class S2Strategy(ASTNode):
@@ -479,12 +427,17 @@ class S2Strategy(ASTNode):
 
 
 class StrategyAST:
-    def __init__(self, stage, logic, timeout, s2config=None):
+    def __init__(
+        self, stage, logic, timeout, s2config=None,
+        logic_config=None, config_dir=None,
+    ):
         self.logic = logic
         self.timeout = timeout
         self.root = Root()
         if stage == 1:
-            self.root.addChildren([S1Strategy(logic)])
+            self.root.addChildren(
+                [S1Strategy(logic, logic_config, config_dir)]
+            )
         else:
             assert s2config
             s2dict = s2config["s2dict"]

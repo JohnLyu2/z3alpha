@@ -5,7 +5,7 @@ import copy
 from pathlib import Path
 from z3alpha.environment import StrategyGame
 from z3alpha.logging_config import attach_file_logger
-from z3alpha.params import create_params_dict
+from z3alpha.tactic_catalog import create_params_dict
 
 logger = logging.getLogger(__name__)
 
@@ -14,8 +14,8 @@ IS_MEAN_EST = False
 
 
 class MCTSNode:
-    def __init__(self, logic, is_mean, trace_log, c_ucb, action_history=None):
-        self.param_dict = create_params_dict(logic)
+    def __init__(self, logic_config, is_mean, trace_log, c_ucb, action_history=None):
+        self.param_dict = logic_config["params"] if logic_config else {}
         self.isMean = is_mean
         self.c_ucb = c_ucb
         # self.alpha = alpha
@@ -124,10 +124,14 @@ class MCTS_RUN:
         log_folder,
         batch_size=1,
         root=None,
+        logic_config=None,
+        config_dir=None,
     ):
         self.stage = stage
         self.z3path = z3path
         self.config = config
+        self.logic_config = logic_config
+        self.config_dir = config_dir
         self.numSimulations = config["sim_num"]
         self.isMean = IS_MEAN_EST
         self.discount = 1  # now set to 1
@@ -156,7 +160,7 @@ class MCTS_RUN:
         )
 
         if not root:
-            root = MCTSNode(self.logic, self.isMean, self.trace_log, self.c_ucb)
+            root = MCTSNode(self.logic_config, self.isMean, self.trace_log, self.c_ucb)
         self.root = root
         self.bestReward = -1
         self.topStrategies = [None, None, None] # top 3 strategies
@@ -206,7 +210,7 @@ class MCTS_RUN:
             history = copy.deepcopy(node.actionHistory)
             history.append(action)
             node.children[action] = MCTSNode(
-                self.logic, self.isMean, self.trace_log, self.c_ucb, history
+                self.logic_config, self.isMean, self.trace_log, self.c_ucb, history
             )
 
     def _rollout(self):
@@ -236,6 +240,8 @@ class MCTS_RUN:
             self.config,
             self.batchSize,
             z3path=self.z3path,
+            logic_config=self.logic_config,
+            config_dir=self.config_dir,
         )
         selectNode, searchPath = self._select()
         self.trace_log.info("Selected Node: " + str(selectNode))

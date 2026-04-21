@@ -1,0 +1,23 @@
+{
+  "solver_tactics": ["smt", "qflra"],
+  "preprocess_tactics": [
+    "simplify",
+    "propagate-values",
+    "ctx-simplify",
+    "elim-uncnstr",
+    "solve-eqs"
+  ],
+  "params": {
+    "smt": {
+      "random_seed": [0, 100, 200, 300, 400, 500]
+    },
+    "simplify": {
+      "elim_and": ["true", "false"],
+      "blast_distinct": ["true", "false"],
+      "local_ctx": ["true", "false"],
+      "pull_cheap_ite": ["true", "false"],
+      "som": ["true", "false"],
+      "flat": ["true", "false"]
+    }
+  }
+}

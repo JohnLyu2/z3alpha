@@ -1,0 +1,37 @@
+{
+  "solver_tactics": ["smt", "qfnra-nlsat", "qfnra"],
+  "preprocess_tactics": [
+    "simplify",
+    "propagate-values",
+    "ctx-simplify",
+    "elim-uncnstr",
+    "solve-eqs"
+  ],
+  "params": {
+    "nla2bv": {
+      "nla2bv_max_bv_size": [4, 8, 16, 32, 64, 128]
+    },
+    "smt": {
+      "random_seed": [0, 100, 200, 300, 400, 500]
+    },
+    "qfnra-nlsat": {
+      "inline_vars": ["true", "false"],
+      "factor": ["true", "false"],
+      "seed": [0, 100, 200, 300, 400, 500]
+    },
+    "simplify": {
+      "elim_and": ["true", "false"],
+      "blast_distinct": ["true", "false"],
+      "local_ctx": ["true", "false"],
+      "pull_cheap_ite": ["true", "false"],
+      "som": ["true", "false"],
+      "flat": ["true", "false"],
+      "hi_div0": ["true", "false"],
+      "hoist_mul": ["true", "false"],
+      "push_ite_bv": ["true", "false"]
+    },
+    "propagate-values": {
+      "push_ite_bv": ["true", "false"]
+    }
+  }
+}

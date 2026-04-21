@@ -6,12 +6,16 @@ from z3alpha.utils import solvedNumReward, parNReward
 
 class StrategyGame:
     def __init__(
-        self, stage, training_lst, logic, timeout, sconfig, batch_size, z3path
+        self, stage, training_lst, logic, timeout, sconfig, batch_size, z3path,
+        logic_config=None, config_dir=None,
     ):
         self.stage = stage
         self.benchmarks = training_lst
         if stage == 1:
-            self.stratAST = StrategyAST(1, logic, timeout)
+            self.stratAST = StrategyAST(
+                1, logic, timeout,
+                logic_config=logic_config, config_dir=config_dir,
+            )
         else:
             self.stratAST = StrategyAST(2, logic, timeout, sconfig)
             self.probe_records = sconfig["s2dict"]["probe_records"]
