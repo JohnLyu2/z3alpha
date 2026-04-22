@@ -26,22 +26,16 @@ class StrategyAST:
     def __str__(self):
         return str(self.root)
 
-    @staticmethod
-    def _find_fst_nonterm_rec(nonterm_stack):
-        if not len(nonterm_stack):
-            return None
-        node_to_search = nonterm_stack.pop()
-        if not node_to_search.is_terminal():
-            return node_to_search
-        else:
-            for child_node in reversed(node_to_search.children):
-                nonterm_stack.append(child_node)
-        return StrategyAST._find_fst_nonterm_rec(nonterm_stack)
-
-    # return the depth-first first nontermial node in the tree; if nonexist, return None
+    # Return the depth-first first nonterminal node in the tree.
     def find_fst_nonterm(self):
         nonterm_stack = [self.root]
-        return StrategyAST._find_fst_nonterm_rec(nonterm_stack)
+        while nonterm_stack:
+            node_to_search = nonterm_stack.pop()
+            if not node_to_search.is_terminal():
+                return node_to_search
+            for child_node in reversed(node_to_search.children):
+                nonterm_stack.append(child_node)
+        return None
 
     def is_terminal(self):
         return not bool(self.find_fst_nonterm())
@@ -61,10 +55,6 @@ class StrategyAST:
         return self.root.get_ln_strats(self.timeout, probe_record)
 
     # Backward-compatible aliases.
-    @staticmethod
-    def _findFstNonTermRec(nonterm_stack):
-        return StrategyAST._find_fst_nonterm_rec(nonterm_stack)
-
     def findFstNonTerm(self):
         return self.find_fst_nonterm()
 
