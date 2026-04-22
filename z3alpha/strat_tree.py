@@ -37,17 +37,21 @@ class StrategyAST:
                 nonterm_stack.append(child_node)
         return None
 
+    def current_decision_node(self):
+        return self.find_fst_nonterm()
+
     def is_terminal(self):
-        return not bool(self.find_fst_nonterm())
+        return not bool(self.current_decision_node())
 
     def legal_actions(self, rollout: bool = False) -> list[Action]:
-        if self.is_terminal():
+        node = self.current_decision_node()
+        if node is None:
             return []
-        return self.find_fst_nonterm().legal_actions(rollout)
+        return node.legal_actions(rollout)
 
     def apply_rule(self, action: Action, params: dict | None) -> None:
-        assert not self.is_terminal()
-        node = self.find_fst_nonterm()
+        node = self.current_decision_node()
+        assert node is not None
         node.apply_rule(action, params)
 
     def get_linear_strategies(self, probe_record):
