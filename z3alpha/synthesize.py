@@ -16,7 +16,7 @@ from z3alpha.mcts import MCTS_RUN
 from z3alpha.selector import linear_strategy_select, convert_strats_to_act_lists
 from z3alpha.utils import calculatePercentile, write_strat_res_to_csv
 
-from z3alpha.strat_tree import PERCENTILES
+from z3alpha.strat_tree_s2 import PERCENTILES
 from z3alpha.tactic_catalog import load_logic_config
 
 log = logging.getLogger(__name__)
