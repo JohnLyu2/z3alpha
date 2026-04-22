@@ -26,18 +26,6 @@ class ASTNode:
         child.parent = self
         child.pos = pos
 
-    # Backward-compatible aliases.
-    def isLeaf(self):
-        return self.is_leaf()
-
-    def isTactic(self):
-        return self.is_tactic()
-
-    def addChildren(self, children):
-        return self.add_children(children)
-
-    def replaceChild(self, child, pos):
-        return self.replace_child(child, pos)
 
 
 class Root(ASTNode):
@@ -54,12 +42,6 @@ class Root(ASTNode):
     def get_ln_strats(self, timeout, probe_record):
         return self.children[0].get_ln_strats([([], timeout)], probe_record)
 
-    # Backward-compatible aliases.
-    def isTerminal(self):
-        return self.is_terminal()
-
-    def getLnStrats(self, timeout, probe_record):
-        return self.get_ln_strats(timeout, probe_record)
 
 
 class TacticNode(ASTNode):
@@ -83,7 +65,7 @@ class TacticNode(ASTNode):
 
     def __str__(self):
         tactic_str = self._tactic_str()
-        if self.isLeaf():
+        if self.is_leaf():
             return tactic_str
         elif self._is_first_then():
             return f"(then {tactic_str} {self.children[0]})"
@@ -110,12 +92,3 @@ class TacticNode(ASTNode):
             return precede_strats
         return self.children[0].get_ln_strats(precede_strats, probe_record)
 
-    # Backward-compatible aliases.
-    def isTactic(self):
-        return self.is_tactic()
-
-    def isTerminal(self):
-        return self.is_terminal()
-
-    def getLnStrats(self, precede_strats, probe_record):
-        return self.get_ln_strats(precede_strats, probe_record)

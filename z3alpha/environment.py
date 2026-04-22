@@ -57,10 +57,6 @@ class StrategyGame:
         database[strat_str] = res_list
         return res_list
 
-    # Backward-compatible alias.
-    def getS1ResLst(self, database):
-        return self.get_s1_res_list(database)
-
     def _get_linear_strategies(self, bench_id):
         probe_record = self.probe_records[bench_id]
         return self.strat_ast.get_linear_strategies(probe_record)
@@ -108,10 +104,6 @@ class StrategyGame:
             res_lst.append(res_tuple)
         return res_lst
 
-    # Backward-compatible alias.
-    def getS2ResLst(self, database):
-        return self.get_s2_res_list(database)
-
     # return a total reward of [0,1] according to the reward type
     def get_value(self, database: dict, reward_type: str) -> float:
         assert self.is_terminal()
@@ -128,14 +120,3 @@ class StrategyGame:
             raise Exception(f"Unknown value type {reward_type}")
         return reward_dispatcher[reward_type](res_lst)
 
-    # Backward-compatible alias.
-    def isTerminal(self):
-        return self.is_terminal()
-
-    # Backward-compatible alias.
-    def legalActions(self, rollout=False):
-        return self.legal_actions(rollout)
-
-    # Backward-compatible alias.
-    def getValue(self, database, reward_type):
-        return self.get_value(database, reward_type)

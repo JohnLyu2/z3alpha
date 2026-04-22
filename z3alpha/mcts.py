@@ -105,24 +105,6 @@ class MCTSNode:
             mab_dict[selected_value][0] += 1
             self.selected[param] = None
 
-    # Backward-compatible aliases.
-    def isExpanded(self):
-        return self.is_expanded()
-
-    def hasParamMABs(self):
-        return self.has_param_mabs()
-
-    def _setParamMABs(self):
-        return self._set_param_mabs()
-
-    def _selectMAB(self, param):
-        return self._select_mab(param)
-
-    def selectMABs(self):
-        return self.select_mabs()
-
-    def backupMABs(self, reward):
-        return self.backup_mabs(reward)
 
 class BaseMCTSRun:
     def __init__(
@@ -279,17 +261,11 @@ class BaseMCTSRun:
     def start(self):
         for i in range(self.num_simulations):
             self.num_sim = i
-            # Console: progress for stage 1 only (stage 2 can have huge sim_num).
             if self.stage == 1:
                 logger.info(f"Simulation {i} starts")
             self.trace_log.info(f"Simulation {i} starts")
             self._oneSimulation()
             self._after_simulation()
-
-    # def bestNS1Strategies(self, n):
-    #     if n > len(self.resS1Database):
-    #         n = len(self.resS1Database)
-    #     return sorted(self.resS1Database, key=self.resS1Database.get, reverse=True)[:n]
 
     def get_strategy_stat(self, strat):
         return self.res_s1_database[strat]
@@ -303,24 +279,6 @@ class BaseMCTSRun:
     def get_best_3_strats(self):
         return self.top_strategies
 
-    # Backward-compatible aliases.
-    def _expandNode(self, node, actions, reward):
-        return self._expand_node(node, actions, reward)
-
-    def _updateTopStrategies(self, value, stratetgy):
-        return self._update_top_strategies(value, stratetgy)
-
-    def getStrategyStat(self, strat):
-        return self.get_strategy_stat(strat)
-
-    def getResDict(self):
-        return self.get_res_dict()
-
-    def getBestStrat(self):
-        return self.get_best_strat()
-
-    def getBest3Strats(self):
-        return self.get_best_3_strats()
 
 
 class Stage1MCTSRun(BaseMCTSRun):
@@ -369,41 +327,3 @@ class Stage2MCTSRun(BaseMCTSRun):
             z3path=self.z3path,
         )
 
-
-def MCTS_RUN(
-    stage,
-    config,
-    bench_lst,
-    logic,
-    z3path,
-    value_type,
-    log_folder,
-    batch_size=1,
-    root=None,
-    logic_config=None,
-):
-    if stage == 1:
-        return Stage1MCTSRun(
-            config,
-            bench_lst,
-            logic,
-            z3path,
-            value_type,
-            log_folder,
-            batch_size=batch_size,
-            root=root,
-            logic_config=logic_config,
-        )
-    if stage == 2:
-        return Stage2MCTSRun(
-            config,
-            bench_lst,
-            logic,
-            z3path,
-            value_type,
-            log_folder,
-            batch_size=batch_size,
-            root=root,
-            logic_config=logic_config,
-        )
-    raise ValueError(f"Unsupported stage: {stage}")

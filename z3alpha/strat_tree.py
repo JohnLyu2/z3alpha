@@ -54,15 +54,3 @@ class StrategyAST:
         assert self.is_terminal()
         return self.root.get_ln_strats(self.timeout, probe_record)
 
-    # Backward-compatible aliases.
-    def findFstNonTerm(self):
-        return self.find_fst_nonterm()
-
-    def isTerminal(self):
-        return self.is_terminal()
-
-    def legalActions(self, rollout: bool = False) -> list[Action]:
-        return self.legal_actions(rollout)
-
-    def applyRule(self, action: Action, params: dict | None) -> None:
-        return self.apply_rule(action, params)

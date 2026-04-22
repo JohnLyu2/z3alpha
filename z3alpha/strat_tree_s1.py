@@ -33,12 +33,3 @@ class S1Strategy(ASTNode):
             return
         raise Exception("unexpected action")
 
-    # Backward-compatible aliases.
-    def isTerminal(self):
-        return self.is_terminal()
-
-    def legalActions(self, rollout=False):
-        return self.legal_actions(rollout)
-
-    def applyRule(self, action, params):
-        return self.apply_rule(action, params)

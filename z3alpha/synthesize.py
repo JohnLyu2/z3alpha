@@ -24,7 +24,7 @@ log = logging.getLogger(__name__)
 VALUE_TYPE = "par10"  # hard code for now
 
 
-def createBenchmarkList(benchmark_directories):
+def create_benchmark_list(benchmark_directories):
     """Collect all .smt2 files from the given directories."""
     benchmark_lst = []
     for dir in benchmark_directories:
@@ -36,7 +36,7 @@ def createBenchmarkList(benchmark_directories):
     return benchmark_lst
 
 
-def createProbeStats(bench_lst):
+def create_probe_stats(bench_lst):
     """
     Create probe stats, i.e., #constants, #expressions, and size, for a list of SMT benchmarks.
     This function returns:
@@ -83,6 +83,12 @@ def createProbeStats(bench_lst):
     return probe_stats, probe_records
 
 
+def _log_elapsed(start_time, label):
+    elapsed = time.time() - start_time
+    log.info(f"{label}: {elapsed:.0f}")
+    return elapsed
+
+
 def stage1_synthesize(config, log_folder):
     start_time = time.time()
     logic = config["logic"]
@@ -98,7 +104,7 @@ def stage1_synthesize(config, log_folder):
 
     # Stage 1
     s1_bench_dirs = s1config["bench_dirs"]
-    s1_bench_lst = createBenchmarkList(s1_bench_dirs)
+    s1_bench_lst = create_benchmark_list(s1_bench_dirs)
     log.info("S1 MCTS Simulations Start")
     run1 = Stage1MCTSRun(
         s1config,
@@ -129,9 +135,7 @@ def stage1_synthesize(config, log_folder):
         f"Selected {len(selected_strat)} strategies: {selected_strat}, saved to {ln_strat_candidates_path}"
     )
 
-    end_time = time.time()
-    s1_time = end_time - start_time
-    log.info(f"Stage 1 Time: {s1_time:.0f}")
+    _log_elapsed(start_time, "Stage 1 Time")
     return selected_strat
 
 def add_fail_if_undecided(strat):
@@ -162,7 +166,7 @@ def cache4stage2(selected_strat, config, log_folder, benchlst=None):
     s2benchLst = (
         benchlst
         if benchlst
-        else createBenchmarkList(s2_bench_dirs)
+        else create_benchmark_list(s2_bench_dirs)
     )
     s2_res_lst = []
     s2evaluator = SolverEvaluator(
@@ -179,9 +183,7 @@ def cache4stage2(selected_strat, config, log_folder, benchlst=None):
     ln_res_csv = Path(log_folder) / "stage2_strategy_cache.csv"
     write_strat_res_to_csv(s2_res_lst, ln_res_csv, s2benchLst)
     log.info(f"Cached results saved to {ln_res_csv}")
-    end_time = time.time()
-    cache_time = end_time - start_time
-    log.info(f"Stage 2 Cache Time: {cache_time:.0f}")
+    _log_elapsed(start_time, "Stage 2 Cache Time")
     return s2_res_lst, s2benchLst
 
 
@@ -218,7 +220,7 @@ def stage2_synthesize(results, bench_lst, config, log_folder):
     s2startTime = time.time()
     log.info("S2 MCTS Simulations Start")
 
-    probe_stats, probe_records = createProbeStats(bench_lst)
+    probe_stats, probe_records = create_probe_stats(bench_lst)
     s2dict["probe_stats"] = probe_stats
     s2dict["probe_records"] = probe_records
     s2config = config["s2config"]
@@ -240,9 +242,7 @@ def stage2_synthesize(results, bench_lst, config, log_folder):
         f.write(best_strategy)
     log.info(f"Best final strategy saved to: {strat_path}")
 
-    s2endTime = time.time()
-    s2time = s2endTime - s2startTime
-    log.info(f"Stage 2 MCTS Time: {s2time:.0f}")
+    _log_elapsed(s2startTime, "Stage 2 MCTS Time")
     return best_strategy
 
 
@@ -265,8 +265,7 @@ def parallel_synthesize(config, log_folder):
         f.write(parallel_strat)
     log.info(f"Final parallel strategy saved to {parallel_strat_path}")
 
-    total_time = time.time() - start_time
-    log.info(f"Total synthesis time: {total_time:.0f} seconds")
+    _log_elapsed(start_time, "Total synthesis time")
 
 
 
@@ -289,8 +288,7 @@ def branched_synthesize(config, log_folder):
     # Step 3: Branched strategy synthesis
     stage2_synthesize(res_dict, bench_lst, config, log_folder)
 
-    total_time = time.time() - start_time
-    log.info(f"Total synthesis time: {total_time:.0f} seconds")
+    _log_elapsed(start_time, "Total synthesis time")
 
 def main():
     parser = argparse.ArgumentParser()
