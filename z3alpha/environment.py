@@ -78,8 +78,9 @@ class StrategyGame:
                 time_remain -= st_timeout
                 time_used += st_timeout
             elif time_remain < cache_time:
-                time_remain = 0
+                # Cache says this run exceeds remaining budget; consume all remaining time.
                 time_used += time_remain
+                time_remain = 0
             else:
                 if cache_solved == True:
                     solved = True
