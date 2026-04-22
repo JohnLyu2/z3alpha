@@ -6,7 +6,9 @@ from pathlib import Path
 from typing import Any
 from z3alpha.environment import StrategyGame
 from z3alpha.logging_config import attach_file_logger
-from z3alpha.strat_tree_s2 import Action
+from z3alpha.strat_tree_s2 import Action as S2Action
+
+Action = int | S2Action
 
 logger = logging.getLogger(__name__)
 

@@ -1,9 +1,22 @@
 import copy
 from typing import Any
+from dataclasses import dataclass
 from z3alpha.selector import search_next_action
 from z3alpha.ast_nodes import ASTNode, TacticNode
 
-Action = int | str
+
+@dataclass(frozen=True)
+class S2Action:
+    kind: str
+    value: int | str | None = None
+
+    def __str__(self) -> str:
+        if self.kind == "if_rule":
+            return "if_rule"
+        return f"{self.kind}:{self.value}"
+
+
+Action = S2Action
 
 MAX_IF_DEPTH = 3
 TIMEOUTS = ["v2", "v8", "v32", "v128", "v512"]  # in seconds
@@ -39,14 +52,6 @@ class OrElseNode(ASTNode):
             1
         ].get_ln_strats(prec_rightcp, probe_record)
 
-    # Backward-compatible aliases.
-    def isTerminal(self):
-        return self.is_terminal()
-
-    def getLnStrats(self, precede_strats, probe_record):
-        return self.get_ln_strats(precede_strats, probe_record)
-
-
 class PredicateNode(ASTNode):
     def __init__(self, name, prob_stats):
         super().__init__()
@@ -81,20 +86,6 @@ class PredicateNode(ASTNode):
         else:
             return self.children[1].get_ln_strats(precede_strats, probe_record)
 
-    # Backward-compatible aliases.
-    def isTerminal(self):
-        return self.is_terminal()
-
-    def legalActions(self, rollout=False):
-        return self.legal_actions(rollout)
-
-    def applyRule(self, action, params):
-        return self.apply_rule(action, params)
-
-    def getLnStrats(self, precede_strats, probe_record):
-        return self.get_ln_strats(precede_strats, probe_record)
-
-
 class ProbeNode(ASTNode):
     def __init__(self, depth, timeout, s2dict):
         super().__init__()
@@ -127,17 +118,6 @@ class ProbeNode(ASTNode):
         right_strat = S2Strategy(self.timeout, self.s2dict, self.if_depth)
         pred_node.add_children([left_strat, right_strat])
 
-    # Backward-compatible aliases.
-    def isTerminal(self):
-        return self.is_terminal()
-
-    def legalActions(self, rollout=False):
-        return self.legal_actions(rollout)
-
-    def applyRule(self, action, params):
-        return self.apply_rule(action, params)
-
-
 class S2Strategy(ASTNode):
     def __init__(self, timeout, s2dict, if_depth):
         super().__init__()
@@ -169,11 +149,16 @@ class S2Strategy(ASTNode):
     def legal_actions(self, rollout: bool = False) -> list[Action]:
         cur_path = self.get_cur_act_path()
         tac_actions = search_next_action(cur_path, self.s1strat_lst)
-        legal_actions = list(tac_actions)
+        legal_actions: list[S2Action] = [
+            S2Action("tactic", tac_action) for tac_action in tac_actions
+        ]
         if (not rollout) and (len(tac_actions) > 1):
-            legal_actions += self.legal_timeout_actions()
+            legal_actions += [
+                S2Action("timeout", timeout_value)
+                for timeout_value in self.legal_timeout_actions()
+            ]
         if (not rollout) and (self.if_depth < MAX_IF_DEPTH):
-            legal_actions.append(ACTION_IF_RULE)
+            legal_actions.append(S2Action("if_rule"))
         return legal_actions
 
     def apply_solver_rule(self, action: int) -> None:
@@ -204,41 +189,16 @@ class S2Strategy(ASTNode):
     def apply_rule(self, action: Action, params: Any) -> None:
         assert self.is_leaf()
         assert action in self.legal_actions()
-        if action == ACTION_IF_RULE:
+        if action.kind == "if_rule":
             self.apply_if_rule()
-        elif action in TIMEOUTS:
-            self.apply_timeout_rule(action)
-        elif action in self.solver_action_dict:
-            self.apply_solver_rule(action)
-        elif action in self.preprocess_action_dict:
-            self.apply_then_rule(action)
+        elif action.kind == "timeout":
+            self.apply_timeout_rule(str(action.value))
+        elif action.kind == "tactic" and action.value in self.solver_action_dict:
+            self.apply_solver_rule(int(action.value))
+        elif (
+            action.kind == "tactic"
+            and action.value in self.preprocess_action_dict
+        ):
+            self.apply_then_rule(int(action.value))
         else:
             raise Exception("unexpected action")
-
-    # Backward-compatible aliases.
-    def isTerminal(self):
-        return self.is_terminal()
-
-    def getCurActPath(self):
-        return self.get_cur_act_path()
-
-    def legalTimeoutActions(self):
-        return self.legal_timeout_actions()
-
-    def legalActions(self, rollout=False):
-        return self.legal_actions(rollout)
-
-    def applySolverRule(self, action):
-        return self.apply_solver_rule(action)
-
-    def applyThenRule(self, action):
-        return self.apply_then_rule(action)
-
-    def applyTimeoutRule(self, action):
-        return self.apply_timeout_rule(action)
-
-    def applyIfRule(self):
-        return self.apply_if_rule()
-
-    def applyRule(self, action, params):
-        return self.apply_rule(action, params)

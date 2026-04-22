@@ -1,7 +1,9 @@
 from z3alpha.ast_nodes import Root
 from z3alpha.strat_tree_s1 import S1Strategy
 from z3alpha.strat_tree_s2 import S2Strategy
-from z3alpha.strat_tree_s2 import Action
+from z3alpha.strat_tree_s2 import Action as S2Action
+
+Action = int | S2Action
 
 
 class StrategyAST:
