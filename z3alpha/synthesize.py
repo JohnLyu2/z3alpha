@@ -12,7 +12,7 @@ from z3 import parse_smt2_file, Probe, Goal
 
 from z3alpha.logging_config import setup_logging
 from z3alpha.evaluator import SolverEvaluator
-from z3alpha.mcts import MCTS_RUN
+from z3alpha.mcts import Stage1MCTSRun, Stage2MCTSRun
 from z3alpha.selector import linear_strategy_select, convert_strats_to_act_lists
 from z3alpha.utils import calculatePercentile, write_strat_res_to_csv
 
@@ -100,8 +100,7 @@ def stage1_synthesize(config, log_folder):
     s1_bench_dirs = s1config["bench_dirs"]
     s1_bench_lst = createBenchmarkList(s1_bench_dirs)
     log.info("S1 MCTS Simulations Start")
-    run1 = MCTS_RUN(
-        1,
+    run1 = Stage1MCTSRun(
         s1config,
         s1_bench_lst,
         logic,
@@ -225,8 +224,7 @@ def stage2_synthesize(results, bench_lst, config, log_folder):
     s2config = config["s2config"]
     s2config["s2dict"] = s2dict
 
-    run_stage_two = MCTS_RUN(
-        2,
+    run_stage_two = Stage2MCTSRun(
         s2config,
         bench_lst,
         logic,

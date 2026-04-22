@@ -130,10 +130,9 @@ class MCTSNode:
 # A MCTS run starting at a particular node as root; this framework only works for deterministric state transition
 
 
-class MCTS_RUN:
+class BaseMCTSRun:
     def __init__(
         self,
-        stage,
         config,
         bench_lst,
         logic,
@@ -144,7 +143,6 @@ class MCTS_RUN:
         root=None,
         logic_config=None,
     ):
-        self.stage = stage
         self.z3path = z3path
         self.config = config
         self.logic_config = logic_config
@@ -158,17 +156,7 @@ class MCTS_RUN:
         self.timeout = config["timeout"]
         self.value_type = value_type
         self.batch_size = batch_size
-        if self.stage == 1:
-            self.c_ucb = config["c_ucb"]
-            self.res_s1_database = {}
-            self._s1_csv_path = Path(log_folder) / "stage1_strategy_results.csv"
-            self._written_strats = set()
-            with open(self._s1_csv_path, "w", newline="") as f:
-                writer = csv.writer(f)
-                writer.writerow(["strat"] + bench_lst)
-        else:
-            self.c_ucb = None
-            self.res_s1_database = config["s2dict"]["res_cache"]
+        self._init_stage_state(log_folder, bench_lst)
 
         self.trace_log = attach_file_logger(
             f"z3alpha.s{self.stage}mcts",
@@ -181,6 +169,15 @@ class MCTS_RUN:
         self.best_reward = -1
         self.top_strategies = [None, None, None]  # top 3 strategies
         self.top_rewards = [-1, -1, -1]
+
+    def _init_stage_state(self, log_folder, bench_lst):
+        raise NotImplementedError
+
+    def _create_env(self):
+        raise NotImplementedError
+
+    def _after_simulation(self):
+        pass
 
     def _uct(self, child_node, parent_node, action):
         value_score = child_node.reward + self.discount * child_node.value_est
@@ -248,16 +245,7 @@ class MCTS_RUN:
 
     def _oneSimulation(self):
         # now does not consider the root is not the game start
-        self.env = StrategyGame(
-            self.stage,
-            self.training_list,
-            self.logic,
-            self.timeout,
-            self.config,
-            self.batch_size,
-            z3path=self.z3path,
-            logic_config=self.logic_config,
-        )
+        self.env = self._create_env()
         selected_node, search_path = self._select()
         self.trace_log.info("Selected Node: " + str(selected_node))
         self.trace_log.info("Selected Strategy ParseTree: " + str(self.env))
@@ -309,8 +297,7 @@ class MCTS_RUN:
                 logger.info(f"Simulation {i} starts")
             self.trace_log.info(f"Simulation {i} starts")
             self._oneSimulation()
-            if self.stage == 1:
-                self._write_new_results()
+            self._after_simulation()
 
     # def bestNS1Strategies(self, n):
     #     if n > len(self.resS1Database):
@@ -347,3 +334,89 @@ class MCTS_RUN:
 
     def getBest3Strats(self):
         return self.get_best_3_strats()
+
+
+class Stage1MCTSRun(BaseMCTSRun):
+    stage = 1
+
+    def _init_stage_state(self, log_folder, bench_lst):
+        self.c_ucb = self.config["c_ucb"]
+        self.res_s1_database = {}
+        self._s1_csv_path = Path(log_folder) / "stage1_strategy_results.csv"
+        self._written_strats = set()
+        with open(self._s1_csv_path, "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow(["strat"] + bench_lst)
+
+    def _create_env(self):
+        return StrategyGame(
+            self.stage,
+            self.training_list,
+            self.logic,
+            self.timeout,
+            self.config,
+            self.batch_size,
+            z3path=self.z3path,
+            logic_config=self.logic_config,
+        )
+
+    def _after_simulation(self):
+        self._write_new_results()
+
+
+class Stage2MCTSRun(BaseMCTSRun):
+    stage = 2
+
+    def _init_stage_state(self, log_folder, bench_lst):
+        self.c_ucb = None
+        self.res_s1_database = self.config["s2dict"]["res_cache"]
+
+    def _create_env(self):
+        return StrategyGame(
+            self.stage,
+            self.training_list,
+            self.logic,
+            self.timeout,
+            self.config,
+            self.batch_size,
+            z3path=self.z3path,
+        )
+
+
+def MCTS_RUN(
+    stage,
+    config,
+    bench_lst,
+    logic,
+    z3path,
+    value_type,
+    log_folder,
+    batch_size=1,
+    root=None,
+    logic_config=None,
+):
+    if stage == 1:
+        return Stage1MCTSRun(
+            config,
+            bench_lst,
+            logic,
+            z3path,
+            value_type,
+            log_folder,
+            batch_size=batch_size,
+            root=root,
+            logic_config=logic_config,
+        )
+    if stage == 2:
+        return Stage2MCTSRun(
+            config,
+            bench_lst,
+            logic,
+            z3path,
+            value_type,
+            log_folder,
+            batch_size=batch_size,
+            root=root,
+            logic_config=logic_config,
+        )
+    raise ValueError(f"Unsupported stage: {stage}")
