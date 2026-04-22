@@ -15,92 +15,111 @@ IS_MEAN_EST = False
 class MCTSNode:
     def __init__(self, logic_config, is_mean, trace_log, c_ucb, action_history=None):
         self.param_dict = logic_config["params"] if logic_config else {}
-        self.isMean = is_mean
+        self.is_mean = is_mean
         self.c_ucb = c_ucb
         # self.alpha = alpha
-        self.visitCount = 0
-        self.actionHistory = [] if action_history is None else list(action_history)
-        self.valueEst = 0
+        self.visit_count = 0
+        self.action_history = [] if action_history is None else list(action_history)
+        self.value_est = 0
         self.children = {}
         self.reward = 0  # always 0 for now
-        self._setParamMABs()
+        self._set_param_mabs()
         self.trace_log = trace_log
 
     def __str__(self):
-        return str(self.actionHistory)
+        return str(self.action_history)
 
-    def isExpanded(self):
+    def is_expanded(self):
         return bool(self.children)
 
-    def hasParamMABs(self):
-        if len(self.actionHistory) == 0:
+    def has_param_mabs(self):
+        if len(self.action_history) == 0:
             return False
-        lastestAction = self.actionHistory[-1]
-        return lastestAction in self.param_dict.keys()
+        latest_action = self.action_history[-1]
+        return latest_action in self.param_dict.keys()
 
-    def _setParamMABs(self):
-        if not self.hasParamMABs():
+    def _set_param_mabs(self):
+        if not self.has_param_mabs():
             return
-        lastestAction = self.actionHistory[-1]
-        self.params = self.param_dict[lastestAction]
+        latest_action = self.action_history[-1]
+        self.params = self.param_dict[latest_action]
         self.MABs = {}
         self.selected = {}
         for param in self.params.keys():
-            MABdict = {}
-            for paramValue in self.params[param]:
-                MABdict[paramValue] = [0, INIT_Q]  # (visit count, q estimation)
-            self.MABs[param] = MABdict
+            mab_dict = {}
+            for param_value in self.params[param]:
+                mab_dict[param_value] = [0, INIT_Q]  # (visit count, q estimation)
+            self.MABs[param] = mab_dict
             self.selected[param] = None
 
     # the argument action is only for log
     def _ucb(self, action_pair, action):
-        visitCount, qScore = action_pair
-        exploreScore = self.c_ucb * math.sqrt(
-            math.log(self.visitCount + 1)  # check ucb 1
-            / (visitCount + 0.001)
+        visit_count, q_score = action_pair
+        explore_score = self.c_ucb * math.sqrt(
+            math.log(self.visit_count + 1)  # check ucb 1
+            / (visit_count + 0.001)
         )
-        ucb = qScore + exploreScore
+        ucb = q_score + explore_score
         self.trace_log.debug(
-            f"  Value of {action}: Q value: {qScore:.05f}; Exp: {exploreScore:.05f} ({visitCount}/{self.visitCount}); UCB: {ucb:.05f}"
+            f"  Value of {action}: Q value: {q_score:.05f}; Exp: {explore_score:.05f} ({visit_count}/{self.visit_count}); UCB: {ucb:.05f}"
         )
         return ucb
 
     # rename parameter values; easily confuesed with the value of a node
-    def _selectMAB(self, param):
+    def _select_mab(self, param):
         MABdict = self.MABs[param]
         selected = None
-        bestUCB = -1
-        for valueCandidate, pair in MABdict.items():
+        best_ucb = -1
+        for value_candidate, pair in MABdict.items():
             # if param == "timeout" and valueCandidate >= remain_time:
             #     continue
-            ucb = self._ucb(pair, valueCandidate)
-            if ucb > bestUCB:
-                bestUCB = ucb
-                selected = valueCandidate
-        assert bestUCB >= 0
+            ucb = self._ucb(pair, value_candidate)
+            if ucb > best_ucb:
+                best_ucb = ucb
+                selected = value_candidate
+        assert best_ucb >= 0
         return selected
 
-    def selectMABs(self):
+    def select_mabs(self):
         for param in self.params.keys():
             self.trace_log.debug(f"\n  Select MAB of {param}")
-            selectV = self._selectMAB(param)
-            self.trace_log.debug(f"  Selected value: {selectV}\n")
-            self.selected[param] = selectV
+            selected_value = self._select_mab(param)
+            self.trace_log.debug(f"  Selected value: {selected_value}\n")
+            self.selected[param] = selected_value
         return self.selected
 
-    def backupMABs(self, reward):
+    def backup_mabs(self, reward):
         for param in self.params.keys():
-            MABdict = self.MABs[param]
-            selectedV = self.selected[param]
+            mab_dict = self.MABs[param]
+            selected_value = self.selected[param]
 
-            if self.isMean:
-                MABdict[selectedV][1] = (
-                    MABdict[selectedV][1] * MABdict[selectedV][0] + reward
-                ) / (MABdict[selectedV][0] + 1)
+            if self.is_mean:
+                mab_dict[selected_value][1] = (
+                    mab_dict[selected_value][1] * mab_dict[selected_value][0] + reward
+                ) / (mab_dict[selected_value][0] + 1)
             else:
-                MABdict[selectedV][1] = max(MABdict[selectedV][1], reward)
-            MABdict[selectedV][0] += 1
+                mab_dict[selected_value][1] = max(mab_dict[selected_value][1], reward)
+            mab_dict[selected_value][0] += 1
             self.selected[param] = None
+
+    # Backward-compatible aliases.
+    def isExpanded(self):
+        return self.is_expanded()
+
+    def hasParamMABs(self):
+        return self.has_param_mabs()
+
+    def _setParamMABs(self):
+        return self._set_param_mabs()
+
+    def _selectMAB(self, param):
+        return self._select_mab(param)
+
+    def selectMABs(self):
+        return self.select_mabs()
+
+    def backupMABs(self, reward):
+        return self.backup_mabs(reward)
 
     # def value(self):
     #     if self.visitCount == 0:  # will this be called anytime?
@@ -129,19 +148,19 @@ class MCTS_RUN:
         self.z3path = z3path
         self.config = config
         self.logic_config = logic_config
-        self.numSimulations = config["sim_num"]
-        self.isMean = IS_MEAN_EST
+        self.num_simulations = config["sim_num"]
+        self.is_mean = IS_MEAN_EST
         self.discount = 1  # now set to 1
         self.c_uct = config["c_uct"]
         # self.alpha = alpha
-        self.trainingLst = bench_lst
+        self.training_list = bench_lst
         self.logic = logic
         self.timeout = config["timeout"]
-        self.valueType = value_type
-        self.batchSize = batch_size
+        self.value_type = value_type
+        self.batch_size = batch_size
         if self.stage == 1:
             self.c_ucb = config["c_ucb"]
-            self.resS1Database = {}
+            self.res_s1_database = {}
             self._s1_csv_path = Path(log_folder) / "stage1_strategy_results.csv"
             self._written_strats = set()
             with open(self._s1_csv_path, "w", newline="") as f:
@@ -149,7 +168,7 @@ class MCTS_RUN:
                 writer.writerow(["strat"] + bench_lst)
         else:
             self.c_ucb = None
-            self.resS1Database = config["s2dict"]["res_cache"]
+            self.res_s1_database = config["s2dict"]["res_cache"]
 
         self.trace_log = attach_file_logger(
             f"z3alpha.s{self.stage}mcts",
@@ -157,133 +176,133 @@ class MCTS_RUN:
         )
 
         if not root:
-            root = MCTSNode(self.logic_config, self.isMean, self.trace_log, self.c_ucb)
+            root = MCTSNode(self.logic_config, self.is_mean, self.trace_log, self.c_ucb)
         self.root = root
-        self.bestReward = -1
-        self.topStrategies = [None, None, None] # top 3 strategies
-        self.topRewards = [-1, -1, -1]
+        self.best_reward = -1
+        self.top_strategies = [None, None, None]  # top 3 strategies
+        self.top_rewards = [-1, -1, -1]
 
-    def _uct(self, childNode, parentNode, action):
-        valueScore = childNode.reward + self.discount * childNode.valueEst
-        exploreScore = self.c_uct * math.sqrt(
-            math.log(parentNode.visitCount) / (childNode.visitCount + 0.001)
+    def _uct(self, child_node, parent_node, action):
+        value_score = child_node.reward + self.discount * child_node.value_est
+        explore_score = self.c_uct * math.sqrt(
+            math.log(parent_node.visit_count) / (child_node.visit_count + 0.001)
         )
-        uct = valueScore + exploreScore
+        uct = value_score + explore_score
         self.trace_log.debug(
-            f"  Value of {action}: Q value: {valueScore:.05f}; Exp: {exploreScore:.05f} ({childNode.visitCount}/{parentNode.visitCount}); UCT: {uct:.05f}"
+            f"  Value of {action}: Q value: {value_score:.05f}; Exp: {explore_score:.05f} ({child_node.visit_count}/{parent_node.visit_count}); UCT: {uct:.05f}"
         )
         return uct
 
     def _select(self):
-        searchPath = [self.root]
+        search_path = [self.root]
         node = self.root
         # does not consider the root has MABs
-        while node.isExpanded() and not self.env.isTerminal():
+        while node.is_expanded() and not self.env.is_terminal():
             self.trace_log.debug(f"\n  Select at {node}")
             # may add randomness when the UCTs are the same
 
-            # select in the order as in the list if the same UCT values; put more promising/safer actions earlier in legalActions()
+            # select in the order as in the list if the same UCT values; put more promising actions earlier in legal_actions()
             selected = None
-            bestUCT = -1
-            nextNode = None
-            for action, childNode in node.children.items():
-                uct = self._uct(childNode, node, action)
-                if uct > bestUCT:
+            best_uct = -1
+            next_node = None
+            for action, child_node in node.children.items():
+                uct = self._uct(child_node, node, action)
+                if uct > best_uct:
                     selected = action
-                    bestUCT = uct
-                    nextNode = childNode
-            assert bestUCT >= 0
-            node = nextNode
+                    best_uct = uct
+                    next_node = child_node
+            assert best_uct >= 0
+            node = next_node
             self.trace_log.debug(f"  Selected action {selected}")
             # remainTime = self.env.getRemainTime() if selected == 2 else None
-            params = node.selectMABs() if node.hasParamMABs() else None
-            searchPath.append(node)
+            params = node.select_mabs() if node.has_param_mabs() else None
+            search_path.append(node)
             self.env.step(selected, params)
-        return node, searchPath
+        return node, search_path
 
-    def _expandNode(self, node, actions, reward):
+    def _expand_node(self, node, actions, reward):
         node.reward = reward
         for action in actions:
-            history = copy.deepcopy(node.actionHistory)
+            history = copy.deepcopy(node.action_history)
             history.append(action)
             node.children[action] = MCTSNode(
-                self.logic_config, self.isMean, self.trace_log, self.c_ucb, history
+                self.logic_config, self.is_mean, self.trace_log, self.c_ucb, history
             )
 
     def _rollout(self):
         self.env.rollout()
 
-    def _backup(self, searchPath, sim_value):
+    def _backup(self, search_path, sim_value):
         value = sim_value
-        for node in reversed(searchPath):
-            if self.isMean:
-                node.valueEst = (node.valueEst * node.visitCount + value) / (
-                    node.visitCount + 1
+        for node in reversed(search_path):
+            if self.is_mean:
+                node.value_est = (node.value_est * node.visit_count + value) / (
+                    node.visit_count + 1
                 )
             else:
-                node.valueEst = max(node.valueEst, value)
-            node.visitCount += 1
+                node.value_est = max(node.value_est, value)
+            node.visit_count += 1
             value = node.reward + self.discount * value  # not applicable now
-            if node.hasParamMABs():
-                node.backupMABs(value)
+            if node.has_param_mabs():
+                node.backup_mabs(value)
 
     def _oneSimulation(self):
         # now does not consider the root is not the game start
         self.env = StrategyGame(
             self.stage,
-            self.trainingLst,
+            self.training_list,
             self.logic,
             self.timeout,
             self.config,
-            self.batchSize,
+            self.batch_size,
             z3path=self.z3path,
             logic_config=self.logic_config,
         )
-        selectNode, searchPath = self._select()
-        self.trace_log.info("Selected Node: " + str(selectNode))
+        selected_node, search_path = self._select()
+        self.trace_log.info("Selected Node: " + str(selected_node))
         self.trace_log.info("Selected Strategy ParseTree: " + str(self.env))
-        if self.env.isTerminal():
+        if self.env.is_terminal():
             self.trace_log.info("Terminal Strategy: no rollout")
-            value = self.env.getValue(self.resS1Database, self.valueType)
+            value = self.env.get_value(self.res_s1_database, self.value_type)
         else:
-            actions = self.env.legalActions()
+            actions = self.env.legal_actions()
             # now reward is always 0 at each step
-            self._expandNode(selectNode, actions, 0)
+            self._expand_node(selected_node, actions, 0)
             self._rollout()
             self.trace_log.info(f"Rollout Strategy: {self.env}")
-            value = self.env.getValue(self.resS1Database, self.valueType)
-        self._updateTopStrategies(value, str(self.env))
+            value = self.env.get_value(self.res_s1_database, self.value_type)
+        self._update_top_strategies(value, str(self.env))
         self.trace_log.info(f"Final Return: {value}\n")
-        self._backup(searchPath, value)
+        self._backup(search_path, value)
 
-    def _updateTopStrategies(self, value, stratetgy):
+    def _update_top_strategies(self, value, strategy):
         for i in range(3):
-            if value > self.topRewards[i]:
+            if value > self.top_rewards[i]:
                 if i == 0:
                     msg = f"At sim {self.num_sim}, new best reward found: {value:.5f}"
                     logger.info(msg)
                     self.trace_log.info(msg)
-                self.topRewards.insert(i, value)
-                self.topRewards.pop()
-                self.topStrategies.insert(i, stratetgy)
-                self.topStrategies.pop()
+                self.top_rewards.insert(i, value)
+                self.top_rewards.pop()
+                self.top_strategies.insert(i, strategy)
+                self.top_strategies.pop()
                 break
 
     def _write_new_results(self):
         """Append any newly evaluated strategies to the S1 results CSV."""
-        new_strats = set(self.resS1Database.keys()) - self._written_strats
+        new_strats = set(self.res_s1_database.keys()) - self._written_strats
         if not new_strats:
             return
         with open(self._s1_csv_path, "a", newline="") as f:
             writer = csv.writer(f)
             for strat in new_strats:
-                res = self.resS1Database[strat]
+                res = self.res_s1_database[strat]
                 row = [strat] + [r[1] if r[0] else -r[1] for r in res]
                 writer.writerow(row)
         self._written_strats.update(new_strats)
 
     def start(self):
-        for i in range(self.numSimulations):
+        for i in range(self.num_simulations):
             self.num_sim = i
             # Console: progress for stage 1 only (stage 2 can have huge sim_num).
             if self.stage == 1:
@@ -298,14 +317,33 @@ class MCTS_RUN:
     #         n = len(self.resS1Database)
     #     return sorted(self.resS1Database, key=self.resS1Database.get, reverse=True)[:n]
 
+    def get_strategy_stat(self, strat):
+        return self.res_s1_database[strat]
+
+    def get_res_dict(self):
+        return self.res_s1_database
+
+    def get_best_strat(self):
+        return self.top_strategies[0]
+
+    def get_best_3_strats(self):
+        return self.top_strategies
+
+    # Backward-compatible aliases.
+    def _expandNode(self, node, actions, reward):
+        return self._expand_node(node, actions, reward)
+
+    def _updateTopStrategies(self, value, stratetgy):
+        return self._update_top_strategies(value, stratetgy)
+
     def getStrategyStat(self, strat):
-        return self.resS1Database[strat]
+        return self.get_strategy_stat(strat)
 
     def getResDict(self):
-        return self.resS1Database
+        return self.get_res_dict()
 
     def getBestStrat(self):
-        return self.topStrategies[0]
+        return self.get_best_strat()
 
     def getBest3Strats(self):
-        return self.topStrategies
+        return self.get_best_3_strats()

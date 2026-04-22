@@ -33,22 +33,22 @@ class StrategyGame:
     # def smt2str(self):
     #     return self.stratAST.smt2str()
 
-    def isTerminal(self):
-        return self.strat_ast.isTerminal()
+    def is_terminal(self):
+        return self.strat_ast.is_terminal()
 
     # def getRemainTime(self):
     #     return self.stratAST.getRemainTime()
 
-    def legalActions(self, rollout=False):
-        return self.strat_ast.legalActions(rollout)
+    def legal_actions(self, rollout=False):
+        return self.strat_ast.legal_actions(rollout)
 
     def step(self, action, params):
-        self.strat_ast.applyRule(action, params)
+        self.strat_ast.apply_rule(action, params)
 
     def rollout(self):
-        assert not self.isTerminal()
-        while not self.isTerminal():
-            actions = self.legalActions(rollout=True)
+        assert not self.is_terminal()
+        while not self.is_terminal():
+            actions = self.legal_actions(rollout=True)
             action = random.choice(actions)
             params = None
             self.step(action, params)
@@ -114,7 +114,7 @@ class StrategyGame:
 
     # return a total reward of [0,1] according to the reward type
     def get_value(self, database, reward_type):
-        assert self.isTerminal()
+        assert self.is_terminal()
         if self.stage == 1:
             res_lst = self.get_s1_res_list(database)
         else:
@@ -127,6 +127,14 @@ class StrategyGame:
             return parNReward(res_lst, 10, self.timeout)
         else:
             raise Exception(f"Unknown value type {reward_type}")
+
+    # Backward-compatible alias.
+    def isTerminal(self):
+        return self.is_terminal()
+
+    # Backward-compatible alias.
+    def legalActions(self, rollout=False):
+        return self.legal_actions(rollout)
 
     # Backward-compatible alias.
     def getValue(self, database, reward_type):

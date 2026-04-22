@@ -11,24 +11,34 @@ class S1Strategy(ASTNode):
     def __str__(self):
         return f"<S1Strategy>({self.logic})"
 
-    def isTerminal(self):
+    def is_terminal(self):
         return False
 
-    def legalActions(self, rollout=False):
+    def legal_actions(self, rollout=False):
         return list(self.logic_config["solver_tactics"]) + list(
             self.logic_config["preprocess_tactics"]
         )
 
-    def applyRule(self, action, params):
-        assert self.isLeaf()
-        assert action in self.legalActions()
+    def apply_rule(self, action, params):
+        assert self.is_leaf()
+        assert action in self.legal_actions()
         if action in SOLVER_CATALOG:
             selected = TacticNode(SOLVER_CATALOG[action], params, action)
-            self.parent.replaceChild(selected, self.pos)
+            self.parent.replace_child(selected, self.pos)
             return
         if action in PREPROCESS_CATALOG:
             selected = TacticNode(PREPROCESS_CATALOG[action], params, action)
-            self.parent.replaceChild(selected, self.pos)
-            selected.addChildren([S1Strategy(self.logic, self.logic_config)])
+            self.parent.replace_child(selected, self.pos)
+            selected.add_children([S1Strategy(self.logic, self.logic_config)])
             return
         raise Exception("unexpected action")
+
+    # Backward-compatible aliases.
+    def isTerminal(self):
+        return self.is_terminal()
+
+    def legalActions(self, rollout=False):
+        return self.legal_actions(rollout)
+
+    def applyRule(self, action, params):
+        return self.apply_rule(action, params)

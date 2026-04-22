@@ -12,47 +12,64 @@ class StrategyAST:
         self.timeout = timeout
         self.root = Root()
         if stage == 1:
-            self.root.addChildren(
+            self.root.add_children(
                 [S1Strategy(logic, logic_config)]
             )
         else:
             assert s2config
             s2dict = s2config["s2dict"]
-            self.root.addChildren([S2Strategy(timeout, s2dict, if_depth=0)])
+            self.root.add_children([S2Strategy(timeout, s2dict, if_depth=0)])
 
     def __str__(self):
         return str(self.root)
 
     @staticmethod
-    def _findFstNonTermRec(nonterm_stack):
+    def _find_fst_nonterm_rec(nonterm_stack):
         if not len(nonterm_stack):
             return None
-        node2Search = nonterm_stack.pop()
-        if not node2Search.isTerminal():
-            return node2Search
+        node_to_search = nonterm_stack.pop()
+        if not node_to_search.is_terminal():
+            return node_to_search
         else:
-            for childNode in reversed(node2Search.children):
-                nonterm_stack.append(childNode)
-        return StrategyAST._findFstNonTermRec(nonterm_stack)
+            for child_node in reversed(node_to_search.children):
+                nonterm_stack.append(child_node)
+        return StrategyAST._find_fst_nonterm_rec(nonterm_stack)
 
     # return the depth-first first nontermial node in the tree; if nonexist, return None
-    def findFstNonTerm(self):
+    def find_fst_nonterm(self):
         nonterm_stack = [self.root]
-        return StrategyAST._findFstNonTermRec(nonterm_stack)
+        return StrategyAST._find_fst_nonterm_rec(nonterm_stack)
 
-    def isTerminal(self):
-        return not bool(self.findFstNonTerm())
+    def is_terminal(self):
+        return not bool(self.find_fst_nonterm())
 
-    def legalActions(self, rollout=False):
-        if self.isTerminal():
+    def legal_actions(self, rollout=False):
+        if self.is_terminal():
             return []
-        return self.findFstNonTerm().legalActions(rollout)
+        return self.find_fst_nonterm().legal_actions(rollout)
 
-    def applyRule(self, action, params):
-        assert not self.isTerminal()
-        node = self.findFstNonTerm()
-        node.applyRule(action, params)
+    def apply_rule(self, action, params):
+        assert not self.is_terminal()
+        node = self.find_fst_nonterm()
+        node.apply_rule(action, params)
 
     def get_linear_strategies(self, probe_record):
-        assert self.isTerminal()
-        return self.root.getLnStrats(self.timeout, probe_record)
+        assert self.is_terminal()
+        return self.root.get_ln_strats(self.timeout, probe_record)
+
+    # Backward-compatible aliases.
+    @staticmethod
+    def _findFstNonTermRec(nonterm_stack):
+        return StrategyAST._find_fst_nonterm_rec(nonterm_stack)
+
+    def findFstNonTerm(self):
+        return self.find_fst_nonterm()
+
+    def isTerminal(self):
+        return self.is_terminal()
+
+    def legalActions(self, rollout=False):
+        return self.legal_actions(rollout)
+
+    def applyRule(self, action, params):
+        return self.apply_rule(action, params)

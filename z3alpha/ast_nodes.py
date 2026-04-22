@@ -3,15 +3,15 @@ class ASTNode:
         self.children = []
         self.parent = None
 
-    def isLeaf(self):
+    def is_leaf(self):
         return len(self.children) == 0
 
-    def isTactic(self):
+    def is_tactic(self):
         return False
 
     # only used for leaf nodes
-    def addChildren(self, children):
-        assert self.isLeaf()
+    def add_children(self, children):
+        assert self.is_leaf()
         assert len(children) > 0
         self.children = children
         for i in range(len(children)):
@@ -19,12 +19,25 @@ class ASTNode:
             children[i].pos = i
 
     # replace the pos'th child with the new children
-    def replaceChild(self, child, pos):
-        assert not self.isLeaf()
+    def replace_child(self, child, pos):
+        assert not self.is_leaf()
         assert pos < len(self.children)
         self.children[pos] = child
         child.parent = self
         child.pos = pos
+
+    # Backward-compatible aliases.
+    def isLeaf(self):
+        return self.is_leaf()
+
+    def isTactic(self):
+        return self.is_tactic()
+
+    def addChildren(self, children):
+        return self.add_children(children)
+
+    def replaceChild(self, child, pos):
+        return self.replace_child(child, pos)
 
 
 class Root(ASTNode):
@@ -35,11 +48,18 @@ class Root(ASTNode):
         assert len(self.children) == 1
         return str(self.children[0])
 
-    def isTerminal(self):
+    def is_terminal(self):
         return True
 
+    def get_ln_strats(self, timeout, probe_record):
+        return self.children[0].get_ln_strats([([], timeout)], probe_record)
+
+    # Backward-compatible aliases.
+    def isTerminal(self):
+        return self.is_terminal()
+
     def getLnStrats(self, timeout, probe_record):
-        return self.children[0].getLnStrats([([], timeout)], probe_record)
+        return self.get_ln_strats(timeout, probe_record)
 
 
 class TacticNode(ASTNode):
@@ -70,22 +90,32 @@ class TacticNode(ASTNode):
         else:
             return f"{tactic_str} {self.children[0]}"
 
-    def isTactic(self):
+    def is_tactic(self):
         return True
 
     def _is_first_then(self):
-        if self.isLeaf():
+        if self.is_leaf():
             return False
-        if self.parent.isTactic():
+        if self.parent.is_tactic():
             return False
         return True
 
-    def isTerminal(self):
+    def is_terminal(self):
         return True
 
-    def getLnStrats(self, precede_strats, probe_record):
+    def get_ln_strats(self, precede_strats, probe_record):
         for strat_tup in precede_strats:
             strat_tup[0].append(self.s2actID)
-        if self.isLeaf():
+        if self.is_leaf():
             return precede_strats
-        return self.children[0].getLnStrats(precede_strats, probe_record)
+        return self.children[0].get_ln_strats(precede_strats, probe_record)
+
+    # Backward-compatible aliases.
+    def isTactic(self):
+        return self.is_tactic()
+
+    def isTerminal(self):
+        return self.is_terminal()
+
+    def getLnStrats(self, precede_strats, probe_record):
+        return self.get_ln_strats(precede_strats, probe_record)

@@ -112,7 +112,7 @@ def stage1_synthesize(config, log_folder):
         logic_config=logic_config,
     )
     run1.start()
-    s1_res_dict = run1.getResDict()
+    s1_res_dict = run1.get_res_dict()
 
     selected_strat, ln_select_logs = linear_strategy_select(
         num_ln_strat, s1_res_dict, s1config["timeout"]
@@ -235,7 +235,7 @@ def stage2_synthesize(results, bench_lst, config, log_folder):
         log_folder,
     )
     run_stage_two.start()
-    best_strategy = run_stage_two.getBestStrat()
+    best_strategy = run_stage_two.get_best_strat()
 
     strat_path = Path(log_folder) / "synthesized_strategy.txt"
     with open(strat_path, "w") as f:
