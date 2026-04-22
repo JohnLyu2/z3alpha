@@ -5,7 +5,6 @@ import copy
 from pathlib import Path
 from z3alpha.environment import StrategyGame
 from z3alpha.logging_config import attach_file_logger
-from z3alpha.tactic_catalog import create_params_dict
 
 logger = logging.getLogger(__name__)
 

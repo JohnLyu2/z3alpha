@@ -26,14 +26,14 @@ VALUE_TYPE = "par10"  # hard code for now
 
 def createBenchmarkList(benchmark_directories):
     """Collect all .smt2 files from the given directories."""
-    benchmarkLst = []
+    benchmark_lst = []
     for dir in benchmark_directories:
         assert Path(dir).exists()
-        benchmarkLst += [
+        benchmark_lst += [
             str(p) for p in sorted(list(Path(dir).rglob("*.smt2")))
         ]
-    benchmarkLst.sort()
-    return benchmarkLst
+    benchmark_lst.sort()
+    return benchmark_lst
 
 
 def createProbeStats(bench_lst):
@@ -43,48 +43,48 @@ def createProbeStats(bench_lst):
     - probeStats: a dictionary containing percentile values for #constants, #expressions, and size in the list
     - probeRecords: a list of dictionaries containing the probe values for each benchmark
     """
-    numConstsLst = []
-    numExprsLst = []
-    sizeLst = []
-    probeRecords = []
+    num_consts_lst = []
+    num_exprs_lst = []
+    size_lst = []
+    probe_records = []
     for smt_path in bench_lst:
-        instanceDict = {}
+        instance_dict = {}
         formula = parse_smt2_file(smt_path)
-        constProbe = Probe("num-consts")
-        exprProbe = Probe("num-exprs")
-        sizeProbe = Probe("size")
+        const_probe = Probe("num-consts")
+        expr_probe = Probe("num-exprs")
+        size_probe = Probe("size")
         goal = Goal()
         goal.add(formula)
-        numConsts = constProbe(goal)
-        numConstsLst.append(numConsts)
-        instanceDict["num-consts"] = numConsts
-        numExprs = exprProbe(goal)
-        numExprsLst.append(numExprs)
-        instanceDict["num-exprs"] = numExprs
-        size = sizeProbe(goal)
-        sizeLst.append(size)
-        instanceDict["size"] = size
-        probeRecords.append(instanceDict)
+        num_consts = const_probe(goal)
+        num_consts_lst.append(num_consts)
+        instance_dict["num-consts"] = num_consts
+        num_exprs = expr_probe(goal)
+        num_exprs_lst.append(num_exprs)
+        instance_dict["num-exprs"] = num_exprs
+        size = size_probe(goal)
+        size_lst.append(size)
+        instance_dict["size"] = size
+        probe_records.append(instance_dict)
     # get 90 percentile, 70 percentile and median from lists
-    probeStats = {}
+    probe_stats = {}
     # contents of probeStats['num-consts'] is another dict, key is the percentile and value is the value
-    probeStats["num-consts"] = {
-        percentile: calculatePercentile(numConstsLst, percentile)
+    probe_stats["num-consts"] = {
+        percentile: calculatePercentile(num_consts_lst, percentile)
         for percentile in PERCENTILES
     }
-    probeStats["num-exprs"] = {
-        percentile: calculatePercentile(numExprsLst, percentile)
+    probe_stats["num-exprs"] = {
+        percentile: calculatePercentile(num_exprs_lst, percentile)
         for percentile in PERCENTILES
     }
-    probeStats["size"] = {
-        percentile: calculatePercentile(sizeLst, percentile)
+    probe_stats["size"] = {
+        percentile: calculatePercentile(size_lst, percentile)
         for percentile in PERCENTILES
     }
-    return probeStats, probeRecords
+    return probe_stats, probe_records
 
 
 def stage1_synthesize(config, log_folder):
-    startTime = time.time()
+    start_time = time.time()
     logic = config["logic"]
     z3path = config["z3path"] if "z3path" in config else "z3"
     batch_size = config["batch_size"]
@@ -98,12 +98,12 @@ def stage1_synthesize(config, log_folder):
 
     # Stage 1
     s1_bench_dirs = s1config["bench_dirs"]
-    s1BenchLst = createBenchmarkList(s1_bench_dirs)
+    s1_bench_lst = createBenchmarkList(s1_bench_dirs)
     log.info("S1 MCTS Simulations Start")
     run1 = MCTS_RUN(
         1,
         s1config,
-        s1BenchLst,
+        s1_bench_lst,
         logic,
         z3path,
         VALUE_TYPE,
@@ -118,8 +118,8 @@ def stage1_synthesize(config, log_folder):
         num_ln_strat, s1_res_dict, s1config["timeout"]
     )
     log.info(ln_select_logs)
-    lnStratCandidatsPath = Path(log_folder) / "stage1_selected_strategies.csv"
-    with open(lnStratCandidatsPath, "w") as f:
+    ln_strat_candidates_path = Path(log_folder) / "stage1_selected_strategies.csv"
+    with open(ln_strat_candidates_path, "w") as f:
         # write one strategy per line as a csv file
         cwriter = csv.writer(f)
         # header (one column "strat")
@@ -127,12 +127,12 @@ def stage1_synthesize(config, log_folder):
         for strat in selected_strat:
             cwriter.writerow([strat])
     log.info(
-        f"Selected {len(selected_strat)} strategies: {selected_strat}, saved to {lnStratCandidatsPath}"
+        f"Selected {len(selected_strat)} strategies: {selected_strat}, saved to {ln_strat_candidates_path}"
     )
 
-    endTime = time.time()
-    s1time = endTime - startTime
-    log.info(f"Stage 1 Time: {s1time:.0f}")
+    end_time = time.time()
+    s1_time = end_time - start_time
+    log.info(f"Stage 1 Time: {s1_time:.0f}")
     return selected_strat
 
 def add_fail_if_undecided(strat):
@@ -151,19 +151,19 @@ def parallel_linear_strategies(ln_strat_lst, fail_if_undecided=True):
     return parallel_strats
 
 def cache4stage2(selected_strat, config, log_folder, benchlst=None):
-    startTime = time.time()
+    start_time = time.time()
     num_strat = config["ln_strat_num"]
     # assert len(selected_strat) >= num_strat
     selected_strat = selected_strat[:num_strat]
     z3path = config["z3path"] if "z3path" in config else "z3"
     s2config = config["s2config"]
-    s2benchDirs = s2config["bench_dirs"]
+    s2_bench_dirs = s2config["bench_dirs"]
     s2timeout = s2config["timeout"]
     batch_size = config["batch_size"]
     s2benchLst = (
         benchlst
         if benchlst
-        else createBenchmarkList(s2benchDirs)
+        else createBenchmarkList(s2_bench_dirs)
     )
     s2_res_lst = []
     s2evaluator = SolverEvaluator(
@@ -180,9 +180,9 @@ def cache4stage2(selected_strat, config, log_folder, benchlst=None):
     ln_res_csv = Path(log_folder) / "stage2_strategy_cache.csv"
     write_strat_res_to_csv(s2_res_lst, ln_res_csv, s2benchLst)
     log.info(f"Cached results saved to {ln_res_csv}")
-    endTime = time.time()
-    cacheTime = endTime - startTime
-    log.info(f"Stage 2 Cache Time: {cacheTime:.0f}")
+    end_time = time.time()
+    cache_time = end_time - start_time
+    log.info(f"Stage 2 Cache Time: {cache_time:.0f}")
     return s2_res_lst, s2benchLst
 
 
@@ -219,9 +219,9 @@ def stage2_synthesize(results, bench_lst, config, log_folder):
     s2startTime = time.time()
     log.info("S2 MCTS Simulations Start")
 
-    probeStats, probeRecords = createProbeStats(bench_lst)
-    s2dict["probe_stats"] = probeStats
-    s2dict["probe_records"] = probeRecords
+    probe_stats, probe_records = createProbeStats(bench_lst)
+    s2dict["probe_stats"] = probe_stats
+    s2dict["probe_records"] = probe_records
     s2config = config["s2config"]
     s2config["s2dict"] = s2dict
 
@@ -237,10 +237,10 @@ def stage2_synthesize(results, bench_lst, config, log_folder):
     run_stage_two.start()
     best_strategy = run_stage_two.getBestStrat()
 
-    stratPath = Path(log_folder) / "synthesized_strategy.txt"
-    with open(stratPath, "w") as f:
+    strat_path = Path(log_folder) / "synthesized_strategy.txt"
+    with open(strat_path, "w") as f:
         f.write(best_strategy)
-    log.info(f"Best final strategy saved to: {stratPath}")
+    log.info(f"Best final strategy saved to: {strat_path}")
 
     s2endTime = time.time()
     s2time = s2endTime - s2startTime
