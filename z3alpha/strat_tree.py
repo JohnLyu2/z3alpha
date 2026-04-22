@@ -1,6 +1,7 @@
 from z3alpha.ast_nodes import Root
 from z3alpha.strat_tree_s1 import S1Strategy
 from z3alpha.strat_tree_s2 import S2Strategy
+from z3alpha.strat_tree_s2 import Action
 
 
 class StrategyAST:
@@ -43,12 +44,12 @@ class StrategyAST:
     def is_terminal(self):
         return not bool(self.find_fst_nonterm())
 
-    def legal_actions(self, rollout=False):
+    def legal_actions(self, rollout: bool = False) -> list[Action]:
         if self.is_terminal():
             return []
         return self.find_fst_nonterm().legal_actions(rollout)
 
-    def apply_rule(self, action, params):
+    def apply_rule(self, action: Action, params: dict | None) -> None:
         assert not self.is_terminal()
         node = self.find_fst_nonterm()
         node.apply_rule(action, params)
@@ -68,8 +69,8 @@ class StrategyAST:
     def isTerminal(self):
         return self.is_terminal()
 
-    def legalActions(self, rollout=False):
+    def legalActions(self, rollout: bool = False) -> list[Action]:
         return self.legal_actions(rollout)
 
-    def applyRule(self, action, params):
+    def applyRule(self, action: Action, params: dict | None) -> None:
         return self.apply_rule(action, params)

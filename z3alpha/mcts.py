@@ -3,8 +3,10 @@ import logging
 import math
 import copy
 from pathlib import Path
+from typing import Any
 from z3alpha.environment import StrategyGame
 from z3alpha.logging_config import attach_file_logger
+from z3alpha.strat_tree_s2 import Action
 
 logger = logging.getLogger(__name__)
 
@@ -14,15 +16,18 @@ IS_MEAN_EST = False
 
 class MCTSNode:
     def __init__(self, logic_config, is_mean, trace_log, c_ucb, action_history=None):
-        self.param_dict = logic_config["params"] if logic_config else {}
-        self.is_mean = is_mean
-        self.c_ucb = c_ucb
-        # self.alpha = alpha
-        self.visit_count = 0
-        self.action_history = [] if action_history is None else list(action_history)
-        self.value_est = 0
-        self.children = {}
-        self.reward = 0  # always 0 for now
+        self.param_dict: dict[int, dict[str, list[Any]]] = (
+            logic_config["params"] if logic_config else {}
+        )
+        self.is_mean: bool = is_mean
+        self.c_ucb: float | None = c_ucb
+        self.visit_count: int = 0
+        self.action_history: list[Action] = (
+            [] if action_history is None else list(action_history)
+        )
+        self.value_est: float = 0
+        self.children: dict[Action, "MCTSNode"] = {}
+        self.reward: float = 0
         self._set_param_mabs()
         self.trace_log = trace_log
 
@@ -52,11 +57,10 @@ class MCTSNode:
             self.MABs[param] = mab_dict
             self.selected[param] = None
 
-    # the argument action is only for log
     def _ucb(self, action_pair, action):
         visit_count, q_score = action_pair
         explore_score = self.c_ucb * math.sqrt(
-            math.log(self.visit_count + 1)  # check ucb 1
+            math.log(self.visit_count + 1)
             / (visit_count + 0.001)
         )
         ucb = q_score + explore_score
@@ -65,14 +69,11 @@ class MCTSNode:
         )
         return ucb
 
-    # rename parameter values; easily confuesed with the value of a node
     def _select_mab(self, param):
         MABdict = self.MABs[param]
         selected = None
         best_ucb = -1
         for value_candidate, pair in MABdict.items():
-            # if param == "timeout" and valueCandidate >= remain_time:
-            #     continue
             ucb = self._ucb(pair, value_candidate)
             if ucb > best_ucb:
                 best_ucb = ucb
@@ -121,15 +122,6 @@ class MCTSNode:
     def backupMABs(self, reward):
         return self.backup_mabs(reward)
 
-    # def value(self):
-    #     if self.visitCount == 0:  # will this be called anytime?
-    #         return 0
-    #     return max(self.valueLst)
-
-
-# A MCTS run starting at a particular node as root; this framework only works for deterministric state transition
-
-
 class BaseMCTSRun:
     def __init__(
         self,
@@ -148,9 +140,8 @@ class BaseMCTSRun:
         self.logic_config = logic_config
         self.num_simulations = config["sim_num"]
         self.is_mean = IS_MEAN_EST
-        self.discount = 1  # now set to 1
+        self.discount = 1
         self.c_uct = config["c_uct"]
-        # self.alpha = alpha
         self.training_list = bench_lst
         self.logic = logic
         self.timeout = config["timeout"]
@@ -193,12 +184,9 @@ class BaseMCTSRun:
     def _select(self):
         search_path = [self.root]
         node = self.root
-        # does not consider the root has MABs
         while node.is_expanded() and not self.env.is_terminal():
             self.trace_log.debug(f"\n  Select at {node}")
-            # may add randomness when the UCTs are the same
 
-            # select in the order as in the list if the same UCT values; put more promising actions earlier in legal_actions()
             selected = None
             best_uct = -1
             next_node = None
@@ -211,7 +199,6 @@ class BaseMCTSRun:
             assert best_uct >= 0
             node = next_node
             self.trace_log.debug(f"  Selected action {selected}")
-            # remainTime = self.env.getRemainTime() if selected == 2 else None
             params = node.select_mabs() if node.has_param_mabs() else None
             search_path.append(node)
             self.env.step(selected, params)
@@ -239,12 +226,11 @@ class BaseMCTSRun:
             else:
                 node.value_est = max(node.value_est, value)
             node.visit_count += 1
-            value = node.reward + self.discount * value  # not applicable now
+            value = node.reward + self.discount * value
             if node.has_param_mabs():
                 node.backup_mabs(value)
 
     def _oneSimulation(self):
-        # now does not consider the root is not the game start
         self.env = self._create_env()
         selected_node, search_path = self._select()
         self.trace_log.info("Selected Node: " + str(selected_node))
@@ -254,7 +240,6 @@ class BaseMCTSRun:
             value = self.env.get_value(self.res_s1_database, self.value_type)
         else:
             actions = self.env.legal_actions()
-            # now reward is always 0 at each step
             self._expand_node(selected_node, actions, 0)
             self._rollout()
             self.trace_log.info(f"Rollout Strategy: {self.env}")

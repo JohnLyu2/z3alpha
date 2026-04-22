@@ -1,10 +1,17 @@
 import copy
+from typing import Any
 from z3alpha.selector import search_next_action
 from z3alpha.ast_nodes import ASTNode, TacticNode
+
+Action = int | str
 
 MAX_IF_DEPTH = 3
 TIMEOUTS = ["v2", "v8", "v32", "v128", "v512"]  # in seconds
 PERCENTILES = ["90p", "70p", "50p"]
+ACTION_IF_RULE = 3
+ACTION_PROBE_NUM_CONSTS = 50
+ACTION_PROBE_NUM_EXPRS = 51
+ACTION_PROBE_SIZE = 52
 
 
 class OrElseNode(ASTNode):
@@ -56,10 +63,10 @@ class PredicateNode(ASTNode):
     def is_terminal(self):
         return self.is_selected
 
-    def legal_actions(self, rollout=False):
+    def legal_actions(self, rollout: bool = False) -> list[str]:
         return PERCENTILES
 
-    def apply_rule(self, action, params):
+    def apply_rule(self, action: str, params: Any) -> None:
         assert not self.is_terminal()
         assert action in self.legal_actions()
         self.value = int(self.prob_stats[self.name][action])
@@ -95,7 +102,11 @@ class ProbeNode(ASTNode):
         self.timeout = timeout
         self.s2dict = s2dict
         self.probe_stats = s2dict["probe_stats"]
-        self.action_dict = {50: "num-consts", 51: "num-exprs", 52: "size"}
+        self.action_dict = {
+            ACTION_PROBE_NUM_CONSTS: "num-consts",
+            ACTION_PROBE_NUM_EXPRS: "num-exprs",
+            ACTION_PROBE_SIZE: "size",
+        }
 
     def __str__(self):
         return f"<ProbeNode>"
@@ -103,10 +114,10 @@ class ProbeNode(ASTNode):
     def is_terminal(self):
         return False
 
-    def legal_actions(self, rollout=False):
+    def legal_actions(self, rollout: bool = False) -> list[int]:
         return list(self.action_dict.keys())
 
-    def apply_rule(self, action, params):
+    def apply_rule(self, action: int, params: Any) -> None:
         assert self.is_leaf()
         assert action in self.legal_actions()
         probe_name = self.action_dict[action]
@@ -152,32 +163,32 @@ class S2Strategy(ASTNode):
             cur_node = cur_node.parent
         return list(reversed(reverse_path))
 
-    def legal_timeout_actions(self):
+    def legal_timeout_actions(self) -> list[str]:
         return [c for c in TIMEOUTS if int(c[1:]) <= self.timeout]
 
-    def legal_actions(self, rollout=False):
+    def legal_actions(self, rollout: bool = False) -> list[Action]:
         cur_path = self.get_cur_act_path()
         tac_actions = search_next_action(cur_path, self.s1strat_lst)
         legal_actions = list(tac_actions)
         if (not rollout) and (len(tac_actions) > 1):
             legal_actions += self.legal_timeout_actions()
         if (not rollout) and (self.if_depth < MAX_IF_DEPTH):
-            legal_actions.append(3)
+            legal_actions.append(ACTION_IF_RULE)
         return legal_actions
 
-    def apply_solver_rule(self, action):
+    def apply_solver_rule(self, action: int) -> None:
         tactic, tac_params = self.solver_action_dict[action]
         tac_node = TacticNode(tactic, tac_params, action)
         self.parent.replace_child(tac_node, self.pos)
 
-    def apply_then_rule(self, action):
+    def apply_then_rule(self, action: int) -> None:
         tactic, tac_params = self.preprocess_action_dict[action]
         tac_node = TacticNode(tactic, tac_params, action)
         self.parent.replace_child(tac_node, self.pos)
         s2strat = S2Strategy(self.timeout, self.s2dict, MAX_IF_DEPTH)
         tac_node.add_children([s2strat])
 
-    def apply_timeout_rule(self, action):
+    def apply_timeout_rule(self, action: str) -> None:
         timeout_value = int(action[1:])
         branching_node = OrElseNode(timeout_value)
         tryout_strat = S2Strategy(timeout_value, self.s2dict, MAX_IF_DEPTH)
@@ -185,15 +196,15 @@ class S2Strategy(ASTNode):
         self.parent.replace_child(branching_node, self.pos)
         branching_node.add_children([tryout_strat, default_strat])
 
-    def apply_if_rule(self):
+    def apply_if_rule(self) -> None:
         self.parent.replace_child(
             ProbeNode(self.if_depth + 1, self.timeout, self.s2dict), self.pos
         )
 
-    def apply_rule(self, action, params):  # params is no use here
+    def apply_rule(self, action: Action, params: Any) -> None:
         assert self.is_leaf()
         assert action in self.legal_actions()
-        if action == 3:  # if rule
+        if action == ACTION_IF_RULE:
             self.apply_if_rule()
         elif action in TIMEOUTS:
             self.apply_timeout_rule(action)

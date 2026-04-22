@@ -1,4 +1,5 @@
 import random
+from typing import Callable
 from z3alpha.strat_tree import StrategyAST
 from z3alpha.evaluator import SolverEvaluator
 from z3alpha.utils import solvedNumReward, parNReward
@@ -30,14 +31,8 @@ class StrategyGame:
     def __str__(self) -> str:
         return str(self.strat_ast)
 
-    # def smt2str(self):
-    #     return self.stratAST.smt2str()
-
     def is_terminal(self):
         return self.strat_ast.is_terminal()
-
-    # def getRemainTime(self):
-    #     return self.stratAST.getRemainTime()
 
     def legal_actions(self, rollout=False):
         return self.strat_ast.legal_actions(rollout)
@@ -72,7 +67,12 @@ class StrategyGame:
 
     # this function to be tested
     @staticmethod
-    def solve_with_cache(bench_id, ln_strats, database, timeout):
+    def solve_with_cache(
+        bench_id: int,
+        ln_strats: list[tuple[list[int], int]],
+        database: dict,
+        timeout: int,
+    ) -> tuple[bool, int]:
         time_remain = timeout
         solved = False
         time_used = 0
@@ -113,20 +113,20 @@ class StrategyGame:
         return self.get_s2_res_list(database)
 
     # return a total reward of [0,1] according to the reward type
-    def get_value(self, database, reward_type):
+    def get_value(self, database: dict, reward_type: str) -> float:
         assert self.is_terminal()
         if self.stage == 1:
             res_lst = self.get_s1_res_list(database)
         else:
             res_lst = self.get_s2_res_list(database)
-        if reward_type == "#solved":
-            return solvedNumReward(res_lst)
-        elif reward_type == "par2":
-            return parNReward(res_lst, 2, self.timeout)
-        elif reward_type == "par10":
-            return parNReward(res_lst, 10, self.timeout)
-        else:
+        reward_dispatcher: dict[str, Callable[[list], float]] = {
+            "#solved": solvedNumReward,
+            "par2": lambda results: parNReward(results, 2, self.timeout),
+            "par10": lambda results: parNReward(results, 10, self.timeout),
+        }
+        if reward_type not in reward_dispatcher:
             raise Exception(f"Unknown value type {reward_type}")
+        return reward_dispatcher[reward_type](res_lst)
 
     # Backward-compatible alias.
     def isTerminal(self):
