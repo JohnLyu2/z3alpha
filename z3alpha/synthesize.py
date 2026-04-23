@@ -9,9 +9,8 @@ import datetime
 
 from z3alpha.logging_config import setup_logging
 from z3alpha.mcts import LinearStrategySearchRun, MCTSSearchConfig
-from z3alpha.stage2.search_runtime import Stage2MCTSRun
+from z3alpha.stage2.search_runtime import run_branched_synthesis
 from z3alpha.strategy_portfolio import create_greedy_linear_strategy_portfolio
-from z3alpha.stage2.pipeline import build_stage2_context
 from z3alpha.synthesis_config import (
     ExperimentConfig,
     MCTSParams,
@@ -30,15 +29,6 @@ def _mcts_config_linear(e: ExperimentConfig, m: MCTSParams) -> MCTSSearchConfig:
         timeout=e.timeout,
         c_uct=m.c_uct,
         c_ucb=m.c_ucb,
-    )
-
-
-def _mcts_config_stage2(e: ExperimentConfig, m: MCTSParams) -> MCTSSearchConfig:
-    return MCTSSearchConfig(
-        sim_num=e.s2_sims,
-        timeout=e.timeout,
-        c_uct=m.c_uct,
-        c_ucb=None,
     )
 
 
@@ -111,8 +101,8 @@ def synthesize_linear_strategies(run: SynthesisRun, log_folder: Path):
     )
 
     _log_elapsed(start_time, "Linear strategy search time")
-    stage1_results_for_s2 = [(s, s1_res_dict[s]) for s in selected_strat]
-    return selected_strat, s1_bench_lst, stage1_results_for_s2
+    shortlist = [(s, s1_res_dict[s]) for s in selected_strat]
+    return selected_strat, s1_bench_lst, shortlist
 
 
 def add_fail_if_undecided(strat):
@@ -130,51 +120,6 @@ def parallel_linear_strategies(ln_strat_lst, fail_if_undecided=True):
         parallel_strats += f" {strat}"
     parallel_strats += ")"
     return parallel_strats
-
-
-def stage2_synthesize(
-    results,
-    bench_lst,
-    run: SynthesisRun,
-    log_folder: Path,
-):
-    experiment, m = run.experiment, run.m
-    num_strat = experiment.ln_strat_num
-    stage2_context = build_stage2_context(results, bench_lst, num_strat)
-    log.info(f"preprocess dict: {stage2_context.preprocess_actions}")
-    log.info(f"solver dict: {stage2_context.solver_actions}")
-    log.info(
-        f"converted selected strategies: {stage2_context.seed_action_sequences}"
-    )
-
-    logic = experiment.logic
-    z3path = "z3"
-    if experiment.z3path:
-        z3path = experiment.z3path
-
-    s2startTime = time.time()
-    log.info("S2 MCTS Simulations Start")
-
-    s2search = _mcts_config_stage2(experiment, m)
-    run_stage_two = Stage2MCTSRun(
-        s2search,
-        stage2_context,
-        bench_lst,
-        logic,
-        z3path,
-        experiment.value_type,
-        log_folder,
-    )
-    run_stage_two.start()
-    best_strategy = run_stage_two.get_best_strat()
-
-    strat_path = Path(log_folder) / "synthesized_strategy.txt"
-    with open(strat_path, "w") as f:
-        f.write(best_strategy)
-    log.info(f"Best final strategy saved to: {strat_path}")
-
-    _log_elapsed(s2startTime, "Stage 2 MCTS Time")
-    return best_strategy
 
 
 def parallel_synthesize(run: SynthesisRun, log_folder: Path):
@@ -195,13 +140,11 @@ def parallel_synthesize(run: SynthesisRun, log_folder: Path):
 def branched_synthesize(run: SynthesisRun, log_folder: Path):
     start_time = time.time()
 
-    _, s1_bench_lst, stage1_results_for_s2 = synthesize_linear_strategies(
+    _, bench_lst, shortlist = synthesize_linear_strategies(
         run, log_folder
     )
 
-    stage2_synthesize(
-        stage1_results_for_s2, s1_bench_lst, run, log_folder
-    )
+    run_branched_synthesis(run, shortlist, bench_lst, log_folder)
 
     _log_elapsed(start_time, "Total synthesis time")
 

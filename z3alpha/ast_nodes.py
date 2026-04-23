@@ -46,12 +46,12 @@ class Root(ASTNode):
 
 class TacticNode(ASTNode):
     def __init__(
-        self, name, params, stage2_action_id=None
+        self, name, params, branched_action_id=None
     ):  # tactic terminals do not have children
         super().__init__()
         self.name = name
         self.params = params
-        self.stage2_action_id = stage2_action_id
+        self.branched_action_id = branched_action_id
 
     def _tactic_str(self):
         if not self.params:
@@ -87,7 +87,7 @@ class TacticNode(ASTNode):
 
     def get_ln_strats(self, precede_strats, probe_record):
         for strat_tup in precede_strats:
-            strat_tup[0].append(self.stage2_action_id)
+            strat_tup[0].append(self.branched_action_id)
         if self.is_leaf():
             return precede_strats
         return self.children[0].get_ln_strats(precede_strats, probe_record)

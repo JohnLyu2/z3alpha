@@ -19,7 +19,7 @@ class ExperimentConfig:
     train_dir: str
     timeout: int
     mcts_sims: int
-    s2_sims: int
+    branched_sims: int
     ln_strat_num: int
     value_type: str = "par10"
     z3path: str | None = None
@@ -71,7 +71,7 @@ def parse_experiment_config(raw: dict[str, Any]) -> ExperimentConfig:
         train_dir=raw["train_dir"],
         timeout=raw["timeout"],
         mcts_sims=raw["mcts_sims"],
-        s2_sims=raw["s2_sims"],
+        branched_sims=raw["branched_sims"],
         ln_strat_num=raw["ln_strat_num"],
         value_type=raw.get("value_type", "par10"),
         z3path=raw.get("z3path"),

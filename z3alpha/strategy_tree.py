@@ -1,9 +1,7 @@
-from z3alpha.ast_nodes import ASTNode, Root, TacticNode
-from z3alpha.stage2.strategy_tree import Action as Stage2Action
-from z3alpha.stage2.strategy_tree import Stage2Context, Stage2StrategyNode
-from z3alpha.tactics.catalog import PREPROCESS_CATALOG, SOLVER_CATALOG
+from __future__ import annotations
 
-Action = int | Stage2Action
+from z3alpha.ast_nodes import ASTNode, Root, TacticNode
+from z3alpha.tactics.catalog import PREPROCESS_CATALOG, SOLVER_CATALOG
 
 
 class LinearStrategy(ASTNode):
@@ -38,31 +36,16 @@ class LinearStrategy(ASTNode):
         raise Exception("unexpected action")
 
 
-class StrategyTree:
-    def __init__(
-        self,
-        stage,
-        logic,
-        timeout,
-        *,
-        logic_config=None,
-        stage2_context: "Stage2Context | None" = None,
-    ):
-        self.logic = logic
-        self.timeout = timeout
-        self.root = Root()
-        if stage == 1:
-            self.root.add_children([LinearStrategy(logic, logic_config)])
-        else:
-            assert stage2_context is not None
-            self.root.add_children(
-                [Stage2StrategyNode(timeout, stage2_context, if_depth=0)]
-            )
+class SearchTreeBase:
+    """Shared DFS navigation; root has one child (the strategy AST under search)."""
+
+    root: Root
+    timeout: int
+    logic: str
 
     def __str__(self):
         return str(self.root)
 
-    # Return the depth-first first nonterminal node in the tree.
     def find_first_nonterminal(self):
         nonterm_stack = [self.root]
         while nonterm_stack:
@@ -79,13 +62,13 @@ class StrategyTree:
     def is_terminal(self):
         return not bool(self.current_decision_node())
 
-    def legal_actions(self, rollout: bool = False) -> list[Action]:
+    def legal_actions(self, rollout: bool = False) -> list:
         node = self.current_decision_node()
         if node is None:
             return []
         return node.legal_actions(rollout)
 
-    def apply_rule(self, action: Action, params: dict | None) -> None:
+    def apply_rule(self, action, params: dict | None) -> None:
         node = self.current_decision_node()
         assert node is not None
         node.apply_rule(action, params)
@@ -93,3 +76,13 @@ class StrategyTree:
     def get_linear_strategies(self, probe_record):
         assert self.is_terminal()
         return self.root.get_ln_strats(self.timeout, probe_record)
+
+
+class LinearStrategyTree(SearchTreeBase):
+    """MCTS search tree for linear (non-conditional) strategies only."""
+
+    def __init__(self, logic, timeout, *, logic_config=None):
+        self.logic = logic
+        self.timeout = timeout
+        self.root = Root()
+        self.root.add_children([LinearStrategy(logic, logic_config)])

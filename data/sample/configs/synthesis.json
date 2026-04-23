@@ -4,6 +4,6 @@
   "train_dir": "data/sample/benchmarks",
   "timeout": 1,
   "mcts_sims": 15,
-  "s2_sims": 50,
+  "branched_sims": 50,
   "ln_strat_num": 5
 }

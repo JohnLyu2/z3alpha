@@ -1,6 +1,6 @@
 import random
 from typing import Callable
-from z3alpha.strategy_tree import StrategyTree
+from z3alpha.strategy_tree import LinearStrategyTree
 from z3alpha.evaluator import SolverEvaluator
 from z3alpha.utils import par_n_reward, solved_num_reward
 
@@ -16,8 +16,9 @@ class LinearStrategyGame:
         logic_config=None,
     ):
         self.benchmarks = training_lst
-        self.strat_ast = StrategyTree(
-            1, logic, timeout,
+        self.strat_ast = LinearStrategyTree(
+            logic,
+            timeout,
             logic_config=logic_config,
         )
         self.simulator = SolverEvaluator(

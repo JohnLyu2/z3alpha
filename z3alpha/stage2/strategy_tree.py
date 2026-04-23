@@ -2,8 +2,9 @@ import copy
 from dataclasses import dataclass
 from typing import Any
 
-from z3alpha.ast_nodes import ASTNode, TacticNode
+from z3alpha.ast_nodes import ASTNode, Root, TacticNode
 from z3alpha.stage2.utils import next_actions_from_prefix
+from z3alpha.strategy_tree import SearchTreeBase
 
 
 @dataclass(frozen=True)
@@ -152,7 +153,7 @@ class Stage2StrategyNode(ASTNode):
         cur_node = self.parent
         while cur_node:
             if cur_node.is_tactic():
-                reverse_path.append(cur_node.stage2_action_id)
+                reverse_path.append(cur_node.branched_action_id)
             cur_node = cur_node.parent
         return list(reversed(reverse_path))
 
@@ -214,3 +215,15 @@ class Stage2StrategyNode(ASTNode):
             self.apply_then_rule(int(action.value))
         else:
             raise Exception("unexpected action")
+
+
+class BranchedStrategyTree(SearchTreeBase):
+    """MCTS search tree for conditional (if / probe) strategies."""
+
+    def __init__(self, logic, timeout, *, context: Stage2Context):
+        self.logic = logic
+        self.timeout = timeout
+        self.root = Root()
+        self.root.add_children(
+            [Stage2StrategyNode(timeout, context, if_depth=0)]
+        )

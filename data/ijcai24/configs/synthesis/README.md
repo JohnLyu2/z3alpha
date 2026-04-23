@@ -10,7 +10,7 @@
 
 **"mcts_sims"**: number of MCTS simulations for linear strategy search
 
-**"s2_sims"**: number of MCTS simulations for branched (stage-2) strategy search
+**"branched_sims"**: number of MCTS simulations for branched (conditional) strategy search
 
 **"ln_strat_num"**: number of linear strategies to select for the shortlist after linear MCTS
 

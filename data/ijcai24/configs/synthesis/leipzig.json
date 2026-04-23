@@ -4,6 +4,6 @@
   "train_dir": "data/ijcai24/benchmarks/fastsmt_benchmarks/qf_nia/leipzig",
   "timeout": 10,
   "mcts_sims": 800,
-  "s2_sims": 300000,
+  "branched_sims": 300000,
   "ln_strat_num": 20
 }

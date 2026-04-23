@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class MCTSSearchConfig:
-    """One MCTS run: sim count, per-instance timeout, UCT, and UCB (linear stage only; ``None`` for stage 2)."""
+    """One MCTS run: sim count, per-instance timeout, UCT, and UCB (linear search only; ``None`` for branched search)."""
 
     sim_num: int
     timeout: int

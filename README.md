@@ -42,9 +42,9 @@ The configuration file lists experiment fields only (see `z3alpha.synthesis_conf
 
 After this command finishes, outputs are saved under `experiments/synthesis/` in a directory named `out-<starting time:%Y-%m-%d_%H-%M-%S>`. Typical files:
 
-- `stage1_mcts_trace.log` / `stage2_mcts_trace.log` — MCTS search traces  
-- `linear_strategy_results.csv` — every linear strategy evaluated during search, with per-benchmark times (Stage 2 reuses these for the shortlist)  
-- `linear_selected_strategies.csv` — shortlist passed to stage 2  
+- `stage1_mcts_trace.log` / `stage2_mcts_trace.log` — MCTS search traces (linear vs. branched/conditional search)  
+- `linear_strategy_results.csv` — every linear strategy evaluated during search, with per-benchmark times; the branched pass reuses these for the shortlist  
+- `linear_selected_strategies.csv` — shortlist passed to the branched/conditional MCTS pass  
 - `synthesized_strategy.txt` — final synthesized tactic string (branched mode; parallel mode uses the same name in the run folder)
 
 ## IJCAI-24 Reproduction
