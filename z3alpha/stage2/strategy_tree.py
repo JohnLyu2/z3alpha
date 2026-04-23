@@ -1,10 +1,29 @@
 import copy
 from dataclasses import dataclass
+from enum import IntEnum
 from typing import Any
 
 from z3alpha.ast_nodes import ASTNode, Root, TacticNode
 from z3alpha.stage2.utils import next_actions_from_prefix
 from z3alpha.strategy_tree import SearchTreeBase
+
+# try-for in SMT-LIB2 uses milliseconds; internal timeouts are in seconds
+TRY_FOR_MS_PER_SEC = 1000
+
+
+class ProbeAction(IntEnum):
+    """Which probe metric to branch on at a :class:`ProbeNode`."""
+
+    NUM_CONSTS = 50
+    NUM_EXPRS = 51
+    SIZE = 52
+
+
+PROBE_ACTION_TO_METRIC: dict[ProbeAction, str] = {
+    ProbeAction.NUM_CONSTS: "num-consts",
+    ProbeAction.NUM_EXPRS: "num-exprs",
+    ProbeAction.SIZE: "size",
+}
 
 
 @dataclass(frozen=True)
@@ -33,10 +52,6 @@ Action = Stage2Action
 MAX_IF_DEPTH = 3
 TIMEOUTS = ["v2", "v8", "v32", "v128", "v512"]  # in seconds
 PERCENTILES = ["90p", "70p", "50p"]
-ACTION_IF_RULE = 3
-ACTION_PROBE_NUM_CONSTS = 50
-ACTION_PROBE_NUM_EXPRS = 51
-ACTION_PROBE_SIZE = 52
 
 
 class OrElseNode(ASTNode):
@@ -46,7 +61,7 @@ class OrElseNode(ASTNode):
 
     def __str__(self):
         return (
-            f"(or-else (try-for {self.children[0]} {self.timeout * 1000}) "
+            f"(or-else (try-for {self.children[0]} {self.timeout * TRY_FOR_MS_PER_SEC}) "
             f"{self.children[1]})"
         )
 
@@ -106,11 +121,7 @@ class ProbeNode(ASTNode):
         self.timeout = timeout
         self.stage2_context = stage2_context
         self.probe_stats = stage2_context.probe_stats
-        self.action_dict = {
-            ACTION_PROBE_NUM_CONSTS: "num-consts",
-            ACTION_PROBE_NUM_EXPRS: "num-exprs",
-            ACTION_PROBE_SIZE: "size",
-        }
+        self._probe_metrics = PROBE_ACTION_TO_METRIC
 
     def __str__(self):
         return "<ProbeNode>"
@@ -118,13 +129,14 @@ class ProbeNode(ASTNode):
     def is_terminal(self):
         return False
 
-    def legal_actions(self, rollout: bool = False) -> list[int]:
-        return list(self.action_dict.keys())
+    def legal_actions(self, rollout: bool = False) -> list[ProbeAction]:
+        return list(ProbeAction)
 
     def apply_rule(self, action: int, params: Any) -> None:
         assert self.is_leaf()
-        assert action in self.legal_actions()
-        probe_name = self.action_dict[action]
+        pa = action if isinstance(action, ProbeAction) else ProbeAction(action)
+        assert pa in self.legal_actions()
+        probe_name = self._probe_metrics[pa]
         pred_node = PredicateNode(probe_name, self.probe_stats)
         self.parent.replace_child(pred_node, self.pos)
         left_strat = Stage2StrategyNode(self.timeout, self.stage2_context, self.if_depth)

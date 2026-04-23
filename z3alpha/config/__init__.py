@@ -1,4 +1,4 @@
-"""Application configuration: experiment/MCTS (JSON + CLI) and logging setup."""
+"""Public config API: re-export from :mod:`z3alpha.config.synthesis` and :mod:`z3alpha.config.logging`."""
 
 from z3alpha.config.logging import (
     DATE_FMT,

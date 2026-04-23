@@ -1,10 +1,11 @@
-"""Typed experiment configuration, MCTS parameters, and optional synthesis run bundle."""
+"""Experiment JSON (``ExperimentConfig``), MCTS/seed defaults, CLI overrides."""
 
 from __future__ import annotations
 
 from dataclasses import MISSING, dataclass, fields
 from typing import Any, Protocol, runtime_checkable
 
+# CLI / code defaults (experiment JSON does not set these; use --c-uct, --c-ucb, --random-seed)
 DEFAULT_C_UCT = 0.5
 DEFAULT_C_UCB = 0.2
 DEFAULT_RANDOM_SEED = 0
@@ -12,7 +13,7 @@ DEFAULT_RANDOM_SEED = 0
 
 @dataclass(frozen=True)
 class ExperimentConfig:
-    """Fields allowed in the experiment JSON file (see :func:`parse_experiment_config`)."""
+    """One experiment file; see :func:`parse_experiment_config` for the JSON schema."""
 
     logic: str
     batch_size: int
@@ -37,33 +38,28 @@ class MCTSParams:
 
 @dataclass(frozen=True)
 class SynthesisRun:
-    """One synthesis invocation: experiment file + resolved MCTS/seed (CLI over code defaults)."""
-
     experiment: ExperimentConfig
     m: MCTSParams
 
 
-def _experiment_field_names() -> frozenset[str]:
+def _allowed_keys() -> frozenset[str]:
     return frozenset(f.name for f in fields(ExperimentConfig))
 
 
-def _required_experiment_keys() -> frozenset[str]:
+def _required_keys() -> frozenset[str]:
     return frozenset(f.name for f in fields(ExperimentConfig) if f.default is MISSING)
 
 
 def parse_experiment_config(raw: dict[str, Any]) -> ExperimentConfig:
-    """Build :class:`ExperimentConfig` from experiment JSON. Unknown keys raise ``ValueError``."""
-    allowed = _experiment_field_names()
-    unknown = set(raw) - allowed
-    if unknown:
+    """Reject unknown keys; require every field with no default."""
+    allowed = _allowed_keys()
+    if extra := (set(raw) - allowed):
         raise ValueError(
-            f"Unknown key(s) in experiment JSON: {sorted(unknown)}. "
-            f"Allowed: {sorted(allowed)}"
+            f"Unknown key(s) in experiment JSON: {sorted(extra)}. Allowed: {sorted(allowed)}"
         )
-    required = _required_experiment_keys() - set(raw)
-    if required:
+    if missing := (_required_keys() - set(raw)):
         raise ValueError(
-            f"Missing required key(s) in experiment JSON: {sorted(required)}"
+            f"Missing required key(s) in experiment JSON: {sorted(missing)}"
         )
 
     return ExperimentConfig(
@@ -90,8 +86,8 @@ class MctsCliArgs(Protocol):
 
 
 def resolve_mcts_params(args: MctsCliArgs) -> MCTSParams:
-    """UCT/UCB/seed from module defaults, overridden by CLI flags when set."""
-    c_uct = DEFAULT_C_UCT if args.c_uct is None else args.c_uct
-    c_ucb = DEFAULT_C_UCB if args.c_ucb is None else args.c_ucb
-    random_seed = DEFAULT_RANDOM_SEED if args.random_seed is None else args.random_seed
-    return MCTSParams(c_uct=c_uct, c_ucb=c_ucb, random_seed=random_seed)
+    return MCTSParams(
+        c_uct=DEFAULT_C_UCT if args.c_uct is None else args.c_uct,
+        c_ucb=DEFAULT_C_UCB if args.c_ucb is None else args.c_ucb,
+        random_seed=DEFAULT_RANDOM_SEED if args.random_seed is None else args.random_seed,
+    )
