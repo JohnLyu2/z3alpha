@@ -1,45 +1,9 @@
 import json
 from pathlib import Path
 
-SOLVER_CATALOG = {
-    10: "smt",
-    11: "qfnra-nlsat",
-    12: "sat",
-    13: "qfbv",
-    14: "qfnia",
-    15: "qfnra",
-    16: "qflia",
-    17: "qflra",
-}
+from z3alpha.tactics.catalog import NAME_TO_ID, PREPROCESS_NAME_TO_ID, SOLVER_NAME_TO_ID
 
-PREPROCESS_CATALOG = {
-    5: "nla2bv",
-    7: "bit-blast",
-    8: "pb2bv",
-    20: "simplify",
-    21: "propagate-values",
-    22: "ctx-simplify",
-    23: "elim-uncnstr",
-    24: "solve-eqs",
-    25: "purify-arith",
-    26: "max-bv-sharing",
-    27: "aig",
-    28: "reduce-bv-size",
-    29: "ackermannize_bv",
-    32: "lia2card",
-    33: "card2bv",
-    34: "cofactor-term-ite",
-    35: "propagate-ineqs",
-    36: "add-bounds",
-    37: "normalize-bounds",
-    38: "lia2pb",
-}
-
-SOLVER_NAME_TO_ID = {name: id for id, name in SOLVER_CATALOG.items()}
-PREPROCESS_NAME_TO_ID = {name: id for id, name in PREPROCESS_CATALOG.items()}
-NAME_TO_ID = {**SOLVER_NAME_TO_ID, **PREPROCESS_NAME_TO_ID}
-
-_BUILTIN_CONFIG_DIR = Path(__file__).parent / "logic_configs"
+_BUILTIN_CONFIG_DIR = Path(__file__).resolve().parent.parent / "logic_configs"
 
 
 def _parse_logic_config(path):

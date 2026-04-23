@@ -1,7 +1,8 @@
 from pathlib import Path
 from typing import Callable
 
-from z3alpha.parser import PREPROCESS_TACTICS, SOLVER_TACTICS, s1_strat_parse
+from z3alpha.parser import s1_strat_parse
+from z3alpha.tactics.catalog import PREPROCESS_TACTICS, SOLVER_TACTICS
 from z3alpha.utils import parNReward, solvedNumReward
 
 ActionId = int

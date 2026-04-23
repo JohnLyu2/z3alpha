@@ -1,5 +1,5 @@
 from z3alpha.ast_nodes import ASTNode, TacticNode
-from z3alpha.tactic_catalog import SOLVER_CATALOG, PREPROCESS_CATALOG
+from z3alpha.tactics.catalog import PREPROCESS_CATALOG, SOLVER_CATALOG
 
 
 class S1Strategy(ASTNode):

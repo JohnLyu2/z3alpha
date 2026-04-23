@@ -1,62 +1,13 @@
-SOLVER_TACTICS = [
-    "smt",
-    "qfnra-nlsat",
-    "sat",
-    "qfbv",
-    "qfnia",
-    "qfnra",
-    "qflia",
-    "qflra",
-]
-PREPROCESS_TACTICS = [
-    "simplify",
-    "propagate-values",
-    "ctx-simplify",
-    "elim-uncnstr",
-    "solve-eqs",
-    "purify-arith",
-    "max-bv-sharing",
-    "aig",
-    "reduce-bv-size",
-    "ackermannize_bv",
-    "lia2card",
-    "card2bv",
-    "cofactor-term-ite",
-    "nla2bv",
-    "bv1-blast",
-    "bit-blast",
-    "pb2bv",
-    "propagate-ineqs",
-    "add-bounds",
-    "normalize-bounds",
-    "lia2pb",
-]
+from z3alpha.tactics.catalog import (
+    PREPROCESS_TACTICS,
+    SOLVER_TACTICS,
+    SUPPORTED_TACTIC_PARAMS,
+)
+
 TACTIC_LST = SOLVER_TACTICS + PREPROCESS_TACTICS
 
 TACTICAL_LST = ["then", "if", "using-params"]
-PARAM_LST = [
-    "inline_vars",
-    "seed",
-    "factor",
-    "elim_and",
-    "som",
-    "blast_distinct",
-    "flat",
-    "hi_div0",
-    "local_ctx",
-    "hoist_mul",
-    "push_ite_bv",
-    "pull_cheap_ite",
-    "nla2bv_max_bv_size",
-    "add_bound_lower",
-    "add_bound_upper",
-    "pb2bv_all_clauses_limit",
-    "lia2pb_max_bits",
-    "random_seed",
-    "push_ite_arith",
-    "hoist_ite",
-    "arith_lhs",
-]
+PARAM_LST = SUPPORTED_TACTIC_PARAMS
 PRED_PROBES = [">", "is-qfbv-eq"]
 NUM_PROBES = ["size", "num-consts"]
 MARKS = ["(", ")", ":"]
@@ -161,63 +112,3 @@ def s1_strat_parse(s1_strat_str):
         # print(tactic)
         tactic_lst.append(tactic)
     return tactic_lst
-
-
-# def _parse_then(t_lst, i):
-#   assert t_lst[i].name == "(" and t_lst[i+1].name == "then"
-#   next_pos = i+2
-#   assert _is_tactic(t_lst, next_pos)
-#   root, next_pos = parse_tactic(t_lst, next_pos)
-#   prev_tactic = root
-#   while _is_tactic(t_lst, next_pos):
-#     tactic, next_pos = parse_tactic(t_lst, next_pos)
-#     prev_tactic.add_children(tactic)
-#     prev_tactic = tactic
-#   if t_lst[next_pos].name == "(":
-#     strat, next_pos = _parse_strat_rec(t_lst, next_pos)
-#     prev_tactic.add_children(strat)
-#   if t_lst[next_pos].name != ")":
-#     raise Exception(f"Invalid strategy")
-#   return root, next_pos+1
-
-
-# # a recursive function that parses the strategy starting from index i in t_lst
-# def _parse_strat_rec(t_lst, i):
-#   if _is_tactic(t_lst, i):
-#     tactic, next_pos = parse_tactic(t_lst, i)
-#     return tactic, next_pos
-#   else:
-#     if t_lst[i].name != "(" or t_lst[i+1].type != "tactical":
-#       raise Exception(f"Invalid strategy")
-#     if t_lst[i+1].name == "then":
-#       return _parse_then(t_lst, i)
-#     if t_lst[i+1].name == "if":
-#       if t_lst[i+2].name != "(":
-#         pred = t_lst[i+2].name
-#         value = None
-#         next_pos = i+3
-#         if pred not in PRED_PROBES:
-#           raise Exception(f"Invalid strategy")
-#       else:
-#         if t_lst[i+3].name != ">" or t_lst[i+4].name not in NUM_PROBES or t_lst[i+5].type != "number" or t_lst[i+6].name != ")": # for now only allows >
-#           raise Exception(f"Invalid strategy")
-#         pred = t_lst[i+4].name
-#         value = t_lst[i+5].name
-#         next_pos = i+7
-#       if_node = IfPredicate(pred, value)
-#       left_strat, next_pos = _parse_strat_rec(t_lst, next_pos)
-#       right_strat, next_pos = _parse_strat_rec(t_lst, next_pos)
-#       if_node.add_children(left_strat, right_strat)
-#       if t_lst[next_pos].name != ")":
-#         raise Exception(f"Invalid strategy")
-#       next_pos += 1
-#       return if_node, next_pos
-
-
-# def Strategy_Parse(s):
-#   assert len(s) > 0
-#   # parse the strategy string into a tree
-#   # return the root node
-#   tokens = Strategy_Tokenizer(s)
-#   strat, p = _parse_strat_rec(tokens, 0)
-#   return strat
