@@ -1,11 +1,11 @@
 import random
 from typing import Callable
-from z3alpha.strat_tree import StrategyAST
+from z3alpha.strategy_tree import StrategyTree
 from z3alpha.evaluator import SolverEvaluator
-from z3alpha.utils import solvedNumReward, parNReward
+from z3alpha.utils import par_n_reward, solved_num_reward
 
 
-class StrategyGame:
+class LinearStrategyGame:
     def __init__(
         self, stage, training_lst, logic, timeout, sconfig, batch_size, z3path,
         logic_config=None,
@@ -13,7 +13,7 @@ class StrategyGame:
         assert stage == 1, "Use stage2.search_runtime.Stage2StrategyGame for stage 2"
         self.stage = 1
         self.benchmarks = training_lst
-        self.strat_ast = StrategyAST(
+        self.strat_ast = StrategyTree(
             1, logic, timeout,
             logic_config=logic_config,
         )
@@ -50,7 +50,7 @@ class StrategyGame:
         strat_str = str(self)
         if strat_str in database:  # does not account for nondeterministism now
             return database[strat_str]
-        res_list = self.simulator.getResLst(strat_str)
+        res_list = self.simulator.get_res_list(strat_str)
         database[strat_str] = res_list
         return res_list
 
@@ -59,9 +59,9 @@ class StrategyGame:
         assert self.is_terminal()
         res_lst = self.get_s1_res_list(database)
         reward_dispatcher: dict[str, Callable[[list], float]] = {
-            "#solved": solvedNumReward,
-            "par2": lambda results: parNReward(results, 2, self.timeout),
-            "par10": lambda results: parNReward(results, 10, self.timeout),
+            "#solved": solved_num_reward,
+            "par2": lambda results: par_n_reward(results, 2, self.timeout),
+            "par10": lambda results: par_n_reward(results, 10, self.timeout),
         }
         if reward_type not in reward_dispatcher:
             raise Exception(f"Unknown value type {reward_type}")

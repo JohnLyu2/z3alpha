@@ -1,4 +1,4 @@
-from z3alpha.utils import parNReward
+from z3alpha.utils import par_n_reward
 
 
 # no incentive for early termination if not solved for now
@@ -36,13 +36,13 @@ def linear_strategy_select(max_selected, result_database, timeout):
     best_res = [(False, None)] * len(result_database[list(result_database.keys())[0]])
     for i in range(max_selected):
         best_strat = None
-        best_value = parNReward(best_res, N, timeout)
+        best_value = par_n_reward(best_res, N, timeout)
         for strat in result_database:
             if strat in selected_strat:
                 continue
             strat_res = result_database[strat]
             virtual_res, _ = virtual_add_strategy(best_res, strat_res)
-            virtual_value = parNReward(virtual_res, N, timeout)
+            virtual_value = par_n_reward(virtual_res, N, timeout)
             if virtual_value > best_value:
                 best_strat = strat
                 best_value = virtual_value

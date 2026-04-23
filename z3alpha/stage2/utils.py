@@ -1,25 +1,25 @@
 from pathlib import Path
 from typing import Callable
 
-from z3alpha.parser import s1_strat_parse
+from z3alpha.parser import parse_linear_strategy
 from z3alpha.tactics.catalog import PREPROCESS_TACTICS, SOLVER_TACTICS
-from z3alpha.utils import parNReward, solvedNumReward
+from z3alpha.utils import par_n_reward, solved_num_reward
 
 ActionId = int
 ActionPath = list[ActionId]
 
 
-def encode_stage1_strategies(s1_strat_lst: list[str]):
+def encode_linear_strategies(linear_strategies: list[str]):
     tactic_dict = {}
     solver_id = 1000
     act2solver = {}
     preprocess_id = 2000
     act2preprocess = {}
     strat_act_lst = []
-    s1strat2acts = {}
+    linear_strategy_to_actions = {}
 
-    for s1_strat in s1_strat_lst:
-        tac_lst = s1_strat_parse(s1_strat)
+    for linear_strategy in linear_strategies:
+        tac_lst = parse_linear_strategy(linear_strategy)
         act_lst = []
         for tac in tac_lst:
             # parameter order may change after parsing; string key normalizes identity.
@@ -37,9 +37,9 @@ def encode_stage1_strategies(s1_strat_lst: list[str]):
                     raise Exception(f"Unknown tactic {tac}")
             act_lst.append(tactic_dict[tac_str])
         strat_act_lst.append(act_lst)
-        s1strat2acts[s1_strat] = tuple(act_lst)
+        linear_strategy_to_actions[linear_strategy] = tuple(act_lst)
 
-    return strat_act_lst, act2solver, act2preprocess, s1strat2acts
+    return strat_act_lst, act2solver, act2preprocess, linear_strategy_to_actions
 
 
 def is_strict_prefix(lst1: ActionPath, lst2: ActionPath) -> bool:
@@ -72,7 +72,7 @@ def create_benchmark_list(benchmark_directories: list[str]) -> list[str]:
 
 def reward_dispatcher(timeout: int) -> dict[str, Callable[[list], float]]:
     return {
-        "#solved": solvedNumReward,
-        "par2": lambda results: parNReward(results, 2, timeout),
-        "par10": lambda results: parNReward(results, 10, timeout),
+        "#solved": solved_num_reward,
+        "par2": lambda results: par_n_reward(results, 2, timeout),
+        "par10": lambda results: par_n_reward(results, 10, timeout),
     }

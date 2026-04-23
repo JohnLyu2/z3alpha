@@ -8,7 +8,7 @@ import json
 import datetime
 
 from z3alpha.logging_config import setup_logging
-from z3alpha.mcts import Stage1MCTSRun
+from z3alpha.mcts import LinearStrategySearchRun
 from z3alpha.stage2.search_runtime import Stage2MCTSRun
 from z3alpha.strategy_portfolio import linear_strategy_select
 from z3alpha.stage2.pipeline import build_stage2_context, cache_stage2_candidates
@@ -37,7 +37,7 @@ def _log_elapsed(start_time, label):
     return elapsed
 
 
-def stage1_synthesize(config, log_folder):
+def synthesize_linear_strategies(config, log_folder):
     start_time = time.time()
     logic = config["logic"]
     z3path = config["z3path"] if "z3path" in config else "z3"
@@ -50,11 +50,11 @@ def stage1_synthesize(config, log_folder):
     config_dir = config.get("logic_config_dir", None)
     logic_config = load_logic_config(logic, config_dir)
 
-    # Stage 1
+    # Linear strategy search
     s1_bench_dirs = s1config["bench_dirs"]
     s1_bench_lst = create_benchmark_list(s1_bench_dirs)
-    log.info("S1 MCTS Simulations Start")
-    run1 = Stage1MCTSRun(
+    log.info("Linear strategy search starts")
+    run1 = LinearStrategySearchRun(
         s1config,
         s1_bench_lst,
         logic,
@@ -71,7 +71,7 @@ def stage1_synthesize(config, log_folder):
         num_ln_strat, s1_res_dict, s1config["timeout"]
     )
     log.info(ln_select_logs)
-    ln_strat_candidates_path = Path(log_folder) / "stage1_selected_strategies.csv"
+    ln_strat_candidates_path = Path(log_folder) / "linear_selected_strategies.csv"
     with open(ln_strat_candidates_path, "w") as f:
         # write one strategy per line as a csv file
         cwriter = csv.writer(f)
@@ -83,7 +83,7 @@ def stage1_synthesize(config, log_folder):
         f"Selected {len(selected_strat)} strategies: {selected_strat}, saved to {ln_strat_candidates_path}"
     )
 
-    _log_elapsed(start_time, "Stage 1 Time")
+    _log_elapsed(start_time, "Linear strategy search time")
     return selected_strat
 
 def add_fail_if_undecided(strat):
@@ -101,7 +101,7 @@ def parallel_linear_strategies(ln_strat_lst, fail_if_undecided=True):
     parallel_strats += ")"
     return parallel_strats
 
-def cache4stage2(selected_strat, config, log_folder, benchlst=None):
+def cache_stage2_candidates_for_run(selected_strat, config, log_folder, benchlst=None):
     return cache_stage2_candidates(selected_strat, config, log_folder, benchlst)
 
 
@@ -155,7 +155,7 @@ def parallel_synthesize(config, log_folder):
     """
     start_time = time.time()
 
-    selected_strats = stage1_synthesize(config, log_folder)
+    selected_strats = synthesize_linear_strategies(config, log_folder)
 
     parallel_strat = parallel_linear_strategies(selected_strats)
 
@@ -178,11 +178,11 @@ def branched_synthesize(config, log_folder):
     """
     start_time = time.time()
 
-    # Step 1: Initial strategy synthesis
-    selected_strats = stage1_synthesize(config, log_folder)
+    # Step 1: Linear strategy synthesis
+    selected_strats = synthesize_linear_strategies(config, log_folder)
 
     # Step 2: Cache results for selected strategies
-    res_dict, bench_lst = cache4stage2(selected_strats, config, log_folder)
+    res_dict, bench_lst = cache_stage2_candidates_for_run(selected_strats, config, log_folder)
 
     # Step 3: Branched strategy synthesis
     stage2_synthesize(res_dict, bench_lst, config, log_folder)

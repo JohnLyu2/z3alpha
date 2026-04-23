@@ -24,7 +24,7 @@ class Token:
         return f'Token "{self.name}": {self.type}'
 
 
-def Strategy_Tokenizer(s):
+def tokenize_strategy(s):
     # tokenize the strategy string
     # return a list of tokens
     s = s.strip()
@@ -95,10 +95,10 @@ def parse_tactic(t_lst, i):
             return (tactic, params), next_pos + 1
 
 
-def s1_strat_parse(s1_strat_str):
-    # parse a s1 strategy string into a list of TacticNode
-    assert len(s1_strat_str) > 0
-    tokens = Strategy_Tokenizer(s1_strat_str)
+def parse_linear_strategy(linear_strategy_str):
+    # parse a linear strategy string into a list of tactic tuples
+    assert len(linear_strategy_str) > 0
+    tokens = tokenize_strategy(linear_strategy_str)
     pos = 0
     if _is_tactic(tokens, pos):
         tactic, pos = parse_tactic(tokens, pos)

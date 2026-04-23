@@ -6,37 +6,37 @@ import sys
 logger = logging.getLogger(__name__)
 
 
-def solvedNum(resLst):
-    return len([res for res in resLst if res[0]])
+def solved_num(res_list):
+    return len([res for res in res_list if res[0]])
 
 
-def solvedNumReward(resLst):
-    return solvedNum(resLst) / len(resLst)
+def solved_num_reward(res_list):
+    return solved_num(res_list) / len(res_list)
 
 
-def parN(resLst, n, timeout):
-    parN = 0
-    for i in range(len(resLst)):
-        if not resLst[i][0]:
-            parN += n * timeout
+def par_n(res_list, n, timeout):
+    par_n_value = 0
+    for i in range(len(res_list)):
+        if not res_list[i][0]:
+            par_n_value += n * timeout
         else:
-            parN += resLst[i][1]
-    return parN
+            par_n_value += res_list[i][1]
+    return par_n_value
 
 
-def parNReward(resLst, n, timeout):
-    par_n = parN(resLst, n, timeout)
-    maxParN = len(resLst) * timeout * n
-    return 1 - par_n / maxParN
+def par_n_reward(res_list, n, timeout):
+    par_n_value = par_n(res_list, n, timeout)
+    max_par_n = len(res_list) * timeout * n
+    return 1 - par_n_value / max_par_n
 
 
-def calculatePercentile(lst, percentile):
-    assert len(lst) > 0
+def calculate_percentile(values, percentile):
+    assert len(values) > 0
     # percentile is of the form like "90p"
     percent = float(percentile[:-1]) / 100
-    sortedLst = sorted(lst)
-    index = int(len(sortedLst) * percent)
-    return sortedLst[index]
+    sorted_values = sorted(values)
+    index = int(len(sorted_values) * percent)
+    return sorted_values[index]
 
 
 def write_strat_res_to_csv(res_lst, csv_path, bench_lst):

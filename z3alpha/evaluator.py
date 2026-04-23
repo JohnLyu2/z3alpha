@@ -4,7 +4,7 @@ import logging
 import csv
 import concurrent.futures
 
-from z3alpha.utils import solvedNum, parN
+from z3alpha.utils import par_n, solved_num
 
 logger = logging.getLogger(__name__)
 
@@ -101,34 +101,34 @@ class SolverEvaluator:
         is_write_res=False,
         res_path=None,
     ):
-        self.solverPath = solver_path
-        self.benchmarkLst = benchmark_lst
-        assert self.getBenchmarkSize() > 0
+        self.solver_path = solver_path
+        self.benchmark_list = benchmark_lst
+        assert self.get_benchmark_size() > 0
         self.timeout = timeout
         assert self.timeout > 0
-        self.batchSize = batch_size
-        self.isWriteRes = is_write_res
-        self.resPath = res_path
+        self.batch_size = batch_size
+        self.is_write_res = is_write_res
+        self.res_path = res_path
 
-    def getBenchmarkSize(self):
-        return len(self.benchmarkLst)
+    def get_benchmark_size(self):
+        return len(self.benchmark_list)
 
     def _run_single(self, run_id, strat_str):
         """Create a SolverRunner and execute it synchronously (for pool use)."""
         runner = SolverRunner(
-            self.solverPath,
-            self.benchmarkLst[run_id],
+            self.solver_path,
+            self.benchmark_list[run_id],
             self.timeout,
             run_id,
             strat_str,
         )
         return runner.execute()
 
-    def getResLst(self, strat_str):
-        size = self.getBenchmarkSize()
+    def get_res_list(self, strat_str):
+        size = self.get_benchmark_size()
         results = [None] * size
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=self.batchSize) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self.batch_size) as executor:
             futures = {
                 executor.submit(self._run_single, i, strat_str): i
                 for i in range(size)
@@ -143,23 +143,23 @@ class SolverEvaluator:
         return results
 
     def evaluate(self, strat_str):
-        results = self.getResLst(strat_str)
-        if self.isWriteRes:
-            with open(self.resPath, "w") as f:
+        results = self.get_res_list(strat_str)
+        if self.is_write_res:
+            with open(self.res_path, "w") as f:
                 writer = csv.writer(f)
                 # write header
                 writer.writerow(["id", "path", "solved", "time", "result"])
-                for i in range(len(self.benchmarkLst)):
+                for i in range(len(self.benchmark_list)):
                     writer.writerow(
                         [
                             i,
-                            self.benchmarkLst[i],
+                            self.benchmark_list[i],
                             results[i][0],
                             results[i][1],
                             results[i][2],
                         ]
                     )
-        solved = solvedNum(results)
-        par2 = parN(results, 2, self.timeout)
-        par10 = parN(results, 10, self.timeout)
+        solved = solved_num(results)
+        par2 = par_n(results, 2, self.timeout)
+        par10 = par_n(results, 10, self.timeout)
         return (solved, par2, par10)

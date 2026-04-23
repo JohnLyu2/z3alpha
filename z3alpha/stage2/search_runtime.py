@@ -5,7 +5,7 @@ from z3alpha.evaluator import SolverEvaluator
 from z3alpha.mcts import BaseMCTSRun
 from z3alpha.stage2.strategy_tree import Stage2Context
 from z3alpha.stage2.utils import reward_dispatcher
-from z3alpha.strat_tree import StrategyAST
+from z3alpha.strategy_tree import StrategyTree
 
 
 def solve_with_cache(
@@ -64,7 +64,7 @@ class Stage2StrategyGame:
     ):
         self.stage = 2
         self.benchmarks = training_lst
-        self.strat_ast = StrategyAST(2, logic, timeout, sconfig)
+        self.strat_ast = StrategyTree(2, logic, timeout, sconfig)
         self.stage2_context: Stage2Context = sconfig["stage2_context"]
         self.probe_records = self.stage2_context.probe_records
         self.simulator = SolverEvaluator(

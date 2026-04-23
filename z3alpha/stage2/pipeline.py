@@ -6,8 +6,8 @@ from z3 import Goal, Probe, parse_smt2_file
 
 from z3alpha.evaluator import SolverEvaluator
 from z3alpha.stage2.strategy_tree import PERCENTILES, Stage2Context
-from z3alpha.stage2.utils import create_benchmark_list, encode_stage1_strategies
-from z3alpha.utils import calculatePercentile, write_strat_res_to_csv
+from z3alpha.stage2.utils import create_benchmark_list, encode_linear_strategies
+from z3alpha.utils import calculate_percentile, write_strat_res_to_csv
 
 log = logging.getLogger(__name__)
 
@@ -37,15 +37,15 @@ def create_probe_stats(bench_lst):
         probe_records.append(instance_dict)
     probe_stats = {}
     probe_stats["num-consts"] = {
-        percentile: calculatePercentile(num_consts_lst, percentile)
+        percentile: calculate_percentile(num_consts_lst, percentile)
         for percentile in PERCENTILES
     }
     probe_stats["num-exprs"] = {
-        percentile: calculatePercentile(num_exprs_lst, percentile)
+        percentile: calculate_percentile(num_exprs_lst, percentile)
         for percentile in PERCENTILES
     }
     probe_stats["size"] = {
-        percentile: calculatePercentile(size_lst, percentile)
+        percentile: calculate_percentile(size_lst, percentile)
         for percentile in PERCENTILES
     }
     return probe_stats, probe_records
@@ -69,7 +69,7 @@ def cache_stage2_candidates(selected_strategies, config, log_folder, benchmark_l
     s2evaluator = SolverEvaluator(z3path, bench_list, s2timeout, batch_size)
     for i, strategy in enumerate(selected_strategies):
         log.info(f"Stage 2 Caching: {i + 1}/{len(selected_strategies)}")
-        strategy_res = s2evaluator.getResLst(strategy)
+        strategy_res = s2evaluator.get_res_list(strategy)
         s2_res_list.append((strategy, strategy_res))
     cache_csv = Path(log_folder) / "stage2_strategy_cache.csv"
     write_strat_res_to_csv(s2_res_list, cache_csv, bench_list)
@@ -84,7 +84,7 @@ def build_stage2_context(results, bench_list, num_strategies):
     result_by_strategy = {strat: res_lst for strat, res_lst in results}
     selected_strategies = list(result_by_strategy.keys())
     action_lists, solver_actions, preprocess_actions, strategy_to_actions = (
-        encode_stage1_strategies(selected_strategies)
+        encode_linear_strategies(selected_strategies)
     )
     result_cache = {
         strategy_to_actions[strategy]: result_by_strategy[strategy]

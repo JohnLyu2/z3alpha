@@ -5,7 +5,7 @@ import math
 from pathlib import Path
 from typing import Any
 
-from z3alpha.environment import StrategyGame
+from z3alpha.environment import LinearStrategyGame
 from z3alpha.logging_config import attach_file_logger
 
 logger = logging.getLogger(__name__)
@@ -211,7 +211,7 @@ class BaseMCTSRun:
             if node.has_param_mabs():
                 node.backup_mabs(value)
 
-    def _oneSimulation(self):
+    def _one_simulation(self):
         self.env = self._create_env()
         selected_node, search_path = self._select()
         self.trace_log.info("Selected Node: " + str(selected_node))
@@ -248,7 +248,7 @@ class BaseMCTSRun:
             if self.stage == 1:
                 logger.info(f"Simulation {i} starts")
             self.trace_log.info(f"Simulation {i} starts")
-            self._oneSimulation()
+            self._one_simulation()
             self._after_simulation()
 
     def get_strategy_stat(self, strat):
@@ -264,11 +264,11 @@ class BaseMCTSRun:
         return self.top_strategies
 
 
-class Stage1MCTSRun(BaseMCTSRun):
+class LinearStrategySearchRun(BaseMCTSRun):
     stage = 1
 
     def _write_new_results(self):
-        """Append any newly evaluated strategies to the S1 results CSV."""
+        """Append any newly evaluated strategies to linear results CSV."""
         new_strats = set(self.res_database.keys()) - self._written_strats
         if not new_strats:
             return
@@ -283,14 +283,14 @@ class Stage1MCTSRun(BaseMCTSRun):
     def _init_stage_state(self, log_folder, bench_lst):
         self.c_ucb = self.config["c_ucb"]
         self.res_database = {}
-        self._s1_csv_path = Path(log_folder) / "stage1_strategy_results.csv"
+        self._s1_csv_path = Path(log_folder) / "linear_strategy_results.csv"
         self._written_strats = set()
         with open(self._s1_csv_path, "w", newline="") as f:
             writer = csv.writer(f)
             writer.writerow(["strat"] + bench_lst)
 
     def _create_env(self):
-        return StrategyGame(
+        return LinearStrategyGame(
             self.stage,
             self.training_list,
             self.logic,

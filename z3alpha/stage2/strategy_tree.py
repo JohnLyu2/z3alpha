@@ -17,7 +17,7 @@ class Stage2Context:
 
 
 @dataclass(frozen=True)
-class S2Action:
+class Stage2Action:
     kind: str
     value: int | str | None = None
 
@@ -27,7 +27,7 @@ class S2Action:
         return f"{self.kind}:{self.value}"
 
 
-Action = S2Action
+Action = Stage2Action
 
 MAX_IF_DEPTH = 3
 TIMEOUTS = ["v2", "v8", "v32", "v128", "v512"]  # in seconds
@@ -126,12 +126,12 @@ class ProbeNode(ASTNode):
         probe_name = self.action_dict[action]
         pred_node = PredicateNode(probe_name, self.probe_stats)
         self.parent.replace_child(pred_node, self.pos)
-        left_strat = S2Strategy(self.timeout, self.stage2_context, self.if_depth)
-        right_strat = S2Strategy(self.timeout, self.stage2_context, self.if_depth)
+        left_strat = Stage2StrategyNode(self.timeout, self.stage2_context, self.if_depth)
+        right_strat = Stage2StrategyNode(self.timeout, self.stage2_context, self.if_depth)
         pred_node.add_children([left_strat, right_strat])
 
 
-class S2Strategy(ASTNode):
+class Stage2StrategyNode(ASTNode):
     def __init__(self, timeout, stage2_context: Stage2Context, if_depth):
         super().__init__()
         self.timeout = timeout
@@ -142,7 +142,7 @@ class S2Strategy(ASTNode):
         self.if_depth = if_depth
 
     def __str__(self):
-        return "<S2Strategy>"
+        return "<Stage2StrategyNode>"
 
     def is_terminal(self):
         return False
@@ -152,7 +152,7 @@ class S2Strategy(ASTNode):
         cur_node = self.parent
         while cur_node:
             if cur_node.is_tactic():
-                reverse_path.append(cur_node.s2actID)
+                reverse_path.append(cur_node.stage2_action_id)
             cur_node = cur_node.parent
         return list(reversed(reverse_path))
 
@@ -162,16 +162,16 @@ class S2Strategy(ASTNode):
     def legal_actions(self, rollout: bool = False) -> list[Action]:
         cur_path = self.get_cur_act_path()
         tac_actions = next_actions_from_prefix(cur_path, self.s1strat_lst)
-        legal_actions: list[S2Action] = [
-            S2Action("tactic", tac_action) for tac_action in tac_actions
+        legal_actions: list[Stage2Action] = [
+            Stage2Action("tactic", tac_action) for tac_action in tac_actions
         ]
         if (not rollout) and (len(tac_actions) > 1):
             legal_actions += [
-                S2Action("timeout", timeout_value)
+                Stage2Action("timeout", timeout_value)
                 for timeout_value in self.legal_timeout_actions()
             ]
         if (not rollout) and (self.if_depth < MAX_IF_DEPTH):
-            legal_actions.append(S2Action("if_rule"))
+            legal_actions.append(Stage2Action("if_rule"))
         return legal_actions
 
     def apply_solver_rule(self, action: int) -> None:
@@ -183,14 +183,14 @@ class S2Strategy(ASTNode):
         tactic, tac_params = self.preprocess_action_dict[action]
         tac_node = TacticNode(tactic, tac_params, action)
         self.parent.replace_child(tac_node, self.pos)
-        s2strat = S2Strategy(self.timeout, self.stage2_context, MAX_IF_DEPTH)
+        s2strat = Stage2StrategyNode(self.timeout, self.stage2_context, MAX_IF_DEPTH)
         tac_node.add_children([s2strat])
 
     def apply_timeout_rule(self, action: str) -> None:
         timeout_value = int(action[1:])
         branching_node = OrElseNode(timeout_value)
-        tryout_strat = S2Strategy(timeout_value, self.stage2_context, MAX_IF_DEPTH)
-        default_strat = S2Strategy(
+        tryout_strat = Stage2StrategyNode(timeout_value, self.stage2_context, MAX_IF_DEPTH)
+        default_strat = Stage2StrategyNode(
             self.timeout - timeout_value, self.stage2_context, MAX_IF_DEPTH
         )
         self.parent.replace_child(branching_node, self.pos)
