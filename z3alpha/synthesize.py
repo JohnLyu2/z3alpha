@@ -7,16 +7,10 @@ import logging
 import json
 import datetime
 
-
-from z3 import parse_smt2_file, Probe, Goal
-
 from z3alpha.logging_config import setup_logging
-from z3alpha.evaluator import SolverEvaluator
 from z3alpha.mcts import Stage1MCTSRun, Stage2MCTSRun
-from z3alpha.selector import linear_strategy_select, convert_strats_to_act_lists
-from z3alpha.utils import calculatePercentile, write_strat_res_to_csv
-
-from z3alpha.strat_tree_s2 import PERCENTILES
+from z3alpha.strategy_portfolio import linear_strategy_select
+from z3alpha.stage2.pipeline import build_stage2_context, cache_stage2_candidates
 from z3alpha.tactic_catalog import load_logic_config
 
 log = logging.getLogger(__name__)
@@ -34,53 +28,6 @@ def create_benchmark_list(benchmark_directories):
         ]
     benchmark_lst.sort()
     return benchmark_lst
-
-
-def create_probe_stats(bench_lst):
-    """
-    Create probe stats, i.e., #constants, #expressions, and size, for a list of SMT benchmarks.
-    This function returns:
-    - probeStats: a dictionary containing percentile values for #constants, #expressions, and size in the list
-    - probeRecords: a list of dictionaries containing the probe values for each benchmark
-    """
-    num_consts_lst = []
-    num_exprs_lst = []
-    size_lst = []
-    probe_records = []
-    for smt_path in bench_lst:
-        instance_dict = {}
-        formula = parse_smt2_file(smt_path)
-        const_probe = Probe("num-consts")
-        expr_probe = Probe("num-exprs")
-        size_probe = Probe("size")
-        goal = Goal()
-        goal.add(formula)
-        num_consts = const_probe(goal)
-        num_consts_lst.append(num_consts)
-        instance_dict["num-consts"] = num_consts
-        num_exprs = expr_probe(goal)
-        num_exprs_lst.append(num_exprs)
-        instance_dict["num-exprs"] = num_exprs
-        size = size_probe(goal)
-        size_lst.append(size)
-        instance_dict["size"] = size
-        probe_records.append(instance_dict)
-    # get 90 percentile, 70 percentile and median from lists
-    probe_stats = {}
-    # contents of probeStats['num-consts'] is another dict, key is the percentile and value is the value
-    probe_stats["num-consts"] = {
-        percentile: calculatePercentile(num_consts_lst, percentile)
-        for percentile in PERCENTILES
-    }
-    probe_stats["num-exprs"] = {
-        percentile: calculatePercentile(num_exprs_lst, percentile)
-        for percentile in PERCENTILES
-    }
-    probe_stats["size"] = {
-        percentile: calculatePercentile(size_lst, percentile)
-        for percentile in PERCENTILES
-    }
-    return probe_stats, probe_records
 
 
 def _log_elapsed(start_time, label):
@@ -154,64 +101,18 @@ def parallel_linear_strategies(ln_strat_lst, fail_if_undecided=True):
     return parallel_strats
 
 def cache4stage2(selected_strat, config, log_folder, benchlst=None):
-    start_time = time.time()
-    num_strat = config["ln_strat_num"]
-    # assert len(selected_strat) >= num_strat
-    selected_strat = selected_strat[:num_strat]
-    z3path = config["z3path"] if "z3path" in config else "z3"
-    s2config = config["s2config"]
-    s2_bench_dirs = s2config["bench_dirs"]
-    s2timeout = s2config["timeout"]
-    batch_size = config["batch_size"]
-    s2benchLst = (
-        benchlst
-        if benchlst
-        else create_benchmark_list(s2_bench_dirs)
-    )
-    s2_res_lst = []
-    s2evaluator = SolverEvaluator(
-        z3path,
-        s2benchLst,
-        s2timeout,
-        batch_size,
-    )
-    for i in range(len(selected_strat)):
-        strat = selected_strat[i]
-        log.info(f"Stage 2 Caching: {i + 1}/{len(selected_strat)}")
-        strat_res = s2evaluator.getResLst(strat)
-        s2_res_lst.append((strat, strat_res))
-    ln_res_csv = Path(log_folder) / "stage2_strategy_cache.csv"
-    write_strat_res_to_csv(s2_res_lst, ln_res_csv, s2benchLst)
-    log.info(f"Cached results saved to {ln_res_csv}")
-    _log_elapsed(start_time, "Stage 2 Cache Time")
-    return s2_res_lst, s2benchLst
+    return cache_stage2_candidates(selected_strat, config, log_folder, benchlst)
 
 
 def stage2_synthesize(results, bench_lst, config, log_folder):
     num_strat = config["ln_strat_num"]
-    # assert len(results) >= num_strat
-    # results is a list of (strat, res_lst); get the first num_strat strat
-    results = results[:num_strat]
-    res_dict = {}
-    for strat, res_lst in results:
-        res_dict[strat] = res_lst
-    selected_strat = list(res_dict.keys())
-    act_lst, solver_dict, preprocess_dict, s1strat2acts = convert_strats_to_act_lists(
-        selected_strat
+    stage2_context = build_stage2_context(results, bench_lst, num_strat)
+    log.info(f"preprocess dict: {stage2_context.preprocess_actions}")
+    log.info(f"solver dict: {stage2_context.solver_actions}")
+    log.info(
+        f"converted selected strategies: {stage2_context.seed_action_sequences}"
     )
-    log.info(f"preprocess dict: {preprocess_dict}")
-    log.info(f"solver dict: {solver_dict}")
-    log.info(f"converted selected strategies: {act_lst}")
 
-    s2_res_dict_acts = {}
-    for strat in s1strat2acts:
-        s2_res_dict_acts[s1strat2acts[strat]] = res_dict[strat]
-
-    s2dict = {}
-    s2dict["s1_strats"] = act_lst
-    s2dict["solver_dict"] = solver_dict
-    s2dict["preprocess_dict"] = preprocess_dict
-    s2dict["res_cache"] = s2_res_dict_acts
     logic = config["logic"]
     z3path = "z3"
     if "z3path" in config:
@@ -220,11 +121,8 @@ def stage2_synthesize(results, bench_lst, config, log_folder):
     s2startTime = time.time()
     log.info("S2 MCTS Simulations Start")
 
-    probe_stats, probe_records = create_probe_stats(bench_lst)
-    s2dict["probe_stats"] = probe_stats
-    s2dict["probe_records"] = probe_records
     s2config = config["s2config"]
-    s2config["s2dict"] = s2dict
+    s2config["stage2_context"] = stage2_context
 
     run_stage_two = Stage2MCTSRun(
         s2config,

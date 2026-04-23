@@ -1,7 +1,8 @@
 from z3alpha.ast_nodes import Root
+from z3alpha.stage2.context import Stage2Context
 from z3alpha.strat_tree_s1 import S1Strategy
-from z3alpha.strat_tree_s2 import S2Strategy
-from z3alpha.strat_tree_s2 import Action as S2Action
+from z3alpha.stage2.tree import S2Strategy
+from z3alpha.stage2.tree import Action as S2Action
 
 Action = int | S2Action
 
@@ -20,8 +21,8 @@ class StrategyAST:
             )
         else:
             assert s2config
-            s2dict = s2config["s2dict"]
-            self.root.add_children([S2Strategy(timeout, s2dict, if_depth=0)])
+            stage2_context: Stage2Context = s2config["stage2_context"]
+            self.root.add_children([S2Strategy(timeout, stage2_context, if_depth=0)])
 
     def __str__(self):
         return str(self.root)

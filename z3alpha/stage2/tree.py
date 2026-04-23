@@ -1,8 +1,9 @@
 import copy
 from typing import Any
 from dataclasses import dataclass
-from z3alpha.selector import search_next_action
+from z3alpha.stage2.actions import search_next_action
 from z3alpha.ast_nodes import ASTNode, TacticNode
+from z3alpha.stage2.context import Stage2Context
 
 
 @dataclass(frozen=True)
@@ -52,6 +53,7 @@ class OrElseNode(ASTNode):
             1
         ].get_ln_strats(prec_rightcp, probe_record)
 
+
 class PredicateNode(ASTNode):
     def __init__(self, name, prob_stats):
         super().__init__()
@@ -86,13 +88,14 @@ class PredicateNode(ASTNode):
         else:
             return self.children[1].get_ln_strats(precede_strats, probe_record)
 
+
 class ProbeNode(ASTNode):
-    def __init__(self, depth, timeout, s2dict):
+    def __init__(self, depth, timeout, stage2_context: Stage2Context):
         super().__init__()
         self.if_depth = depth
         self.timeout = timeout
-        self.s2dict = s2dict
-        self.probe_stats = s2dict["probe_stats"]
+        self.stage2_context = stage2_context
+        self.probe_stats = stage2_context.probe_stats
         self.action_dict = {
             ACTION_PROBE_NUM_CONSTS: "num-consts",
             ACTION_PROBE_NUM_EXPRS: "num-exprs",
@@ -114,18 +117,19 @@ class ProbeNode(ASTNode):
         probe_name = self.action_dict[action]
         pred_node = PredicateNode(probe_name, self.probe_stats)
         self.parent.replace_child(pred_node, self.pos)
-        left_strat = S2Strategy(self.timeout, self.s2dict, self.if_depth)
-        right_strat = S2Strategy(self.timeout, self.s2dict, self.if_depth)
+        left_strat = S2Strategy(self.timeout, self.stage2_context, self.if_depth)
+        right_strat = S2Strategy(self.timeout, self.stage2_context, self.if_depth)
         pred_node.add_children([left_strat, right_strat])
 
+
 class S2Strategy(ASTNode):
-    def __init__(self, timeout, s2dict, if_depth):
+    def __init__(self, timeout, stage2_context: Stage2Context, if_depth):
         super().__init__()
         self.timeout = timeout
-        self.s2dict = s2dict
-        self.solver_action_dict = s2dict["solver_dict"]
-        self.preprocess_action_dict = s2dict["preprocess_dict"]
-        self.s1strat_lst = s2dict["s1_strats"]
+        self.stage2_context = stage2_context
+        self.solver_action_dict = stage2_context.solver_actions
+        self.preprocess_action_dict = stage2_context.preprocess_actions
+        self.s1strat_lst = stage2_context.seed_action_sequences
         self.if_depth = if_depth
 
     def __str__(self):
@@ -170,20 +174,22 @@ class S2Strategy(ASTNode):
         tactic, tac_params = self.preprocess_action_dict[action]
         tac_node = TacticNode(tactic, tac_params, action)
         self.parent.replace_child(tac_node, self.pos)
-        s2strat = S2Strategy(self.timeout, self.s2dict, MAX_IF_DEPTH)
+        s2strat = S2Strategy(self.timeout, self.stage2_context, MAX_IF_DEPTH)
         tac_node.add_children([s2strat])
 
     def apply_timeout_rule(self, action: str) -> None:
         timeout_value = int(action[1:])
         branching_node = OrElseNode(timeout_value)
-        tryout_strat = S2Strategy(timeout_value, self.s2dict, MAX_IF_DEPTH)
-        default_strat = S2Strategy(self.timeout - timeout_value, self.s2dict, MAX_IF_DEPTH)
+        tryout_strat = S2Strategy(timeout_value, self.stage2_context, MAX_IF_DEPTH)
+        default_strat = S2Strategy(
+            self.timeout - timeout_value, self.stage2_context, MAX_IF_DEPTH
+        )
         self.parent.replace_child(branching_node, self.pos)
         branching_node.add_children([tryout_strat, default_strat])
 
     def apply_if_rule(self) -> None:
         self.parent.replace_child(
-            ProbeNode(self.if_depth + 1, self.timeout, self.s2dict), self.pos
+            ProbeNode(self.if_depth + 1, self.timeout, self.stage2_context), self.pos
         )
 
     def apply_rule(self, action: Action, params: Any) -> None:
