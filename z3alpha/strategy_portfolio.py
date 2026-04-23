@@ -29,7 +29,7 @@ def virtual_add_strategy(cur_best_res, strat_res):
 N = 10
 
 
-def linear_strategy_select(max_selected, result_database, timeout):
+def create_greedy_linear_strategy_portfolio(max_selected, result_database, timeout):
     assert max_selected <= len(result_database)
     selected_strat = []
     log_str = "\n"

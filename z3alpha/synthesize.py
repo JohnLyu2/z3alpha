@@ -10,7 +10,7 @@ import datetime
 from z3alpha.logging_config import setup_logging
 from z3alpha.mcts import LinearStrategySearchRun
 from z3alpha.stage2.search_runtime import Stage2MCTSRun
-from z3alpha.strategy_portfolio import linear_strategy_select
+from z3alpha.strategy_portfolio import create_greedy_linear_strategy_portfolio
 from z3alpha.stage2.pipeline import build_stage2_context, cache_stage2_candidates
 from z3alpha.tactics.logic_config import load_logic_config
 
@@ -67,7 +67,7 @@ def synthesize_linear_strategies(config, log_folder):
     run1.start()
     s1_res_dict = run1.get_res_dict()
 
-    selected_strat, ln_select_logs = linear_strategy_select(
+    selected_strat, ln_select_logs = create_greedy_linear_strategy_portfolio(
         num_ln_strat, s1_res_dict, s1config["timeout"]
     )
     log.info(ln_select_logs)

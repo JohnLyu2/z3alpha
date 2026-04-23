@@ -12,8 +12,6 @@ PRED_PROBES = [">", "is-qfbv-eq"]
 NUM_PROBES = ["size", "num-consts"]
 MARKS = ["(", ")", ":"]
 
-# from alphasmt.strat_tree import TacticNode
-
 
 class Token:
     def __init__(self, name, type):
