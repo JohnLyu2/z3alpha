@@ -3,7 +3,7 @@ from pathlib import Path
 
 from z3alpha.tactics.catalog import NAME_TO_ID, PREPROCESS_NAME_TO_ID, SOLVER_NAME_TO_ID
 
-_BUILTIN_CONFIG_DIR = Path(__file__).resolve().parent.parent / "logic_configs"
+_BUILTIN_CONFIG_DIR = Path(__file__).resolve().parent / "logic_configs"
 
 
 def _parse_logic_config(path):

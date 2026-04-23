@@ -8,7 +8,7 @@ import sys
 from datetime import datetime
 
 from z3alpha.evaluator import SolverEvaluator
-from z3alpha.logging_config import setup_logging
+from z3alpha.config import setup_logging
 
 _REQUIRED_KEYS = ("solvers", "timeout", "batch_size", "res_dir")
 

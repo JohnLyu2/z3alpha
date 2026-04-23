@@ -38,7 +38,7 @@ The command for this toy example is as follows:
 python -m z3alpha.synthesize data/sample/configs/synthesis.json
 ```
 
-The configuration file lists experiment fields only (see `z3alpha.synthesis_config.ExperimentConfig` for the allowed schema; unknown keys are rejected). UCT/UCB and the random seed default from constants in `z3alpha/synthesis_config.py` and can be overridden only via `--c-uct`, `--c-ucb`, and `--random-seed` on the CLI. A sample configuration is provided at `data/sample/configs/synthesis.json`.
+The configuration file lists experiment fields only (see `z3alpha.config.ExperimentConfig` for the allowed schema; unknown keys are rejected). UCT/UCB and the random seed default from constants in `z3alpha/config/synthesis.py` and can be overridden only via `--c-uct`, `--c-ucb`, and `--random-seed` on the CLI. A sample configuration is provided at `data/sample/configs/synthesis.json`.
 
 After this command finishes, outputs are saved under `experiments/synthesis/` in a directory named `out-<starting time:%Y-%m-%d_%H-%M-%S>`. Typical files:
 

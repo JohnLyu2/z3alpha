@@ -14,12 +14,12 @@
 
 **"ln_strat_num"**: number of linear strategies to select for the shortlist after linear MCTS
 
-Optional keys (see `z3alpha.synthesis_config`): **`z3path`**, **`parent_log_dir`**, **`log_level`**, **`logic_config_dir`**
+Optional keys (see `z3alpha.config`): **`z3path`**, **`parent_log_dir`**, **`log_level`**, **`logic_config_dir`**
 
 Unknown keys in the JSON cause an error. Do not add `mcts_config` or `random_seed` to this file.
 
 ## MCTS hyperparameters and random seed
 
-Defaults live in `z3alpha/synthesis_config.py` (`DEFAULT_C_UCT`, `DEFAULT_C_UCB`, `DEFAULT_RANDOM_SEED`). Override per run on the CLI:
+Defaults live in `z3alpha/config/synthesis.py` (`DEFAULT_C_UCT`, `DEFAULT_C_UCB`, `DEFAULT_RANDOM_SEED`). Override per run on the CLI:
 
 `python -m z3alpha.synthesize CONFIG.json --c-uct 0.6 --c-ucb 0.1 --random-seed 42`

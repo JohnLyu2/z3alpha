@@ -1,8 +1,8 @@
 import pytest
 
-from z3alpha.synthesis_config import (
-    DEFAULT_C_UCT,
+from z3alpha.config import (
     DEFAULT_C_UCB,
+    DEFAULT_C_UCT,
     DEFAULT_RANDOM_SEED,
     MCTSParams,
     parse_experiment_config,

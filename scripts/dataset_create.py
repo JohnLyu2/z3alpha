@@ -4,7 +4,7 @@ import logging
 import random
 from pathlib import Path
 
-from z3alpha.logging_config import setup_logging
+from z3alpha.config import setup_logging
 
 log = logging.getLogger(__name__)
 

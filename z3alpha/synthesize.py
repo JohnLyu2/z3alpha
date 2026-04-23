@@ -7,17 +7,17 @@ import logging
 import json
 import datetime
 
-from z3alpha.logging_config import setup_logging
-from z3alpha.mcts import LinearStrategySearchRun, MCTSSearchConfig
-from z3alpha.stage2.search_runtime import run_branched_synthesis
-from z3alpha.strategy_portfolio import create_greedy_linear_strategy_portfolio
-from z3alpha.synthesis_config import (
+from z3alpha.config import (
     ExperimentConfig,
     MCTSParams,
     SynthesisRun,
     parse_experiment_config,
     resolve_mcts_params,
+    setup_logging,
 )
+from z3alpha.mcts import LinearStrategySearchRun, MCTSSearchConfig
+from z3alpha.stage2.search_runtime import run_branched_synthesis
+from z3alpha.strategy_portfolio import create_greedy_linear_strategy_portfolio
 from z3alpha.tactics.logic_config import load_logic_config
 
 log = logging.getLogger(__name__)
@@ -164,20 +164,20 @@ def main():
         "--c-uct",
         type=float,
         default=None,
-        help="Override MCTS UCT (default: z3alpha.synthesis_config.DEFAULT_C_UCT)",
+        help="Override MCTS UCT (default: z3alpha.config.synthesis.DEFAULT_C_UCT)",
     )
     parser.add_argument(
         "--c-ucb",
         type=float,
         default=None,
-        help="Override UCB1 for linear search (default: z3alpha.synthesis_config.DEFAULT_C_UCB)",
+        help="Override UCB1 for linear search (default: z3alpha.config.synthesis.DEFAULT_C_UCB)",
     )
     parser.add_argument(
         "--random-seed",
         type=int,
         default=None,
         dest="random_seed",
-        help="Override random seed (default: z3alpha.synthesis_config.DEFAULT_RANDOM_SEED)",
+        help="Override random seed (default: z3alpha.config.synthesis.DEFAULT_RANDOM_SEED)",
     )
     args = parser.parse_args()
     with open(args.json_config, encoding="utf-8") as f:

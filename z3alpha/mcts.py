@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from z3alpha.environment import LinearStrategyGame
-from z3alpha.logging_config import attach_file_logger
+from z3alpha.config import attach_file_logger
 
 logger = logging.getLogger(__name__)
 

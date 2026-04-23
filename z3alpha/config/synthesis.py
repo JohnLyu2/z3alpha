@@ -50,6 +50,7 @@ def _experiment_field_names() -> frozenset[str]:
 def _required_experiment_keys() -> frozenset[str]:
     return frozenset(f.name for f in fields(ExperimentConfig) if f.default is MISSING)
 
+
 def parse_experiment_config(raw: dict[str, Any]) -> ExperimentConfig:
     """Build :class:`ExperimentConfig` from experiment JSON. Unknown keys raise ``ValueError``."""
     allowed = _experiment_field_names()

@@ -18,7 +18,7 @@ from z3alpha.stage2.strategy_tree import (
     Stage2Context,
 )
 from z3alpha.stage2.utils import encode_linear_strategies, reward_dispatcher
-from z3alpha.synthesis_config import SynthesisRun
+from z3alpha.config import SynthesisRun
 from z3alpha.utils import calculate_percentile
 
 log = logging.getLogger(__name__)
