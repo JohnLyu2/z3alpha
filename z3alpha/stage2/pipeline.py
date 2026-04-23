@@ -1,15 +1,8 @@
-import logging
-import time
-from pathlib import Path
-
 from z3 import Goal, Probe, parse_smt2_file
 
-from z3alpha.evaluator import SolverEvaluator
 from z3alpha.stage2.strategy_tree import PERCENTILES, Stage2Context
-from z3alpha.stage2.utils import create_benchmark_list, encode_linear_strategies
-from z3alpha.utils import calculate_percentile, write_strat_res_to_csv
-
-log = logging.getLogger(__name__)
+from z3alpha.stage2.utils import encode_linear_strategies
+from z3alpha.utils import calculate_percentile
 
 
 def create_probe_stats(bench_lst):
@@ -49,34 +42,6 @@ def create_probe_stats(bench_lst):
         for percentile in PERCENTILES
     }
     return probe_stats, probe_records
-
-
-def cache_stage2_candidates(selected_strategies, config, log_folder, benchmark_list=None):
-    start_time = time.time()
-    num_strat = config["ln_strat_num"]
-    selected_strategies = selected_strategies[:num_strat]
-    z3path = config["z3path"] if "z3path" in config else "z3"
-    s2config = config["s2config"]
-    s2_bench_dirs = s2config["bench_dirs"]
-    s2timeout = s2config["timeout"]
-    batch_size = config["batch_size"]
-    bench_list = (
-        benchmark_list
-        if benchmark_list
-        else create_benchmark_list(s2_bench_dirs)
-    )
-    s2_res_list = []
-    s2evaluator = SolverEvaluator(z3path, bench_list, s2timeout, batch_size)
-    for i, strategy in enumerate(selected_strategies):
-        log.info(f"Stage 2 Caching: {i + 1}/{len(selected_strategies)}")
-        strategy_res = s2evaluator.get_res_list(strategy)
-        s2_res_list.append((strategy, strategy_res))
-    cache_csv = Path(log_folder) / "stage2_strategy_cache.csv"
-    write_strat_res_to_csv(s2_res_list, cache_csv, bench_list)
-    log.info(f"Cached results saved to {cache_csv}")
-    elapsed = time.time() - start_time
-    log.info(f"Stage 2 Cache Time: {elapsed:.0f}")
-    return s2_res_list, bench_list
 
 
 def build_stage2_context(results, bench_list, num_strategies):

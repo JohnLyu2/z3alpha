@@ -11,7 +11,7 @@ from z3alpha.logging_config import setup_logging
 from z3alpha.mcts import LinearStrategySearchRun
 from z3alpha.stage2.search_runtime import Stage2MCTSRun
 from z3alpha.strategy_portfolio import create_greedy_linear_strategy_portfolio
-from z3alpha.stage2.pipeline import build_stage2_context, cache_stage2_candidates
+from z3alpha.stage2.pipeline import build_stage2_context
 from z3alpha.tactics.logic_config import load_logic_config
 
 log = logging.getLogger(__name__)
@@ -84,7 +84,8 @@ def synthesize_linear_strategies(config, log_folder):
     )
 
     _log_elapsed(start_time, "Linear strategy search time")
-    return selected_strat
+    stage1_results_for_s2 = [(s, s1_res_dict[s]) for s in selected_strat]
+    return selected_strat, s1_bench_lst, stage1_results_for_s2
 
 def add_fail_if_undecided(strat):
     return f"(then {strat} fail-if-undecided)"
@@ -101,8 +102,17 @@ def parallel_linear_strategies(ln_strat_lst, fail_if_undecided=True):
     parallel_strats += ")"
     return parallel_strats
 
-def cache_stage2_candidates_for_run(selected_strat, config, log_folder, benchlst=None):
-    return cache_stage2_candidates(selected_strat, config, log_folder, benchlst)
+def _warn_if_s2_bench_dirs_mismatch(config):
+    s1 = config.get("s1config", {})
+    s2 = config.get("s2config", {})
+    if "bench_dirs" not in s2:
+        return
+    if s1.get("bench_dirs") != s2.get("bench_dirs"):
+        log.warning(
+            "s2config bench_dirs differs from s1config; branched synthesis uses only "
+            "linear stage benchmarks and cached per-benchmark results from linear search. "
+            "Ignoring s2config bench_dirs for result data and probes."
+        )
 
 
 def stage2_synthesize(results, bench_lst, config, log_folder):
@@ -155,7 +165,7 @@ def parallel_synthesize(config, log_folder):
     """
     start_time = time.time()
 
-    selected_strats = synthesize_linear_strategies(config, log_folder)
+    selected_strats, _, _ = synthesize_linear_strategies(config, log_folder)
 
     parallel_strat = parallel_linear_strategies(selected_strats)
 
@@ -178,14 +188,15 @@ def branched_synthesize(config, log_folder):
     """
     start_time = time.time()
 
-    # Step 1: Linear strategy synthesis
-    selected_strats = synthesize_linear_strategies(config, log_folder)
+    # Step 1: Linear strategy synthesis (Stage 2 uses its per-benchmark results)
+    _, s1_bench_lst, stage1_results_for_s2 = synthesize_linear_strategies(
+        config, log_folder
+    )
 
-    # Step 2: Cache results for selected strategies
-    res_dict, bench_lst = cache_stage2_candidates_for_run(selected_strats, config, log_folder)
+    _warn_if_s2_bench_dirs_mismatch(config)
 
-    # Step 3: Branched strategy synthesis
-    stage2_synthesize(res_dict, bench_lst, config, log_folder)
+    # Step 2: Branched strategy synthesis
+    stage2_synthesize(stage1_results_for_s2, s1_bench_lst, config, log_folder)
 
     _log_elapsed(start_time, "Total synthesis time")
 

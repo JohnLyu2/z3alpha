@@ -43,9 +43,8 @@ The configuration file specifies settings such as the number of MCTS simulations
 After this command finishes, outputs are saved under `experiments/synthesis/` in a directory named `out-<starting time:%Y-%m-%d_%H-%M-%S>`. Typical files:
 
 - `stage1_mcts_trace.log` / `stage2_mcts_trace.log` — MCTS search traces  
-- `stage1_strategy_results.csv` — every stage-1 strategy evaluated, with per-benchmark times  
-- `stage1_selected_strategies.csv` — shortlist passed to stage 2  
-- `stage2_strategy_cache.csv` — cached per-benchmark results for that shortlist (feeds stage-2 MCTS)  
+- `linear_strategy_results.csv` — every linear strategy evaluated during search, with per-benchmark times (Stage 2 reuses these for the shortlist)  
+- `linear_selected_strategies.csv` — shortlist passed to stage 2  
 - `synthesized_strategy.txt` — final synthesized tactic string (branched mode; parallel mode uses the same name in the run folder)
 
 ## IJCAI-24 Reproduction
