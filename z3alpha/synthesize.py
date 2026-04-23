@@ -164,13 +164,13 @@ def main():
         "--c-uct",
         type=float,
         default=None,
-        help="Override MCTS UCT (default: z3alpha.config.synthesis.DEFAULT_C_UCT)",
+        help="Override MCTS PUCT c (tactic tree; default: z3alpha.config.synthesis.DEFAULT_C_UCT)",
     )
     parser.add_argument(
         "--c-ucb",
         type=float,
         default=None,
-        help="Override UCB1 for linear search (default: z3alpha.config.synthesis.DEFAULT_C_UCB)",
+        help="Override PUCB c for param MABs in linear run (default: z3alpha.config.synthesis.DEFAULT_C_UCB)",
     )
     parser.add_argument(
         "--random-seed",

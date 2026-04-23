@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class MCTSSearchConfig:
-    """One MCTS run: sim count, per-instance timeout, UCT, and UCB (linear search only; ``None`` for branched search)."""
+    """One MCTS run: sim count, per-instance timeout, PUCT (tactics) and PUCB (param MABs; uniform prior 1.0), and c_ucb (linear; ``None`` for branched)."""
 
     sim_num: int
     timeout: int
@@ -23,6 +23,8 @@ class MCTSSearchConfig:
 
 INIT_Q = 0
 IS_MEAN_EST = False
+# PUCT/PUCB uniform prior: P=1 for every tactic child and every parameter arm.
+UNIFORM_PUCT_PRIOR = 1.0
 
 
 class MCTSNode:
@@ -68,27 +70,33 @@ class MCTSNode:
             self.MABs[param] = mab_dict
             self.selected[param] = None
 
-    def _ucb(self, action_pair, action):
+    def _pucb(self, action_pair, action):
+        """PUCB: Q + c * P * sqrt(N_node) / (1 + N_arm); same shape as PUCT, prior P = UNIFORM_PUCT_PRIOR."""
         visit_count, q_score = action_pair
-        explore_score = self.c_ucb * math.sqrt(
-            math.log(self.visit_count + 1) / (visit_count + 0.001)
+        parent_n = max(1, self.visit_count)
+        explore_score = (
+            self.c_ucb
+            * UNIFORM_PUCT_PRIOR
+            * math.sqrt(parent_n)
+            / (1 + visit_count)
         )
-        ucb = q_score + explore_score
+        pucb = q_score + explore_score
         self.trace_log.debug(
-            f"  Value of {action}: Q value: {q_score:.05f}; Exp: {explore_score:.05f} ({visit_count}/{self.visit_count}); UCB: {ucb:.05f}"
+            f"  Value of {action}: Q value: {q_score:.05f}; Exp: {explore_score:.05f} "
+            f"({visit_count}/{parent_n}); P={UNIFORM_PUCT_PRIOR}; PUCB: {pucb:.05f}"
         )
-        return ucb
+        return pucb
 
     def _select_mab(self, param):
         MABdict = self.MABs[param]
         selected = None
-        best_ucb = -1
+        best_pucb = float("-inf")
         for value_candidate, pair in MABdict.items():
-            ucb = self._ucb(pair, value_candidate)
-            if ucb > best_ucb:
-                best_ucb = ucb
+            pucb = self._pucb(pair, value_candidate)
+            if pucb > best_pucb:
+                best_pucb = pucb
                 selected = value_candidate
-        assert best_ucb >= 0
+        assert best_pucb > float("-inf")
         return selected
 
     def select_mabs(self):
@@ -162,16 +170,22 @@ class BaseMCTSRun:
     def _after_simulation(self):
         pass
 
-    def _uct(self, child_node, parent_node, action):
+    def _puct(self, child_node, parent_node, action):
+        """PUCT: Q + c * P * sqrt(N_parent) / (1 + N_child); prior P = UNIFORM_PUCT_PRIOR for all tactics."""
         value_score = child_node.reward + self.discount * child_node.value_est
-        explore_score = self.c_uct * math.sqrt(
-            math.log(parent_node.visit_count) / (child_node.visit_count + 0.001)
+        parent_n = max(1, parent_node.visit_count)
+        explore_score = (
+            self.c_uct
+            * UNIFORM_PUCT_PRIOR
+            * math.sqrt(parent_n)
+            / (1 + child_node.visit_count)
         )
-        uct = value_score + explore_score
+        puct = value_score + explore_score
         self.trace_log.debug(
-            f"  Value of {action}: Q value: {value_score:.05f}; Exp: {explore_score:.05f} ({child_node.visit_count}/{parent_node.visit_count}); UCT: {uct:.05f}"
+            f"  Value of {action}: Q value: {value_score:.05f}; Exp: {explore_score:.05f} "
+            f"({child_node.visit_count}/{parent_n}); P={UNIFORM_PUCT_PRIOR}; PUCT: {puct:.05f}"
         )
-        return uct
+        return puct
 
     def _select(self):
         search_path = [self.root]
@@ -180,15 +194,15 @@ class BaseMCTSRun:
             self.trace_log.debug(f"\n  Select at {node}")
 
             selected = None
-            best_uct = -1
+            best_puct = float("-inf")
             next_node = None
             for action, child_node in node.children.items():
-                uct = self._uct(child_node, node, action)
-                if uct > best_uct:
+                puct = self._puct(child_node, node, action)
+                if puct > best_puct:
                     selected = action
-                    best_uct = uct
+                    best_puct = puct
                     next_node = child_node
-            assert best_uct >= 0
+            assert best_puct > float("-inf")
             node = next_node
             self.trace_log.debug(f"  Selected action {selected}")
             params = node.select_mabs() if node.has_param_mabs() else None
