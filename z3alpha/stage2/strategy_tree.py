@@ -1,9 +1,19 @@
 import copy
-from typing import Any
 from dataclasses import dataclass
-from z3alpha.stage2.actions import search_next_action
+from typing import Any
+
 from z3alpha.ast_nodes import ASTNode, TacticNode
-from z3alpha.stage2.context import Stage2Context
+from z3alpha.stage2.utils import next_actions_from_prefix
+
+
+@dataclass(frozen=True)
+class Stage2Context:
+    seed_action_sequences: list[list[int]]
+    solver_actions: dict[int, tuple]
+    preprocess_actions: dict[int, tuple]
+    result_cache: dict[tuple[int, ...], list[tuple[bool, float, str]]]
+    probe_stats: dict[str, dict[str, int]]
+    probe_records: list[dict[str, int]]
 
 
 @dataclass(frozen=True)
@@ -85,8 +95,7 @@ class PredicateNode(ASTNode):
         bench_value = int(probe_record[self.name])
         if bench_value > self.value:
             return self.children[0].get_ln_strats(precede_strats, probe_record)
-        else:
-            return self.children[1].get_ln_strats(precede_strats, probe_record)
+        return self.children[1].get_ln_strats(precede_strats, probe_record)
 
 
 class ProbeNode(ASTNode):
@@ -103,7 +112,7 @@ class ProbeNode(ASTNode):
         }
 
     def __str__(self):
-        return f"<ProbeNode>"
+        return "<ProbeNode>"
 
     def is_terminal(self):
         return False
@@ -133,7 +142,7 @@ class S2Strategy(ASTNode):
         self.if_depth = if_depth
 
     def __str__(self):
-        return f"<S2Strategy>"
+        return "<S2Strategy>"
 
     def is_terminal(self):
         return False
@@ -152,7 +161,7 @@ class S2Strategy(ASTNode):
 
     def legal_actions(self, rollout: bool = False) -> list[Action]:
         cur_path = self.get_cur_act_path()
-        tac_actions = search_next_action(cur_path, self.s1strat_lst)
+        tac_actions = next_actions_from_prefix(cur_path, self.s1strat_lst)
         legal_actions: list[S2Action] = [
             S2Action("tactic", tac_action) for tac_action in tac_actions
         ]
@@ -201,10 +210,7 @@ class S2Strategy(ASTNode):
             self.apply_timeout_rule(str(action.value))
         elif action.kind == "tactic" and action.value in self.solver_action_dict:
             self.apply_solver_rule(int(action.value))
-        elif (
-            action.kind == "tactic"
-            and action.value in self.preprocess_action_dict
-        ):
+        elif action.kind == "tactic" and action.value in self.preprocess_action_dict:
             self.apply_then_rule(int(action.value))
         else:
             raise Exception("unexpected action")

@@ -5,9 +5,8 @@ from pathlib import Path
 from z3 import Goal, Probe, parse_smt2_file
 
 from z3alpha.evaluator import SolverEvaluator
-from z3alpha.stage2.actions import convert_strats_to_act_lists
-from z3alpha.stage2.context import Stage2Context
-from z3alpha.stage2.tree import PERCENTILES
+from z3alpha.stage2.strategy_tree import PERCENTILES, Stage2Context
+from z3alpha.stage2.utils import create_benchmark_list, encode_stage1_strategies
 from z3alpha.utils import calculatePercentile, write_strat_res_to_csv
 
 log = logging.getLogger(__name__)
@@ -64,7 +63,7 @@ def cache_stage2_candidates(selected_strategies, config, log_folder, benchmark_l
     bench_list = (
         benchmark_list
         if benchmark_list
-        else _create_benchmark_list(s2_bench_dirs)
+        else create_benchmark_list(s2_bench_dirs)
     )
     s2_res_list = []
     s2evaluator = SolverEvaluator(z3path, bench_list, s2timeout, batch_size)
@@ -85,7 +84,7 @@ def build_stage2_context(results, bench_list, num_strategies):
     result_by_strategy = {strat: res_lst for strat, res_lst in results}
     selected_strategies = list(result_by_strategy.keys())
     action_lists, solver_actions, preprocess_actions, strategy_to_actions = (
-        convert_strats_to_act_lists(selected_strategies)
+        encode_stage1_strategies(selected_strategies)
     )
     result_cache = {
         strategy_to_actions[strategy]: result_by_strategy[strategy]
@@ -100,12 +99,3 @@ def build_stage2_context(results, bench_list, num_strategies):
         probe_stats=probe_stats,
         probe_records=probe_records,
     )
-
-
-def _create_benchmark_list(benchmark_directories):
-    benchmark_lst = []
-    for bench_dir in benchmark_directories:
-        assert Path(bench_dir).exists()
-        benchmark_lst += [str(p) for p in sorted(list(Path(bench_dir).rglob("*.smt2")))]
-    benchmark_lst.sort()
-    return benchmark_lst

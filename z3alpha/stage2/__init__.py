@@ -1,2 +1,4 @@
-from z3alpha.stage2.context import Stage2Context
+from z3alpha.stage2.strategy_tree import Stage2Context
+
+__all__ = ["Stage2Context"]
 

@@ -1,8 +1,8 @@
 from z3alpha.ast_nodes import Root
-from z3alpha.stage2.context import Stage2Context
+from z3alpha.stage2.strategy_tree import Stage2Context
 from z3alpha.strat_tree_s1 import S1Strategy
-from z3alpha.stage2.tree import S2Strategy
-from z3alpha.stage2.tree import Action as S2Action
+from z3alpha.stage2.strategy_tree import S2Strategy
+from z3alpha.stage2.strategy_tree import Action as S2Action
 
 Action = int | S2Action
 

@@ -10,7 +10,7 @@ class StrategyGame:
         self, stage, training_lst, logic, timeout, sconfig, batch_size, z3path,
         logic_config=None,
     ):
-        assert stage == 1, "Use stage2.environment.Stage2StrategyGame for stage 2"
+        assert stage == 1, "Use stage2.search_runtime.Stage2StrategyGame for stage 2"
         self.stage = 1
         self.benchmarks = training_lst
         self.strat_ast = StrategyAST(
