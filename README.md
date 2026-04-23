@@ -38,7 +38,7 @@ The command for this toy example is as follows:
 python -m z3alpha.synthesize data/sample/configs/synthesis.json
 ```
 
-The configuration file specifies settings such as the number of MCTS simulations, a top-level `train_dir` (one training benchmark root directory), and timeouts. A sample configuration is provided at `data/sample/configs/synthesis.json`.
+The configuration file specifies settings such as `mcts_sims` / `s2_sims`, a top-level `train_dir` (one training benchmark root directory), and a per-instance `timeout`. UCT/UCB and the random seed default from `z3alpha/synthesis_defaults.json` and can be overridden in the JSON (optional keys) or with `--c-uct`, `--c-ucb`, and `--random-seed` on the CLI. A sample configuration is provided at `data/sample/configs/synthesis.json`.
 
 After this command finishes, outputs are saved under `experiments/synthesis/` in a directory named `out-<starting time:%Y-%m-%d_%H-%M-%S>`. Typical files:
 

@@ -2,17 +2,8 @@
   "logic": "QF_NIA",
   "batch_size": 2,
   "train_dir": "data/sample/benchmarks",
-  "s1config": {
-    "sim_num": 15,
-    "timeout": 1,
-    "c_uct": 0.5,
-    "c_ucb": 0.2
-  },
-  "s2config": {
-    "sim_num": 50,
-    "timeout": 5,
-    "c_uct": 0.6
-  },
-  "ln_strat_num": 5,
-  "random_seed": 0
+  "timeout": 1,
+  "mcts_sims": 15,
+  "s2_sims": 50,
+  "ln_strat_num": 5
 }

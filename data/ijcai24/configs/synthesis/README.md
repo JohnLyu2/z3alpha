@@ -6,18 +6,18 @@
 
 **"train_dir"**: path to a single root directory for training benchmarks. All `*.smt2` files under that directory (recursively) are used for both linear search and branched (stage-2) synthesis.
 
-**"s1config"**: configurations for the linear strategy MCTS
+**"timeout"**: wall-clock timeout (seconds) for each solver–instance pair in both linear search and stage-2 search
 
-**"s2config"**: configurations for the branched (stage-2) MCTS
+**"mcts_sims"**: number of MCTS simulations for linear strategy search
 
-**"sim_num"**: number of MCTS simulations
+**"s2_sims"**: number of MCTS simulations for branched (stage-2) strategy search
 
-**"timeout"**: wallclock timeout for each solver-instance pair
+**"ln_strat_num"**: number of linear strategies to select for the shortlist after linear MCTS
 
-**"c_uct"**: the c constant in UCT of MCTS
+## Defaults and overrides
 
-**"c_ucb"**: the c constant in UCB1 of the layered search
+Package defaults (UCT/UCB constants, random seed) load from `z3alpha/synthesis_defaults.json` in the repository and are merged with this JSON (your file overrides on a per-key basis if you add optional keys there).
 
-**"ln_strat_num"**: number of linear strategies to be selected after the Stage-1 MCTS
+- Optional keys in the JSON, same shape as the defaults: **`mcts_config`** (with `c_uct` and `c_ucb`) and **`random_seed`**.
 
-**"random_seed"**: the random seed for rollout
+- CLI overrides (highest priority): `python -m z3alpha.synthesize CONFIG.json --c-uct 0.6 --c-ucb 0.1 --random-seed 42`

@@ -12,6 +12,7 @@ from z3alpha.mcts import LinearStrategySearchRun
 from z3alpha.stage2.search_runtime import Stage2MCTSRun
 from z3alpha.strategy_portfolio import create_greedy_linear_strategy_portfolio
 from z3alpha.stage2.pipeline import build_stage2_context
+from z3alpha.synthesis_config import merge_synthesis_config
 from z3alpha.tactics.logic_config import load_logic_config
 
 log = logging.getLogger(__name__)
@@ -45,12 +46,33 @@ def _log_elapsed(start_time, label):
     return elapsed
 
 
+def _linear_mcts_run_config(config: dict) -> dict:
+    """Config dict for ``LinearStrategySearchRun`` (expects ``sim_num`` / ``c_ucb`` / UCT / timeout)."""
+    m = config["mcts_config"]
+    return {
+        "sim_num": config["mcts_sims"],
+        "timeout": config["timeout"],
+        "c_uct": m["c_uct"],
+        "c_ucb": m["c_ucb"],
+    }
+
+
+def _stage2_mcts_run_config(config: dict) -> dict:
+    """Config dict for ``Stage2MCTSRun`` (same ``timeout`` and ``c_uct`` as linear search)."""
+    m = config["mcts_config"]
+    return {
+        "sim_num": config["s2_sims"],
+        "timeout": config["timeout"],
+        "c_uct": m["c_uct"],
+    }
+
+
 def synthesize_linear_strategies(config, log_folder):
     start_time = time.time()
     logic = config["logic"]
     z3path = config["z3path"] if "z3path" in config else "z3"
     batch_size = config["batch_size"]
-    s1config = config["s1config"]
+    linear_run_config = _linear_mcts_run_config(config)
     num_ln_strat = config["ln_strat_num"]
     random_seed = config["random_seed"]
     random.seed(random_seed)
@@ -62,7 +84,7 @@ def synthesize_linear_strategies(config, log_folder):
     s1_bench_lst = create_benchmark_list([_train_dir(config)])
     log.info("Linear strategy search starts")
     run1 = LinearStrategySearchRun(
-        s1config,
+        linear_run_config,
         s1_bench_lst,
         logic,
         z3path,
@@ -75,7 +97,7 @@ def synthesize_linear_strategies(config, log_folder):
     s1_res_dict = run1.get_res_dict()
 
     selected_strat, ln_select_logs = create_greedy_linear_strategy_portfolio(
-        num_ln_strat, s1_res_dict, s1config["timeout"]
+        num_ln_strat, s1_res_dict, config["timeout"]
     )
     log.info(ln_select_logs)
     ln_strat_candidates_path = Path(log_folder) / "linear_selected_strategies.csv"
@@ -126,11 +148,10 @@ def stage2_synthesize(results, bench_lst, config, log_folder):
     s2startTime = time.time()
     log.info("S2 MCTS Simulations Start")
 
-    s2config = config["s2config"]
-    s2config["stage2_context"] = stage2_context
+    run2_config = {**_stage2_mcts_run_config(config), "stage2_context": stage2_context}
 
     run_stage_two = Stage2MCTSRun(
-        s2config,
+        run2_config,
         bench_lst,
         logic,
         z3path,
@@ -192,6 +213,17 @@ def branched_synthesize(config, log_folder):
 
     _log_elapsed(start_time, "Total synthesis time")
 
+def _apply_synthesis_cli_overrides(config, args) -> None:
+    """Apply argparse overrides onto merged config (mutates *config*)."""
+    m = config.setdefault("mcts_config", {})
+    if args.c_uct is not None:
+        m["c_uct"] = args.c_uct
+    if args.c_ucb is not None:
+        m["c_ucb"] = args.c_ucb
+    if args.random_seed is not None:
+        config["random_seed"] = args.random_seed
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -202,9 +234,30 @@ def main():
         action="store_true",
         help="Synthesize parallel strategy instead of branched strategy"
     )
+    parser.add_argument(
+        "--c-uct",
+        type=float,
+        default=None,
+        help="Override MCTS UCT constant (default from z3alpha/synthesis_defaults.json)",
+    )
+    parser.add_argument(
+        "--c-ucb",
+        type=float,
+        default=None,
+        help="Override UCB1 constant for linear strategy search (default from synthesis_defaults.json)",
+    )
+    parser.add_argument(
+        "--random-seed",
+        type=int,
+        default=None,
+        dest="random_seed",
+        help="Override random seed (default from synthesis_defaults.json)",
+    )
     args = parser.parse_args()
     with open(args.json_config, encoding="utf-8") as f:
-        config = json.load(f)
+        user = json.load(f)
+    config = merge_synthesis_config(user)
+    _apply_synthesis_cli_overrides(config, args)
 
     level = config.get("log_level", "INFO")
     setup_logging(level=level)
