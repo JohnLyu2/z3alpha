@@ -8,7 +8,8 @@ import json
 import datetime
 
 from z3alpha.logging_config import setup_logging
-from z3alpha.mcts import Stage1MCTSRun, Stage2MCTSRun
+from z3alpha.mcts import Stage1MCTSRun
+from z3alpha.stage2.mcts_run import Stage2MCTSRun
 from z3alpha.strategy_portfolio import linear_strategy_select
 from z3alpha.stage2.pipeline import build_stage2_context, cache_stage2_candidates
 from z3alpha.tactic_catalog import load_logic_config

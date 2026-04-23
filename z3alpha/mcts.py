@@ -1,14 +1,12 @@
+import copy
 import csv
 import logging
 import math
-import copy
 from pathlib import Path
 from typing import Any
+
 from z3alpha.environment import StrategyGame
 from z3alpha.logging_config import attach_file_logger
-from z3alpha.stage2.tree import Action as S2Action
-
-Action = int | S2Action
 
 logger = logging.getLogger(__name__)
 
@@ -24,11 +22,11 @@ class MCTSNode:
         self.is_mean: bool = is_mean
         self.c_ucb: float | None = c_ucb
         self.visit_count: int = 0
-        self.action_history: list[Action] = (
+        self.action_history: list[Any] = (
             [] if action_history is None else list(action_history)
         )
         self.value_est: float = 0
-        self.children: dict[Action, "MCTSNode"] = {}
+        self.children: dict[Any, "MCTSNode"] = {}
         self.reward: float = 0
         self._set_param_mabs()
         self.trace_log = trace_log
@@ -62,8 +60,7 @@ class MCTSNode:
     def _ucb(self, action_pair, action):
         visit_count, q_score = action_pair
         explore_score = self.c_ucb * math.sqrt(
-            math.log(self.visit_count + 1)
-            / (visit_count + 0.001)
+            math.log(self.visit_count + 1) / (visit_count + 0.001)
         )
         ucb = q_score + explore_score
         self.trace_log.debug(
@@ -245,19 +242,6 @@ class BaseMCTSRun:
                 self.top_strategies.pop()
                 break
 
-    def _write_new_results(self):
-        """Append any newly evaluated strategies to the S1 results CSV."""
-        new_strats = set(self.res_database.keys()) - self._written_strats
-        if not new_strats:
-            return
-        with open(self._s1_csv_path, "a", newline="") as f:
-            writer = csv.writer(f)
-            for strat in new_strats:
-                res = self.res_database[strat]
-                row = [strat] + [r[1] if r[0] else -r[1] for r in res]
-                writer.writerow(row)
-        self._written_strats.update(new_strats)
-
     def start(self):
         for i in range(self.num_simulations):
             self.num_sim = i
@@ -280,9 +264,21 @@ class BaseMCTSRun:
         return self.top_strategies
 
 
-
 class Stage1MCTSRun(BaseMCTSRun):
     stage = 1
+
+    def _write_new_results(self):
+        """Append any newly evaluated strategies to the S1 results CSV."""
+        new_strats = set(self.res_database.keys()) - self._written_strats
+        if not new_strats:
+            return
+        with open(self._s1_csv_path, "a", newline="") as f:
+            writer = csv.writer(f)
+            for strat in new_strats:
+                res = self.res_database[strat]
+                row = [strat] + [r[1] if r[0] else -r[1] for r in res]
+                writer.writerow(row)
+        self._written_strats.update(new_strats)
 
     def _init_stage_state(self, log_folder, bench_lst):
         self.c_ucb = self.config["c_ucb"]
@@ -307,23 +303,4 @@ class Stage1MCTSRun(BaseMCTSRun):
 
     def _after_simulation(self):
         self._write_new_results()
-
-
-class Stage2MCTSRun(BaseMCTSRun):
-    stage = 2
-
-    def _init_stage_state(self, log_folder, bench_lst):
-        self.c_ucb = None
-        self.res_database = self.config["stage2_context"].result_cache
-
-    def _create_env(self):
-        return StrategyGame(
-            self.stage,
-            self.training_list,
-            self.logic,
-            self.timeout,
-            self.config,
-            self.batch_size,
-            z3path=self.z3path,
-        )
 
