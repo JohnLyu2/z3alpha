@@ -19,6 +19,14 @@ log = logging.getLogger(__name__)
 VALUE_TYPE = "par10"  # hard code for now
 
 
+def _train_dir(config) -> str:
+    """Top-level config ``train_dir``: one root directory (scanned recursively for ``*.smt2``)."""
+    raw = config["train_dir"]
+    if not isinstance(raw, str):
+        raise TypeError("train_dir must be a string (path to a directory)")
+    return raw
+
+
 def create_benchmark_list(benchmark_directories):
     """Collect all .smt2 files from the given directories."""
     benchmark_lst = []
@@ -51,8 +59,7 @@ def synthesize_linear_strategies(config, log_folder):
     logic_config = load_logic_config(logic, config_dir)
 
     # Linear strategy search
-    s1_bench_dirs = s1config["bench_dirs"]
-    s1_bench_lst = create_benchmark_list(s1_bench_dirs)
+    s1_bench_lst = create_benchmark_list([_train_dir(config)])
     log.info("Linear strategy search starts")
     run1 = LinearStrategySearchRun(
         s1config,
@@ -101,19 +108,6 @@ def parallel_linear_strategies(ln_strat_lst, fail_if_undecided=True):
         parallel_strats += f" {strat}"
     parallel_strats += ")"
     return parallel_strats
-
-def _warn_if_s2_bench_dirs_mismatch(config):
-    s1 = config.get("s1config", {})
-    s2 = config.get("s2config", {})
-    if "bench_dirs" not in s2:
-        return
-    if s1.get("bench_dirs") != s2.get("bench_dirs"):
-        log.warning(
-            "s2config bench_dirs differs from s1config; branched synthesis uses only "
-            "linear stage benchmarks and cached per-benchmark results from linear search. "
-            "Ignoring s2config bench_dirs for result data and probes."
-        )
-
 
 def stage2_synthesize(results, bench_lst, config, log_folder):
     num_strat = config["ln_strat_num"]
@@ -192,8 +186,6 @@ def branched_synthesize(config, log_folder):
     _, s1_bench_lst, stage1_results_for_s2 = synthesize_linear_strategies(
         config, log_folder
     )
-
-    _warn_if_s2_bench_dirs_mismatch(config)
 
     # Step 2: Branched strategy synthesis
     stage2_synthesize(stage1_results_for_s2, s1_bench_lst, config, log_folder)

@@ -1,14 +1,14 @@
 # Synthesis Configuration Help
-  
+
 **"logic"**: the SMT logic of the tested benchmarks, e.g., QF_BV, QF_LIA, etc
 
 **"batch_size"**: number of instances to be evaluated in a batch
 
-**"s1config"**: configurations for the stage-1 MCTS
+**"train_dir"**: path to a single root directory for training benchmarks. All `*.smt2` files under that directory (recursively) are used for both linear search and branched (stage-2) synthesis.
 
-**"s2config"**: configurations for the stage-2 MCTS
+**"s1config"**: configurations for the linear strategy MCTS
 
-**"bench_dirs"**: list all training set directories (will recursively include all instances in the listed directories as training instances)
+**"s2config"**: configurations for the branched (stage-2) MCTS
 
 **"sim_num"**: number of MCTS simulations
 
