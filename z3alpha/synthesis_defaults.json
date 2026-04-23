@@ -1,7 +1,0 @@
-{
-  "mcts_config": {
-    "c_uct": 0.5,
-    "c_ucb": 0.2
-  },
-  "random_seed": 0
-}

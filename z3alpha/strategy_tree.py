@@ -40,8 +40,13 @@ class LinearStrategy(ASTNode):
 
 class StrategyTree:
     def __init__(
-        self, stage, logic, timeout, s2config=None,
+        self,
+        stage,
+        logic,
+        timeout,
+        *,
         logic_config=None,
+        stage2_context: "Stage2Context | None" = None,
     ):
         self.logic = logic
         self.timeout = timeout
@@ -49,9 +54,10 @@ class StrategyTree:
         if stage == 1:
             self.root.add_children([LinearStrategy(logic, logic_config)])
         else:
-            assert s2config
-            stage2_context: Stage2Context = s2config["stage2_context"]
-            self.root.add_children([Stage2StrategyNode(timeout, stage2_context, if_depth=0)])
+            assert stage2_context is not None
+            self.root.add_children(
+                [Stage2StrategyNode(timeout, stage2_context, if_depth=0)]
+            )
 
     def __str__(self):
         return str(self.root)

@@ -2,7 +2,7 @@ import random
 from typing import Callable
 
 from z3alpha.evaluator import SolverEvaluator
-from z3alpha.mcts import BaseMCTSRun
+from z3alpha.mcts import BaseMCTSRun, MCTSSearchConfig
 from z3alpha.stage2.strategy_tree import Stage2Context
 from z3alpha.stage2.utils import reward_dispatcher
 from z3alpha.strategy_tree import StrategyTree
@@ -58,14 +58,15 @@ class Stage2StrategyGame:
         training_lst,
         logic,
         timeout,
-        sconfig,
+        stage2_context: Stage2Context,
         batch_size,
         z3path,
     ):
-        self.stage = 2
         self.benchmarks = training_lst
-        self.strat_ast = StrategyTree(2, logic, timeout, sconfig)
-        self.stage2_context: Stage2Context = sconfig["stage2_context"]
+        self.strat_ast = StrategyTree(
+            2, logic, timeout, stage2_context=stage2_context
+        )
+        self.stage2_context: Stage2Context = stage2_context
         self.probe_records = self.stage2_context.probe_records
         self.simulator = SolverEvaluator(
             z3path,
@@ -120,16 +121,40 @@ class Stage2StrategyGame:
 class Stage2MCTSRun(BaseMCTSRun):
     stage = 2
 
+    def __init__(
+        self,
+        search: MCTSSearchConfig,
+        stage2_context: Stage2Context,
+        bench_lst,
+        logic,
+        z3path,
+        value_type,
+        log_folder,
+        batch_size=1,
+        logic_config=None,
+    ):
+        self._stage2_context = stage2_context
+        super().__init__(
+            search,
+            bench_lst,
+            logic,
+            z3path,
+            value_type,
+            log_folder,
+            batch_size=batch_size,
+            logic_config=logic_config,
+        )
+
     def _init_stage_state(self, log_folder, bench_lst):
         self.c_ucb = None
-        self.res_database = self.config["stage2_context"].result_cache
+        self.res_database = self._stage2_context.result_cache
 
     def _create_env(self):
         return Stage2StrategyGame(
             self.training_list,
             self.logic,
             self.timeout,
-            self.config,
+            self._stage2_context,
             self.batch_size,
             z3path=self.z3path,
         )

@@ -7,11 +7,14 @@ from z3alpha.utils import par_n_reward, solved_num_reward
 
 class LinearStrategyGame:
     def __init__(
-        self, stage, training_lst, logic, timeout, sconfig, batch_size, z3path,
+        self,
+        training_lst,
+        logic,
+        timeout,
+        batch_size,
+        z3path,
         logic_config=None,
     ):
-        assert stage == 1, "Use stage2.search_runtime.Stage2StrategyGame for stage 2"
-        self.stage = 1
         self.benchmarks = training_lst
         self.strat_ast = StrategyTree(
             1, logic, timeout,

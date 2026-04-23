@@ -2,6 +2,7 @@ import copy
 import csv
 import logging
 import math
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -9,6 +10,16 @@ from z3alpha.environment import LinearStrategyGame
 from z3alpha.logging_config import attach_file_logger
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class MCTSSearchConfig:
+    """One MCTS run: sim count, per-instance timeout, UCT, and UCB (linear stage only; ``None`` for stage 2)."""
+
+    sim_num: int
+    timeout: int
+    c_uct: float
+    c_ucb: float | None
 
 INIT_Q = 0
 IS_MEAN_EST = False
@@ -106,7 +117,7 @@ class MCTSNode:
 class BaseMCTSRun:
     def __init__(
         self,
-        config,
+        search: MCTSSearchConfig,
         bench_lst,
         logic,
         z3path,
@@ -117,15 +128,15 @@ class BaseMCTSRun:
         logic_config=None,
     ):
         self.z3path = z3path
-        self.config = config
+        self.search = search
         self.logic_config = logic_config
-        self.num_simulations = config["sim_num"]
+        self.num_simulations = search.sim_num
         self.is_mean = IS_MEAN_EST
         self.discount = 1
-        self.c_uct = config["c_uct"]
+        self.c_uct = search.c_uct
         self.training_list = bench_lst
         self.logic = logic
-        self.timeout = config["timeout"]
+        self.timeout = search.timeout
         self.value_type = value_type
         self.batch_size = batch_size
         self._init_stage_state(log_folder, bench_lst)
@@ -281,7 +292,8 @@ class LinearStrategySearchRun(BaseMCTSRun):
         self._written_strats.update(new_strats)
 
     def _init_stage_state(self, log_folder, bench_lst):
-        self.c_ucb = self.config["c_ucb"]
+        assert self.search.c_ucb is not None, "Linear MCTS requires c_ucb"
+        self.c_ucb = self.search.c_ucb
         self.res_database = {}
         self._s1_csv_path = Path(log_folder) / "linear_strategy_results.csv"
         self._written_strats = set()
@@ -291,11 +303,9 @@ class LinearStrategySearchRun(BaseMCTSRun):
 
     def _create_env(self):
         return LinearStrategyGame(
-            self.stage,
             self.training_list,
             self.logic,
             self.timeout,
-            self.config,
             self.batch_size,
             z3path=self.z3path,
             logic_config=self.logic_config,
