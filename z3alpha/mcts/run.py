@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 # Default for ``MctsConfig.is_mean``. ``False`` (running max) preserves
 # the historical behavior; flipping to ``True`` switches to running mean
-# updates in :meth:`BaseMCTSRun._backup`.
+# value-estimate updates in :meth:`BaseMCTSRun._backup`.
 DEFAULT_IS_MEAN = False
 
 
@@ -25,9 +25,9 @@ DEFAULT_IS_MEAN = False
 class MctsConfig:
     """All MCTS knobs for one run.
 
-    ``is_mean`` toggles between max-based and mean-based value backups; default
-    ``False`` (max) keeps the prior behavior. Flip to ``True`` to switch
-    PUCT/backup to running-mean estimates instead of running-max.
+    ``is_mean`` toggles between max-based and mean-based value-estimate
+    updates; default ``False`` (max) keeps the prior behavior. Flip to
+    ``True`` to use running-mean estimates instead of running-max.
     """
 
     sim_num: int
@@ -100,8 +100,8 @@ class BaseMCTSRun:
         return None
 
     def _puct(self, child_node: MCTSNode, parent_node: MCTSNode, action) -> float:
-        """PUCT: Q + c * P * sqrt(N_parent) / (1 + N_child); prior P = UNIFORM_PUCT_PRIOR for all tactics."""
-        value_score = child_node.reward + child_node.value_est
+        """PUCT: V + c * P * sqrt(N_parent) / (1 + N_child), with uniform prior."""
+        value_score = child_node.value_est
         parent_n = max(1, parent_node.visit_count)
         explore_score = (
             self.c_uct
@@ -111,7 +111,7 @@ class BaseMCTSRun:
         )
         puct = value_score + explore_score
         self.trace_log.debug(
-            f"  Value of {action}: Q value: {value_score:.05f}; Exp: {explore_score:.05f} "
+            f"  Value of {action}: V est: {value_score:.05f}; Exp: {explore_score:.05f} "
             f"({child_node.visit_count}/{parent_n}); P={UNIFORM_PUCT_PRIOR}; PUCT: {puct:.05f}"
         )
         return puct
@@ -139,8 +139,7 @@ class BaseMCTSRun:
             self.env.step(selected)
         return node, search_path
 
-    def _expand_node(self, node: MCTSNode, actions, reward: float) -> None:
-        node.reward = reward
+    def _expand_node(self, node: MCTSNode, actions) -> None:
         for action in actions:
             history = copy.deepcopy(node.action_history)
             history.append(action)
@@ -159,7 +158,6 @@ class BaseMCTSRun:
             else:
                 node.value_est = max(node.value_est, value)
             node.visit_count += 1
-            value = node.reward + value
 
     def _one_simulation(self) -> None:
         self.env = self._create_env()
@@ -171,7 +169,7 @@ class BaseMCTSRun:
             value = self.env.get_value(self.res_database, self.value_type)
         else:
             actions = self.env.legal_actions()
-            self._expand_node(selected_node, actions, 0)
+            self._expand_node(selected_node, actions)
             self._rollout()
             self.trace_log.info(f"Rollout Strategy: {self.env}")
             value = self.env.get_value(self.res_database, self.value_type)
@@ -183,7 +181,7 @@ class BaseMCTSRun:
         for i in range(3):
             if value > self.top_rewards[i]:
                 if i == 0:
-                    msg = f"At sim {self.num_sim}, new best reward found: {value:.5f}"
+                    msg = f"At sim {self.num_sim}, new best value found: {value:.5f}"
                     logger.info(msg)
                     self.trace_log.info(msg)
                 self.top_rewards.insert(i, value)
