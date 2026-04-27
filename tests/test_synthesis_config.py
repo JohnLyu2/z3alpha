@@ -2,10 +2,11 @@ import pytest
 
 from z3alpha.config import (
     DEFAULT_C_UCT,
+    DEFAULT_IS_MEAN,
     DEFAULT_RANDOM_SEED,
-    MCTSParams,
+    MctsConfig,
     parse_experiment_config,
-    resolve_mcts_params,
+    resolve_mcts_config,
 )
 
 
@@ -43,23 +44,32 @@ def test_parse_experiment_config_unknown_key_raises():
         parse_experiment_config(raw)
 
 
-def test_resolve_mcts_params_defaults():
+def test_resolve_mcts_config_defaults():
     class A:
         c_uct = None
         random_seed = None
 
-    m = resolve_mcts_params(A())
-    assert m == MCTSParams(
+    experiment = parse_experiment_config(_minimal_experiment())
+    cfg = resolve_mcts_config(A(), experiment)
+    assert cfg == MctsConfig(
+        sim_num=experiment.mcts_sims,
+        timeout=experiment.timeout,
         c_uct=DEFAULT_C_UCT,
         random_seed=DEFAULT_RANDOM_SEED,
+        is_mean=DEFAULT_IS_MEAN,
     )
+    assert cfg.is_mean is False
 
 
-def test_resolve_mcts_params_cli():
+def test_resolve_mcts_config_cli_overrides():
     class A:
         c_uct = 0.9
         random_seed = 7
 
-    m = resolve_mcts_params(A())
-    assert m.c_uct == 0.9
-    assert m.random_seed == 7
+    experiment = parse_experiment_config(_minimal_experiment())
+    cfg = resolve_mcts_config(A(), experiment)
+    assert cfg.c_uct == 0.9
+    assert cfg.random_seed == 7
+    assert cfg.sim_num == experiment.mcts_sims
+    assert cfg.timeout == experiment.timeout
+    assert cfg.is_mean is DEFAULT_IS_MEAN

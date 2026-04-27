@@ -5,13 +5,14 @@ from __future__ import annotations
 import logging
 import random
 import time
+from dataclasses import replace
 from pathlib import Path
-from typing import Callable
+from typing import Any, Callable
 
 from z3 import Goal, Probe, parse_smt2_file
 
 from z3alpha.evaluator import SolverEvaluator
-from z3alpha.mcts import BaseMCTSRun, MCTSSearchConfig
+from z3alpha.mcts import BaseMCTSRun, MctsConfig
 from z3alpha.stage2.strategy_tree import (
     PERCENTILES,
     BranchedStrategyTree,
@@ -22,6 +23,10 @@ from z3alpha.config import SynthesisRun
 from z3alpha.utils import calculate_percentile
 
 log = logging.getLogger(__name__)
+
+
+def _no_params(action: Any) -> dict | None:
+    return None
 
 
 # --- Shortlist + benchmarks → :class:`Stage2Context` (probes, caches)
@@ -142,6 +147,7 @@ class Stage2StrategyGame:
         stage2_context: Stage2Context,
         batch_size,
         z3path,
+        params_for: Callable[[Any], dict | None] = _no_params,
     ):
         self.benchmarks = training_lst
         self.strat_ast = BranchedStrategyTree(
@@ -158,6 +164,7 @@ class Stage2StrategyGame:
             batch_size,
         )
         self.timeout = timeout
+        self._params_for = params_for
 
     def __str__(self) -> str:
         return str(self.strat_ast)
@@ -168,15 +175,15 @@ class Stage2StrategyGame:
     def legal_actions(self, rollout=False):
         return self.strat_ast.legal_actions(rollout)
 
-    def step(self, action, params):
-        self.strat_ast.apply_rule(action, params)
+    def step(self, action):
+        self.strat_ast.apply_rule(action, self._params_for(action))
 
     def rollout(self):
         assert not self.is_terminal()
         while not self.is_terminal():
             actions = self.legal_actions(rollout=True)
             action = random.choice(actions)
-            self.step(action, None)
+            self.step(action)
 
     def _get_linear_strategies(self, bench_id):
         probe_record = self.probe_records[bench_id]
@@ -206,29 +213,27 @@ class Stage2MCTSRun(BaseMCTSRun):
 
     def __init__(
         self,
-        search: MCTSSearchConfig,
+        config: MctsConfig,
         stage2_context: Stage2Context,
         bench_lst,
         logic,
         z3path,
         value_type,
         log_folder,
-        batch_size=1,
-        logic_config=None,
-    ):
+        batch_size: int = 1,
+    ) -> None:
         self._stage2_context = stage2_context
         super().__init__(
-            search,
+            config,
             bench_lst,
             logic,
             z3path,
             value_type,
             log_folder,
             batch_size=batch_size,
-            logic_config=logic_config,
         )
 
-    def _init_stage_state(self, log_folder, bench_lst):
+    def _init_stage_state(self) -> None:
         self.res_database = self._stage2_context.result_cache
 
     def _create_env(self):
@@ -239,18 +244,8 @@ class Stage2MCTSRun(BaseMCTSRun):
             self._stage2_context,
             self.batch_size,
             z3path=self.z3path,
+            params_for=self.params_for,
         )
-
-
-# --- Branched MCTS from experiment + shortlist
-
-def _mcts_config_for_branched(run: SynthesisRun) -> MCTSSearchConfig:
-    e, m = run.experiment, run.m
-    return MCTSSearchConfig(
-        sim_num=e.branched_sims,
-        timeout=e.timeout,
-        c_uct=m.c_uct,
-    )
 
 
 def run_branched_synthesis(
@@ -273,8 +268,9 @@ def run_branched_synthesis(
     branched_start = time.time()
     log.info("Branched MCTS search starts")
 
+    branched_config = replace(run.mcts, sim_num=experiment.branched_sims)
     mcts_run = Stage2MCTSRun(
-        _mcts_config_for_branched(run),
+        branched_config,
         context,
         bench_lst,
         logic,

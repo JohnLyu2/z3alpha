@@ -1,8 +1,12 @@
 import random
-from typing import Callable
+from typing import Any, Callable
 from z3alpha.strategy_tree import LinearStrategyTree
 from z3alpha.evaluator import SolverEvaluator
 from z3alpha.utils import par_n_reward, solved_num_reward
+
+
+def _no_params(action: Any) -> dict | None:
+    return None
 
 
 class LinearStrategyGame:
@@ -14,6 +18,7 @@ class LinearStrategyGame:
         batch_size,
         z3path,
         logic_config=None,
+        params_for: Callable[[Any], dict | None] = _no_params,
     ):
         self.benchmarks = training_lst
         self.strat_ast = LinearStrategyTree(
@@ -28,6 +33,7 @@ class LinearStrategyGame:
             batch_size,
         )
         self.timeout = timeout
+        self._params_for = params_for
 
     def __str__(self) -> str:
         return str(self.strat_ast)
@@ -38,16 +44,15 @@ class LinearStrategyGame:
     def legal_actions(self, rollout=False):
         return self.strat_ast.legal_actions(rollout)
 
-    def step(self, action, params):
-        self.strat_ast.apply_rule(action, params)
+    def step(self, action):
+        self.strat_ast.apply_rule(action, self._params_for(action))
 
     def rollout(self):
         assert not self.is_terminal()
         while not self.is_terminal():
             actions = self.legal_actions(rollout=True)
             action = random.choice(actions)
-            params = None
-            self.step(action, params)
+            self.step(action)
 
     # every entry in the resLst is (solved, time, res)
     def get_s1_res_list(self, database):
@@ -70,4 +75,3 @@ class LinearStrategyGame:
         if reward_type not in reward_dispatcher:
             raise Exception(f"Unknown value type {reward_type}")
         return reward_dispatcher[reward_type](res_lst)
-

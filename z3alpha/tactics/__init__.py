@@ -9,7 +9,7 @@ from z3alpha.tactics.catalog import (
     SUPPORTED_TACTIC_PARAMS,
     CatalogTacticId,
 )
-from z3alpha.tactics.logic_config import create_params_dict, load_logic_config
+from z3alpha.tactics.logic_config import load_logic_config
 
 __all__ = [
     "CatalogTacticId",
@@ -21,6 +21,5 @@ __all__ = [
     "SOLVER_NAME_TO_ID",
     "SOLVER_TACTICS",
     "SUPPORTED_TACTIC_PARAMS",
-    "create_params_dict",
     "load_logic_config",
 ]

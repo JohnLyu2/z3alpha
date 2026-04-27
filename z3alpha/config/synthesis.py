@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import MISSING, dataclass, fields
 from typing import Any, Protocol, runtime_checkable
 
+from z3alpha.mcts.run import DEFAULT_IS_MEAN, MctsConfig
+
 # CLI / code defaults (experiment JSON does not set these; use --c-uct, --random-seed)
 DEFAULT_C_UCT = 0.5
 DEFAULT_RANDOM_SEED = 0
@@ -29,15 +31,9 @@ class ExperimentConfig:
 
 
 @dataclass(frozen=True)
-class MCTSParams:
-    c_uct: float
-    random_seed: int
-
-
-@dataclass(frozen=True)
 class SynthesisRun:
     experiment: ExperimentConfig
-    m: MCTSParams
+    mcts: MctsConfig
 
 
 def _allowed_keys() -> frozenset[str]:
@@ -82,8 +78,16 @@ class MctsCliArgs(Protocol):
     random_seed: int | None
 
 
-def resolve_mcts_params(args: MctsCliArgs) -> MCTSParams:
-    return MCTSParams(
+def resolve_mcts_config(args: MctsCliArgs, experiment: ExperimentConfig) -> MctsConfig:
+    """Build the linear-stage :class:`MctsConfig` from CLI overrides + experiment.
+
+    Branched runs derive their own config by copying this one with a different
+    ``sim_num`` (see :func:`z3alpha.stage2.search_runtime.run_branched_synthesis`).
+    """
+    return MctsConfig(
+        sim_num=experiment.mcts_sims,
+        timeout=experiment.timeout,
         c_uct=DEFAULT_C_UCT if args.c_uct is None else args.c_uct,
         random_seed=DEFAULT_RANDOM_SEED if args.random_seed is None else args.random_seed,
+        is_mean=DEFAULT_IS_MEAN,
     )

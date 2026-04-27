@@ -9,26 +9,17 @@ import datetime
 
 from z3alpha.config import (
     ExperimentConfig,
-    MCTSParams,
     SynthesisRun,
     parse_experiment_config,
-    resolve_mcts_params,
+    resolve_mcts_config,
     setup_logging,
 )
-from z3alpha.mcts import LinearStrategySearchRun, MCTSSearchConfig
+from z3alpha.mcts import LinearStrategySearchRun
 from z3alpha.stage2.search_runtime import run_branched_synthesis
 from z3alpha.strategy_portfolio import create_greedy_linear_strategy_portfolio
 from z3alpha.tactics.logic_config import load_logic_config
 
 log = logging.getLogger(__name__)
-
-
-def _mcts_config_linear(e: ExperimentConfig, m: MCTSParams) -> MCTSSearchConfig:
-    return MCTSSearchConfig(
-        sim_num=e.mcts_sims,
-        timeout=e.timeout,
-        c_uct=m.c_uct,
-    )
 
 
 def _train_dir(experiment: ExperimentConfig) -> str:
@@ -57,15 +48,14 @@ def _log_elapsed(start_time, label):
 
 
 def synthesize_linear_strategies(run: SynthesisRun, log_folder: Path):
-    experiment, m = run.experiment, run.m
+    experiment = run.experiment
     start_time = time.time()
     logic = experiment.logic
     z3path = experiment.z3path if experiment.z3path else "z3"
     batch_size = experiment.batch_size
-    search = _mcts_config_linear(experiment, m)
     num_ln_strat = experiment.ln_strat_num
     value_type = experiment.value_type
-    random.seed(m.random_seed)
+    random.seed(run.mcts.random_seed)
 
     config_dir = experiment.logic_config_dir
     logic_config = load_logic_config(logic, config_dir)
@@ -73,7 +63,7 @@ def synthesize_linear_strategies(run: SynthesisRun, log_folder: Path):
     s1_bench_lst = create_benchmark_list([_train_dir(experiment)])
     log.info("Linear strategy search starts")
     run1 = LinearStrategySearchRun(
-        search,
+        run.mcts,
         s1_bench_lst,
         logic,
         z3path,
@@ -176,8 +166,8 @@ def main():
     with open(args.json_config, encoding="utf-8") as f:
         user = json.load(f)
     experiment = parse_experiment_config(user)
-    m = resolve_mcts_params(args)
-    run = SynthesisRun(experiment=experiment, m=m)
+    mcts_config = resolve_mcts_config(args, experiment)
+    run = SynthesisRun(experiment=experiment, mcts=mcts_config)
 
     level = run.experiment.log_level or "INFO"
     setup_logging(level=level)

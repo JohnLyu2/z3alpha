@@ -9,27 +9,29 @@ from z3alpha.config.logging import (
 )
 from z3alpha.config.synthesis import (
     DEFAULT_C_UCT,
+    DEFAULT_IS_MEAN,
     DEFAULT_RANDOM_SEED,
     ExperimentConfig,
-    MCTSParams,
     MctsCliArgs,
+    MctsConfig,
     SynthesisRun,
     parse_experiment_config,
-    resolve_mcts_params,
+    resolve_mcts_config,
 )
 
 __all__ = [
     "DATE_FMT",
     "LOG_FORMAT",
     "DEFAULT_C_UCT",
+    "DEFAULT_IS_MEAN",
     "DEFAULT_RANDOM_SEED",
     "ExperimentConfig",
-    "MCTSParams",
     "MctsCliArgs",
+    "MctsConfig",
     "SynthesisRun",
     "attach_file_logger",
     "get_formatter",
     "parse_experiment_config",
-    "resolve_mcts_params",
+    "resolve_mcts_config",
     "setup_logging",
 ]

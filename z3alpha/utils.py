@@ -39,20 +39,22 @@ def calculate_percentile(values, percentile):
     return sorted_values[index]
 
 
+def encode_strat_row(strat, res):
+    """Encode one (strat, per-bench-results) pair as a CSV row.
+
+    Each result tuple is ``(solved, time, ...)``. Solved instances keep their
+    time, unsolved ones are written as the negation so the sign tracks
+    solved/unsolved without needing a separate column.
+    """
+    return [strat] + [r[1] if r[0] else -r[1] for r in res]
+
+
 def write_strat_res_to_csv(res_lst, csv_path, bench_lst):
     with open(csv_path, "w") as f:
         writer = csv.writer(f)
-        # write header
         writer.writerow(["strat"] + bench_lst)
         for strat, res in res_lst:
-            write_lst = []
-            for res_tuple in res:
-                if res_tuple[0]:
-                    write_lst.append(res_tuple[1])
-                else:
-                    # negative values if the instance is not saved
-                    write_lst.append(-res_tuple[1])
-            writer.writerow([strat] + write_lst)
+            writer.writerow(encode_strat_row(strat, res))
 
 
 def read_strat_res_from_csv(csv_path):

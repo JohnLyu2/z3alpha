@@ -20,6 +20,8 @@ Unknown keys in the JSON cause an error. Do not add `mcts_config` or `random_see
 
 ## MCTS hyperparameters and random seed
 
-Defaults live in `z3alpha/config/synthesis.py` (`DEFAULT_C_UCT`, `DEFAULT_RANDOM_SEED`). Override per run on the CLI:
+The full per-run MCTS configuration is `z3alpha.config.MctsConfig` (sim count, timeout, `c_uct`, `random_seed`, `is_mean`). It is built in `synthesize.py` from the experiment JSON (sim count, timeout) plus CLI overrides for `c_uct` / `random_seed`; the branched pass copies it with `sim_num=branched_sims`.
+
+Defaults live in `z3alpha/config/synthesis.py` (`DEFAULT_C_UCT`, `DEFAULT_RANDOM_SEED`) and `z3alpha/mcts/run.py` (`DEFAULT_IS_MEAN = False`, i.e. max-based value backup). Override `c_uct` / random seed per run on the CLI:
 
 `python -m z3alpha.synthesize CONFIG.json --c-uct 0.6 --random-seed 42`
