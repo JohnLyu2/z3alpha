@@ -14,26 +14,19 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class MCTSSearchConfig:
-    """One MCTS run: sim count, per-instance timeout, PUCT (tactics) and PUCB (param MABs; uniform prior 1.0), and c_ucb (linear; ``None`` for branched)."""
+    """One MCTS run: sim count, per-instance timeout, and PUCT exploration constant for the tactic tree."""
 
     sim_num: int
     timeout: int
     c_uct: float
-    c_ucb: float | None
 
-INIT_Q = 0
 IS_MEAN_EST = False
-# PUCT/PUCB uniform prior: P=1 for every tactic child and every parameter arm.
+# PUCT uniform prior: P=1 for every tactic child.
 UNIFORM_PUCT_PRIOR = 1.0
 
 
 class MCTSNode:
-    def __init__(self, logic_config, is_mean, trace_log, c_ucb, action_history=None):
-        self.param_dict: dict[int, dict[str, list[Any]]] = (
-            logic_config["params"] if logic_config else {}
-        )
-        self.is_mean: bool = is_mean
-        self.c_ucb: float | None = c_ucb
+    def __init__(self, trace_log, action_history=None):
         self.visit_count: int = 0
         self.action_history: list[Any] = (
             [] if action_history is None else list(action_history)
@@ -41,7 +34,6 @@ class MCTSNode:
         self.value_est: float = 0
         self.children: dict[Any, "MCTSNode"] = {}
         self.reward: float = 0
-        self._set_param_mabs()
         self.trace_log = trace_log
 
     def __str__(self):
@@ -49,77 +41,6 @@ class MCTSNode:
 
     def is_expanded(self):
         return bool(self.children)
-
-    def has_param_mabs(self):
-        if len(self.action_history) == 0:
-            return False
-        latest_action = self.action_history[-1]
-        return latest_action in self.param_dict.keys()
-
-    def _set_param_mabs(self):
-        if not self.has_param_mabs():
-            return
-        latest_action = self.action_history[-1]
-        self.params = self.param_dict[latest_action]
-        self.MABs = {}
-        self.selected = {}
-        for param in self.params.keys():
-            mab_dict = {}
-            for param_value in self.params[param]:
-                mab_dict[param_value] = [0, INIT_Q]  # (visit count, q estimation)
-            self.MABs[param] = mab_dict
-            self.selected[param] = None
-
-    def _pucb(self, action_pair, action):
-        """PUCB: Q + c * P * sqrt(N_node) / (1 + N_arm); same shape as PUCT, prior P = UNIFORM_PUCT_PRIOR."""
-        visit_count, q_score = action_pair
-        parent_n = max(1, self.visit_count)
-        explore_score = (
-            self.c_ucb
-            * UNIFORM_PUCT_PRIOR
-            * math.sqrt(parent_n)
-            / (1 + visit_count)
-        )
-        pucb = q_score + explore_score
-        self.trace_log.debug(
-            f"  Value of {action}: Q value: {q_score:.05f}; Exp: {explore_score:.05f} "
-            f"({visit_count}/{parent_n}); P={UNIFORM_PUCT_PRIOR}; PUCB: {pucb:.05f}"
-        )
-        return pucb
-
-    def _select_mab(self, param):
-        MABdict = self.MABs[param]
-        selected = None
-        best_pucb = float("-inf")
-        for value_candidate, pair in MABdict.items():
-            pucb = self._pucb(pair, value_candidate)
-            if pucb > best_pucb:
-                best_pucb = pucb
-                selected = value_candidate
-        assert best_pucb > float("-inf")
-        return selected
-
-    def select_mabs(self):
-        for param in self.params.keys():
-            self.trace_log.debug(f"\n  Select MAB of {param}")
-            selected_value = self._select_mab(param)
-            self.trace_log.debug(f"  Selected value: {selected_value}\n")
-            self.selected[param] = selected_value
-        return self.selected
-
-    def backup_mabs(self, reward):
-        for param in self.params.keys():
-            mab_dict = self.MABs[param]
-            selected_value = self.selected[param]
-
-            if self.is_mean:
-                mab_dict[selected_value][1] = (
-                    mab_dict[selected_value][1] * mab_dict[selected_value][0] + reward
-                ) / (mab_dict[selected_value][0] + 1)
-            else:
-                mab_dict[selected_value][1] = max(mab_dict[selected_value][1], reward)
-            mab_dict[selected_value][0] += 1
-            self.selected[param] = None
 
 
 class BaseMCTSRun:
@@ -155,7 +76,7 @@ class BaseMCTSRun:
         )
 
         if not root:
-            root = MCTSNode(self.logic_config, self.is_mean, self.trace_log, self.c_ucb)
+            root = MCTSNode(self.trace_log)
         self.root = root
         self.best_reward = -1
         self.top_strategies = [None, None, None]  # top 3 strategies
@@ -169,6 +90,10 @@ class BaseMCTSRun:
 
     def _after_simulation(self):
         pass
+
+    def params_for(self, action):
+        """Placeholder param heuristic. Override to set tactic params; default = no using-params."""
+        return None
 
     def _puct(self, child_node, parent_node, action):
         """PUCT: Q + c * P * sqrt(N_parent) / (1 + N_child); prior P = UNIFORM_PUCT_PRIOR for all tactics."""
@@ -205,9 +130,8 @@ class BaseMCTSRun:
             assert best_puct > float("-inf")
             node = next_node
             self.trace_log.debug(f"  Selected action {selected}")
-            params = node.select_mabs() if node.has_param_mabs() else None
             search_path.append(node)
-            self.env.step(selected, params)
+            self.env.step(selected, self.params_for(selected))
         return node, search_path
 
     def _expand_node(self, node, actions, reward):
@@ -215,9 +139,7 @@ class BaseMCTSRun:
         for action in actions:
             history = copy.deepcopy(node.action_history)
             history.append(action)
-            node.children[action] = MCTSNode(
-                self.logic_config, self.is_mean, self.trace_log, self.c_ucb, history
-            )
+            node.children[action] = MCTSNode(self.trace_log, history)
 
     def _rollout(self):
         self.env.rollout()
@@ -233,8 +155,6 @@ class BaseMCTSRun:
                 node.value_est = max(node.value_est, value)
             node.visit_count += 1
             value = node.reward + self.discount * value
-            if node.has_param_mabs():
-                node.backup_mabs(value)
 
     def _one_simulation(self):
         self.env = self._create_env()
@@ -306,8 +226,6 @@ class LinearStrategySearchRun(BaseMCTSRun):
         self._written_strats.update(new_strats)
 
     def _init_stage_state(self, log_folder, bench_lst):
-        assert self.search.c_ucb is not None, "Linear MCTS requires c_ucb"
-        self.c_ucb = self.search.c_ucb
         self.res_database = {}
         self._s1_csv_path = Path(log_folder) / "linear_strategy_results.csv"
         self._written_strats = set()

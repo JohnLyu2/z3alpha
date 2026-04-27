@@ -229,7 +229,6 @@ class Stage2MCTSRun(BaseMCTSRun):
         )
 
     def _init_stage_state(self, log_folder, bench_lst):
-        self.c_ucb = None
         self.res_database = self._stage2_context.result_cache
 
     def _create_env(self):
@@ -251,7 +250,6 @@ def _mcts_config_for_branched(run: SynthesisRun) -> MCTSSearchConfig:
         sim_num=e.branched_sims,
         timeout=e.timeout,
         c_uct=m.c_uct,
-        c_ucb=None,
     )
 
 

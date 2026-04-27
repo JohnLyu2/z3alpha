@@ -1,7 +1,6 @@
 import pytest
 
 from z3alpha.config import (
-    DEFAULT_C_UCB,
     DEFAULT_C_UCT,
     DEFAULT_RANDOM_SEED,
     MCTSParams,
@@ -47,13 +46,11 @@ def test_parse_experiment_config_unknown_key_raises():
 def test_resolve_mcts_params_defaults():
     class A:
         c_uct = None
-        c_ucb = None
         random_seed = None
 
     m = resolve_mcts_params(A())
     assert m == MCTSParams(
         c_uct=DEFAULT_C_UCT,
-        c_ucb=DEFAULT_C_UCB,
         random_seed=DEFAULT_RANDOM_SEED,
     )
 
@@ -61,10 +58,8 @@ def test_resolve_mcts_params_defaults():
 def test_resolve_mcts_params_cli():
     class A:
         c_uct = 0.9
-        c_ucb = None
         random_seed = 7
 
     m = resolve_mcts_params(A())
     assert m.c_uct == 0.9
-    assert m.c_ucb == DEFAULT_C_UCB
     assert m.random_seed == 7

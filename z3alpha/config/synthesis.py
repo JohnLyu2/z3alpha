@@ -5,9 +5,8 @@ from __future__ import annotations
 from dataclasses import MISSING, dataclass, fields
 from typing import Any, Protocol, runtime_checkable
 
-# CLI / code defaults (experiment JSON does not set these; use --c-uct, --c-ucb, --random-seed)
+# CLI / code defaults (experiment JSON does not set these; use --c-uct, --random-seed)
 DEFAULT_C_UCT = 0.5
-DEFAULT_C_UCB = 0.2
 DEFAULT_RANDOM_SEED = 0
 
 
@@ -32,7 +31,6 @@ class ExperimentConfig:
 @dataclass(frozen=True)
 class MCTSParams:
     c_uct: float
-    c_ucb: float
     random_seed: int
 
 
@@ -81,13 +79,11 @@ def parse_experiment_config(raw: dict[str, Any]) -> ExperimentConfig:
 @runtime_checkable
 class MctsCliArgs(Protocol):
     c_uct: float | None
-    c_ucb: float | None
     random_seed: int | None
 
 
 def resolve_mcts_params(args: MctsCliArgs) -> MCTSParams:
     return MCTSParams(
         c_uct=DEFAULT_C_UCT if args.c_uct is None else args.c_uct,
-        c_ucb=DEFAULT_C_UCB if args.c_ucb is None else args.c_ucb,
         random_seed=DEFAULT_RANDOM_SEED if args.random_seed is None else args.random_seed,
     )

@@ -28,7 +28,6 @@ def _mcts_config_linear(e: ExperimentConfig, m: MCTSParams) -> MCTSSearchConfig:
         sim_num=e.mcts_sims,
         timeout=e.timeout,
         c_uct=m.c_uct,
-        c_ucb=m.c_ucb,
     )
 
 
@@ -165,12 +164,6 @@ def main():
         type=float,
         default=None,
         help="Override MCTS PUCT c (tactic tree; default: z3alpha.config.synthesis.DEFAULT_C_UCT)",
-    )
-    parser.add_argument(
-        "--c-ucb",
-        type=float,
-        default=None,
-        help="Override PUCB c for param MABs in linear run (default: z3alpha.config.synthesis.DEFAULT_C_UCB)",
     )
     parser.add_argument(
         "--random-seed",

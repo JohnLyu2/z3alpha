@@ -8,7 +8,6 @@ from z3alpha.config.logging import (
     setup_logging,
 )
 from z3alpha.config.synthesis import (
-    DEFAULT_C_UCB,
     DEFAULT_C_UCT,
     DEFAULT_RANDOM_SEED,
     ExperimentConfig,
@@ -22,7 +21,6 @@ from z3alpha.config.synthesis import (
 __all__ = [
     "DATE_FMT",
     "LOG_FORMAT",
-    "DEFAULT_C_UCB",
     "DEFAULT_C_UCT",
     "DEFAULT_RANDOM_SEED",
     "ExperimentConfig",
