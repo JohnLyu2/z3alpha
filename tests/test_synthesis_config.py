@@ -14,7 +14,7 @@ def _minimal_experiment():
     return {
         "logic": "QF_NIA",
         "batch_size": 2,
-        "train_dir": "data/sample/benchmarks",
+        "train_dir": "data/smoke/benchmarks",
         "timeout": 1,
         "mcts_sims": 15,
         "branched_sims": 50,
@@ -57,6 +57,7 @@ def test_resolve_mcts_config_defaults():
         c_uct=DEFAULT_C_UCT,
         random_seed=DEFAULT_RANDOM_SEED,
         is_mean=DEFAULT_IS_MEAN,
+        llm_prior=None,
     )
     assert cfg.is_mean is False
 

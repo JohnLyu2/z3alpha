@@ -15,12 +15,14 @@ from z3alpha.config.synthesis import (
     parse_experiment_config,
     resolve_mcts_config,
 )
+from z3alpha.mcts.llm_prior import LLMPriorConfig
 
 __all__ = [
     "DEFAULT_C_UCT",
     "DEFAULT_IS_MEAN",
     "DEFAULT_RANDOM_SEED",
     "ExperimentConfig",
+    "LLMPriorConfig",
     "MctsCliArgs",
     "MctsConfig",
     "SynthesisRun",

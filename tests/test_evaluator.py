@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 from z3alpha.evaluator import SolverRunner
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
-SAMPLE_SMT = str(_PROJECT_ROOT / "data" / "sample" / "benchmarks" / "0.smt2")
+SAMPLE_SMT = str(_PROJECT_ROOT / "data" / "smoke" / "benchmarks" / "0.smt2")
 
 
 def _execute_with_mock(runner: SolverRunner, communicate_return: tuple[bytes, bytes]) -> tuple:

@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from z3alpha.config.logging import attach_file_logger
+from z3alpha.mcts.llm_prior import LLMPriorConfig
 from z3alpha.mcts.node import MCTSNode
 
 logger = logging.getLogger(__name__)
@@ -28,6 +29,9 @@ class MctsConfig:
     ``is_mean`` toggles between max-based and mean-based value-estimate
     updates; default ``False`` (max) keeps the prior behavior. Flip to
     ``True`` to use running-mean estimates instead of running-max.
+
+    ``llm_prior`` is optional; when set and enabled, stage-1 MCTS uses LLM
+    scores as PUCT priors (see :class:`z3alpha.mcts.llm_prior.LLMPriorConfig`).
     """
 
     sim_num: int
@@ -35,10 +39,7 @@ class MctsConfig:
     c_uct: float
     random_seed: int
     is_mean: bool = DEFAULT_IS_MEAN
-
-
-# PUCT uniform prior: P=1 for every tactic child.
-UNIFORM_PUCT_PRIOR = 1.0
+    llm_prior: LLMPriorConfig | None = None
 
 
 class BaseMCTSRun:
@@ -99,20 +100,22 @@ class BaseMCTSRun:
         """Placeholder param heuristic. Override to set tactic params; default = no using-params."""
         return None
 
+    def _priors_for(self, actions: list) -> dict[Any, float] | None:
+        """Return mapping action -> prior P for expansion; ``None`` means uniform (1.0 per child)."""
+        return None
+
     def _puct(self, child_node: MCTSNode, parent_node: MCTSNode, action) -> float:
-        """PUCT: V + c * P * sqrt(N_parent) / (1 + N_child), with uniform prior."""
+        """PUCT: V + c * P * sqrt(N_parent) / (1 + N_child); P is ``child_node.prior``."""
         value_score = child_node.value_est
         parent_n = max(1, parent_node.visit_count)
+        p = child_node.prior
         explore_score = (
-            self.c_uct
-            * UNIFORM_PUCT_PRIOR
-            * math.sqrt(parent_n)
-            / (1 + child_node.visit_count)
+            self.c_uct * p * math.sqrt(parent_n) / (1 + child_node.visit_count)
         )
         puct = value_score + explore_score
         self.trace_log.debug(
             f"  Value of {action}: V est: {value_score:.05f}; Exp: {explore_score:.05f} "
-            f"({child_node.visit_count}/{parent_n}); P={UNIFORM_PUCT_PRIOR}; PUCT: {puct:.05f}"
+            f"({child_node.visit_count}/{parent_n}); P={p:.05f}; PUCT: {puct:.05f}"
         )
         return puct
 
@@ -139,11 +142,16 @@ class BaseMCTSRun:
             self.env.step(selected)
         return node, search_path
 
-    def _expand_node(self, node: MCTSNode, actions) -> None:
+    def _expand_node(
+        self, node: MCTSNode, actions, priors: dict[Any, float] | None = None
+    ) -> None:
         for action in actions:
             history = copy.deepcopy(node.action_history)
             history.append(action)
-            node.children[action] = MCTSNode(history)
+            child = MCTSNode(history)
+            if priors is not None and action in priors:
+                child.prior = float(priors[action])
+            node.children[action] = child
 
     def _rollout(self) -> None:
         self.env.rollout()
@@ -169,7 +177,8 @@ class BaseMCTSRun:
             value = self.env.get_value(self.res_database, self.value_type)
         else:
             actions = self.env.legal_actions()
-            self._expand_node(selected_node, actions)
+            priors = self._priors_for(actions)
+            self._expand_node(selected_node, actions, priors)
             self._rollout()
             self.trace_log.info(f"Rollout Strategy: {self.env}")
             value = self.env.get_value(self.res_database, self.value_type)

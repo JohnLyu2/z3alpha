@@ -8,9 +8,9 @@ from typing import Any
 class MCTSNode:
     """A node in the MCTS search tree.
 
-    Holds the running visit count, value estimate, and child links keyed by
-    action. Child histories are recorded for tracing and for AST-action
-    lookup elsewhere.
+    Holds the running visit count, value estimate, PUCT prior for the edge
+    to this child, and child links keyed by action. Child histories are
+    recorded for tracing and for AST-action lookup elsewhere.
     """
 
     def __init__(self, action_history: list[Any] | None = None) -> None:
@@ -20,6 +20,7 @@ class MCTSNode:
         )
         self.value_est: float = 0.0
         self.children: dict[Any, "MCTSNode"] = {}
+        self.prior: float = 1.0
 
     def __str__(self) -> str:
         return str(self.action_history)

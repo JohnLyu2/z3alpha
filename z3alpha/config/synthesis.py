@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import MISSING, dataclass, fields
 from typing import Any, Protocol, runtime_checkable
 
+from z3alpha.mcts.llm_prior import LLMPriorConfig
 from z3alpha.mcts.run import DEFAULT_IS_MEAN, MctsConfig
 
 # CLI / code defaults (experiment JSON does not set these; use --c-uct, --random-seed)
@@ -84,10 +85,30 @@ def resolve_mcts_config(args: MctsCliArgs, experiment: ExperimentConfig) -> Mcts
     Branched runs derive their own config by copying this one with a different
     ``sim_num`` (see :func:`z3alpha.stage2.search_runtime.run_branched_synthesis`).
     """
+    llm_prior: LLMPriorConfig | None = None
+    if getattr(args, "llm_prior", False):
+        llm_prior = LLMPriorConfig(
+            enabled=True,
+            model=(getattr(args, "llm_model", None) or "gpt-4o-mini"),
+            base_url=(
+                getattr(args, "llm_base_url", None) or "https://api.openai.com/v1"
+            ),
+            timeout_s=(
+                30.0
+                if getattr(args, "llm_timeout", None) is None
+                else float(args.llm_timeout)
+            ),
+            temperature=(
+                0.0
+                if getattr(args, "llm_temperature", None) is None
+                else float(args.llm_temperature)
+            ),
+        )
     return MctsConfig(
         sim_num=experiment.mcts_sims,
         timeout=experiment.timeout,
         c_uct=DEFAULT_C_UCT if args.c_uct is None else args.c_uct,
         random_seed=DEFAULT_RANDOM_SEED if args.random_seed is None else args.random_seed,
         is_mean=DEFAULT_IS_MEAN,
+        llm_prior=llm_prior,
     )

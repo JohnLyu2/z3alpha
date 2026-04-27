@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import csv
 import logging
-from pathlib import Path
+from dataclasses import replace
+from typing import Any
 
 from z3alpha.environment import LinearStrategyGame
+from z3alpha.mcts.llm_prior import LLMPriorScorer
 from z3alpha.mcts.run import BaseMCTSRun, MctsConfig
 from z3alpha.utils import encode_strat_row
 
@@ -45,6 +47,18 @@ class LinearStrategySearchRun(BaseMCTSRun):
         with open(self._s1_csv_path, "w", newline="") as f:
             writer = csv.writer(f)
             writer.writerow(["strat"] + list(self.training_list))
+        self._scorer: LLMPriorScorer | None = None
+        lp = self.config.llm_prior
+        if lp is not None and lp.enabled:
+            cfg = replace(lp, cache_path=self.log_folder / "llm_priors.json")
+            self._scorer = LLMPriorScorer(cfg)
+
+    def _priors_for(self, actions: list) -> dict[Any, float] | None:
+        if self._scorer is None:
+            return None
+        names = [str(a) for a in actions]
+        by_name = self._scorer.score(self.logic, str(self.env), names)
+        return {a: float(by_name[str(a)]) for a in actions}
 
     def _create_env(self):
         return LinearStrategyGame(

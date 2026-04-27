@@ -162,6 +162,35 @@ def main():
         dest="random_seed",
         help="Override random seed (default: z3alpha.config.synthesis.DEFAULT_RANDOM_SEED)",
     )
+    parser.add_argument(
+        "--llm-prior",
+        action="store_true",
+        help="Use OpenAI Chat Completions to score legal tactics as PUCT priors (stage 1 only; needs OPENAI_API_KEY)",
+    )
+    parser.add_argument(
+        "--llm-model",
+        type=str,
+        default="gpt-4o-mini",
+        help="OpenAI model id for --llm-prior (default: gpt-4o-mini)",
+    )
+    parser.add_argument(
+        "--llm-base-url",
+        type=str,
+        default=None,
+        help="OpenAI API base URL for --llm-prior (default: https://api.openai.com/v1)",
+    )
+    parser.add_argument(
+        "--llm-timeout",
+        type=float,
+        default=None,
+        help="HTTP timeout in seconds for --llm-prior (default: 30)",
+    )
+    parser.add_argument(
+        "--llm-temperature",
+        type=float,
+        default=None,
+        help="Sampling temperature for --llm-prior (default: 0)",
+    )
     args = parser.parse_args()
     with open(args.json_config, encoding="utf-8") as f:
         user = json.load(f)
