@@ -2,7 +2,7 @@ import random
 from typing import Any, Callable
 from z3alpha.strategy_tree import LinearStrategyTree
 from z3alpha.evaluator import SolverEvaluator
-from z3alpha.utils import par_n_reward, solved_num_reward
+from z3alpha.utils import reward_dispatcher
 
 
 def _no_params(action: Any) -> dict | None:
@@ -59,7 +59,7 @@ class LinearStrategyGame:
         strat_str = str(self)
         if strat_str in database:  # does not account for nondeterministism now
             return database[strat_str]
-        res_list = self.simulator.get_res_list(strat_str)
+        res_list = self.simulator.evaluate(strat_str)
         database[strat_str] = res_list
         return res_list
 
@@ -67,11 +67,7 @@ class LinearStrategyGame:
     def get_value(self, database: dict, reward_type: str) -> float:
         assert self.is_terminal()
         res_lst = self.get_s1_res_list(database)
-        reward_dispatcher: dict[str, Callable[[list], float]] = {
-            "#solved": solved_num_reward,
-            "par2": lambda results: par_n_reward(results, 2, self.timeout),
-            "par10": lambda results: par_n_reward(results, 10, self.timeout),
-        }
-        if reward_type not in reward_dispatcher:
+        reward_fn_by_type = reward_dispatcher(self.timeout)
+        if reward_type not in reward_fn_by_type:
             raise Exception(f"Unknown value type {reward_type}")
-        return reward_dispatcher[reward_type](res_lst)
+        return reward_fn_by_type[reward_type](res_lst)

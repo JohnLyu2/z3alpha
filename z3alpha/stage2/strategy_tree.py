@@ -5,7 +5,6 @@ from typing import Any
 
 from z3alpha.ast_nodes import ASTNode, Root, TacticNode
 from z3alpha.stage2.utils import next_actions_from_prefix
-from z3alpha.strategy_tree import SearchTreeBase
 
 # try-for in SMT-LIB2 uses milliseconds; internal timeouts are in seconds
 TRY_FOR_MS_PER_SEC = 1000
@@ -165,7 +164,7 @@ class Stage2StrategyNode(ASTNode):
         cur_node = self.parent
         while cur_node:
             if cur_node.is_tactic():
-                reverse_path.append(cur_node.branched_action_id)
+                reverse_path.append(cur_node.action_id)
             cur_node = cur_node.parent
         return list(reversed(reverse_path))
 
@@ -229,7 +228,7 @@ class Stage2StrategyNode(ASTNode):
             raise Exception("unexpected action")
 
 
-class BranchedStrategyTree(SearchTreeBase):
+class BranchedStrategyTree:
     """MCTS search tree for conditional (if / probe) strategies."""
 
     def __init__(self, logic, timeout, *, context: Stage2Context):
@@ -239,3 +238,37 @@ class BranchedStrategyTree(SearchTreeBase):
         self.root.add_children(
             [Stage2StrategyNode(timeout, context, if_depth=0)]
         )
+
+    def __str__(self):
+        return str(self.root)
+
+    def find_first_nonterminal(self):
+        nonterm_stack = [self.root]
+        while nonterm_stack:
+            node_to_search = nonterm_stack.pop()
+            if not node_to_search.is_terminal():
+                return node_to_search
+            for child_node in reversed(node_to_search.children):
+                nonterm_stack.append(child_node)
+        return None
+
+    def current_decision_node(self):
+        return self.find_first_nonterminal()
+
+    def is_terminal(self):
+        return not bool(self.current_decision_node())
+
+    def legal_actions(self, rollout: bool = False) -> list:
+        node = self.current_decision_node()
+        if node is None:
+            return []
+        return node.legal_actions(rollout)
+
+    def apply_rule(self, action, params: Any) -> None:
+        node = self.current_decision_node()
+        assert node is not None
+        node.apply_rule(action, params)
+
+    def get_linear_strategies(self, probe_record):
+        assert self.is_terminal()
+        return self.root.get_ln_strats(self.timeout, probe_record)

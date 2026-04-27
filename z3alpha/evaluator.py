@@ -1,10 +1,7 @@
 import subprocess
 import time
 import logging
-import csv
 import concurrent.futures
-
-from z3alpha.utils import par_n, solved_num
 
 logger = logging.getLogger(__name__)
 
@@ -92,23 +89,13 @@ class SolverEvaluator:
     PAR scoring.
     """
 
-    def __init__(
-        self,
-        solver_path,
-        benchmark_lst,
-        timeout,
-        batch_size,
-        is_write_res=False,
-        res_path=None,
-    ):
+    def __init__(self, solver_path, benchmark_lst, timeout, batch_size):
         self.solver_path = solver_path
         self.benchmark_list = benchmark_lst
         assert self.get_benchmark_size() > 0
         self.timeout = timeout
         assert self.timeout > 0
         self.batch_size = batch_size
-        self.is_write_res = is_write_res
-        self.res_path = res_path
 
     def get_benchmark_size(self):
         return len(self.benchmark_list)
@@ -124,7 +111,10 @@ class SolverEvaluator:
         )
         return runner.execute()
 
-    def get_res_list(self, strat_str):
+    def evaluate(self, strat_str):
+        """Run the solver/strategy across ``benchmark_list`` and return one
+        ``(solved, time, result_str)`` tuple per instance, in benchmark order.
+        """
         size = self.get_benchmark_size()
         results = [None] * size
 
@@ -141,25 +131,3 @@ class SolverEvaluator:
         for i in range(size):
             assert results[i] is not None
         return results
-
-    def evaluate(self, strat_str):
-        results = self.get_res_list(strat_str)
-        if self.is_write_res:
-            with open(self.res_path, "w") as f:
-                writer = csv.writer(f)
-                # write header
-                writer.writerow(["id", "path", "solved", "time", "result"])
-                for i in range(len(self.benchmark_list)):
-                    writer.writerow(
-                        [
-                            i,
-                            self.benchmark_list[i],
-                            results[i][0],
-                            results[i][1],
-                            results[i][2],
-                        ]
-                    )
-        solved = solved_num(results)
-        par2 = par_n(results, 2, self.timeout)
-        par10 = par_n(results, 10, self.timeout)
-        return (solved, par2, par10)

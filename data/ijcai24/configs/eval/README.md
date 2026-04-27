@@ -14,5 +14,3 @@
 
 **"eval_list_file"**: path to a text file listing instance paths, one per line (blank lines and lines starting with `#` are ignored). Use this for large instance sets.
 
-**"tmp_dir"**: the temp file directory
-

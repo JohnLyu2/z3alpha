@@ -1,16 +1,7 @@
-from z3alpha.stage2.search_runtime import build_stage2_context, run_branched_synthesis
-from z3alpha.stage2.utils import (
-    BranchedPathSegment,
-    PREPROCESS_INSTANCE_ID_BASE,
-    SOLVER_INSTANCE_ID_BASE,
-)
-from z3alpha.stage2.strategy_tree import Stage2Context
+"""Stage 2 (branched / conditional) MCTS synthesis.
 
-__all__ = [
-    "BranchedPathSegment",
-    "PREPROCESS_INSTANCE_ID_BASE",
-    "SOLVER_INSTANCE_ID_BASE",
-    "Stage2Context",
-    "build_stage2_context",
-    "run_branched_synthesis",
-]
+This subpackage is intentionally self-contained from the linear-stage code
+under ``z3alpha`` so it can be replaced or removed wholesale. Import from the
+concrete modules directly (``z3alpha.stage2.search_runtime``,
+``z3alpha.stage2.strategy_tree``, ``z3alpha.stage2.utils``).
+"""

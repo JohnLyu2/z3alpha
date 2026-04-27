@@ -1,4 +1,4 @@
-"""Branched MCTS helpers: shortlist path encoding, prefix queries, rewards, optional benchmark listing.
+"""Branched MCTS helpers: shortlist path encoding and prefix queries.
 
 **Path ids:** bases ``1000`` / ``2000`` and :class:`BranchedPathSegment` (typing-only) must stay disjoint
 from linear :mod:`z3alpha.tactics.catalog` and from :class:`~z3alpha.stage2.strategy_tree.ProbeAction` (50–52).
@@ -6,12 +6,10 @@ from linear :mod:`z3alpha.tactics.catalog` and from :class:`~z3alpha.stage2.stra
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Callable, NewType
+from typing import NewType
 
 from z3alpha.parser import parse_linear_strategy
 from z3alpha.tactics.catalog import PREPROCESS_TACTICS, SOLVER_TACTICS
-from z3alpha.utils import par_n_reward, solved_num_reward
 
 SOLVER_INSTANCE_ID_BASE = 1000
 PREPROCESS_INSTANCE_ID_BASE = 2000
@@ -80,20 +78,3 @@ def next_actions_from_prefix(
         if is_strict_prefix(cur_act_path, strategy):
             action_set.add(strategy[len(cur_act_path)])
     return list(action_set)
-
-
-def create_benchmark_list(benchmark_directories: list[str]) -> list[str]:
-    benchmark_lst = []
-    for bench_dir in benchmark_directories:
-        assert Path(bench_dir).exists()
-        benchmark_lst += [str(p) for p in sorted(list(Path(bench_dir).rglob("*.smt2")))]
-    benchmark_lst.sort()
-    return benchmark_lst
-
-
-def reward_dispatcher(timeout: int) -> dict[str, Callable[[list], float]]:
-    return {
-        "#solved": solved_num_reward,
-        "par2": lambda results: par_n_reward(results, 2, timeout),
-        "par10": lambda results: par_n_reward(results, 10, timeout),
-    }

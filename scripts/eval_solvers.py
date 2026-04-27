@@ -9,10 +9,27 @@ from datetime import datetime
 
 from z3alpha.evaluator import SolverEvaluator
 from z3alpha.config import setup_logging
+from z3alpha.utils import par_n, solved_num
 
 _REQUIRED_KEYS = ("solvers", "timeout", "batch_size", "res_dir")
 
 log = logging.getLogger(__name__)
+
+
+def _evaluate_and_write(evaluator, strat_str, csv_path):
+    """Run ``evaluator.evaluate`` and dump per-instance results + PAR summary."""
+    results = evaluator.evaluate(strat_str)
+    with open(csv_path, "w") as f:
+        writer = csv.writer(f)
+        writer.writerow(["id", "path", "solved", "time", "result"])
+        for i, bench in enumerate(evaluator.benchmark_list):
+            solved, runtime, result_str = results[i]
+            writer.writerow([i, bench, solved, runtime, result_str])
+    return (
+        solved_num(results),
+        par_n(results, 2, evaluator.timeout),
+        par_n(results, 10, evaluator.timeout),
+    )
 
 
 def main():
@@ -100,15 +117,8 @@ def main():
             solver_path, strat_path = test_solvers[solver]
             strat = pathlib.Path(strat_path).read_text() if strat_path else None
             csv_path = os.path.join(res_dir, f"{solver}.csv")
-            evaluator = SolverEvaluator(
-                solver_path,
-                eval_lst,
-                timeout,
-                batch_size,
-                is_write_res=True,
-                res_path=csv_path,
-            )
-            solved, par2, par10 = evaluator.evaluate(strat)
+            evaluator = SolverEvaluator(solver_path, eval_lst, timeout, batch_size)
+            solved, par2, par10 = _evaluate_and_write(evaluator, strat, csv_path)
             csvwriter.writerow([solver, solved, par2, par10])
             log.info(
                 "%s test results: solved %s instances with par2 %.2f and par10 %.2f",

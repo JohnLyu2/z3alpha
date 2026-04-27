@@ -1,10 +1,7 @@
 """Public config API: re-export from :mod:`z3alpha.config.synthesis` and :mod:`z3alpha.config.logging`."""
 
 from z3alpha.config.logging import (
-    DATE_FMT,
-    LOG_FORMAT,
     attach_file_logger,
-    get_formatter,
     setup_logging,
 )
 from z3alpha.config.synthesis import (
@@ -20,8 +17,6 @@ from z3alpha.config.synthesis import (
 )
 
 __all__ = [
-    "DATE_FMT",
-    "LOG_FORMAT",
     "DEFAULT_C_UCT",
     "DEFAULT_IS_MEAN",
     "DEFAULT_RANDOM_SEED",
@@ -30,7 +25,6 @@ __all__ = [
     "MctsConfig",
     "SynthesisRun",
     "attach_file_logger",
-    "get_formatter",
     "parse_experiment_config",
     "resolve_mcts_config",
     "setup_logging",

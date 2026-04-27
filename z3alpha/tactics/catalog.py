@@ -5,8 +5,6 @@ Branched shortlist path ids: :mod:`z3alpha.stage2.utils`. Probes: :class:`z3alph
 
 from __future__ import annotations
 
-from typing import NewType
-
 # --- id → SMT2 tactic name (linear search action space)
 
 SOLVER_CATALOG = {
@@ -75,10 +73,7 @@ SOLVER_NAME_TO_ID = {n: i for i, n in SOLVER_CATALOG.items()}
 PREPROCESS_NAME_TO_ID = {n: i for i, n in PREPROCESS_CATALOG.items()}
 NAME_TO_ID = {**SOLVER_NAME_TO_ID, **PREPROCESS_NAME_TO_ID}
 
-CatalogTacticId = NewType("CatalogTacticId", int)
-
 __all__ = [
-    "CatalogTacticId",
     "NAME_TO_ID",
     "PREPROCESS_CATALOG",
     "PREPROCESS_NAME_TO_ID",

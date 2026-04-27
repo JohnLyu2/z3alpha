@@ -36,12 +36,14 @@ class LinearStrategy(ASTNode):
         raise Exception("unexpected action")
 
 
-class SearchTreeBase:
-    """Shared DFS navigation; root has one child (the strategy AST under search)."""
+class LinearStrategyTree:
+    """MCTS search tree for linear (non-conditional) strategies only."""
 
-    root: Root
-    timeout: int
-    logic: str
+    def __init__(self, logic, timeout, *, logic_config=None):
+        self.logic = logic
+        self.timeout = timeout
+        self.root = Root()
+        self.root.add_children([LinearStrategy(logic, logic_config)])
 
     def __str__(self):
         return str(self.root)
@@ -72,17 +74,3 @@ class SearchTreeBase:
         node = self.current_decision_node()
         assert node is not None
         node.apply_rule(action, params)
-
-    def get_linear_strategies(self, probe_record):
-        assert self.is_terminal()
-        return self.root.get_ln_strats(self.timeout, probe_record)
-
-
-class LinearStrategyTree(SearchTreeBase):
-    """MCTS search tree for linear (non-conditional) strategies only."""
-
-    def __init__(self, logic, timeout, *, logic_config=None):
-        self.logic = logic
-        self.timeout = timeout
-        self.root = Root()
-        self.root.add_children([LinearStrategy(logic, logic_config)])

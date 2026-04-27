@@ -18,9 +18,9 @@ from z3alpha.stage2.strategy_tree import (
     BranchedStrategyTree,
     Stage2Context,
 )
-from z3alpha.stage2.utils import encode_linear_strategies, reward_dispatcher
+from z3alpha.stage2.utils import encode_linear_strategies
 from z3alpha.config import SynthesisRun
-from z3alpha.utils import calculate_percentile
+from z3alpha.utils import calculate_percentile, reward_dispatcher
 
 log = logging.getLogger(__name__)
 
@@ -200,9 +200,7 @@ class Stage2StrategyGame:
     def get_value(self, database: dict, reward_type: str) -> float:
         assert self.is_terminal()
         res_lst = self.get_s2_res_list(database)
-        reward_fn_by_type: dict[str, Callable[[list], float]] = reward_dispatcher(
-            self.timeout
-        )
+        reward_fn_by_type = reward_dispatcher(self.timeout)
         if reward_type not in reward_fn_by_type:
             raise Exception(f"Unknown value type {reward_type}")
         return reward_fn_by_type[reward_type](res_lst)
