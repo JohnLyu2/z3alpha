@@ -60,6 +60,11 @@ class LinearStrategySearchRun(BaseMCTSRun):
             llm_log_path = str(self.log_folder / "llm_prior_qa.log")
             self._scorer = LLMPriorScorer(replace(lp, qa_log_path=llm_log_path))
 
+    def _seed_expanded_children(self, node, value: float) -> None:
+        for child in node.children.values():
+            if child.visit_count == 0:
+                child.value_est = float(value)
+
     def _priors_for(self, actions: list) -> dict[Any, float] | None:
         if self._scorer is None:
             return None

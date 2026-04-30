@@ -113,6 +113,10 @@ class BaseMCTSRun:
         """Return mapping action -> prior P for expansion; ``None`` means uniform (1.0 per child)."""
         return None
 
+    def _seed_expanded_children(self, node: MCTSNode, value: float) -> None:
+        """Optional post-rollout seeding for freshly expanded children."""
+        return
+
     def _trace_format_action(self, action: Any) -> str:
         """Pretty-print ``action`` for MCTS trace logs (linear SMT tactic ids vs stage-2 values)."""
         if isinstance(action, int):
@@ -245,7 +249,11 @@ class BaseMCTSRun:
     def _backup(self, search_path, sim_value: float) -> None:
         value = sim_value
         for node in reversed(search_path):
-            if self.is_mean:
+            # If this is the first actual visit, overwrite any optimistic/seeded
+            # initialization so later estimation is based on real evaluations.
+            if node.visit_count == 0:
+                node.value_est = value
+            elif self.is_mean:
                 node.value_est = (node.value_est * node.visit_count + value) / (
                     node.visit_count + 1
                 )
@@ -268,6 +276,7 @@ class BaseMCTSRun:
             self._rollout()
             self.trace_log.info(f"Rollout Strategy: {self.env}")
             value = self.env.get_value(self.res_database, self.value_type)
+            self._seed_expanded_children(selected_node, value)
         self._update_top_strategies(value, str(self.env))
         self.trace_log.info(f"Final Return: {value}\n")
         self._backup(search_path, value)
