@@ -7,11 +7,16 @@ import logging
 import math
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 from z3alpha.config.logging import attach_file_logger
 from z3alpha.mcts.llm_prior import LLMPriorConfig
 from z3alpha.mcts.node import MCTSNode
+from z3alpha.tactics.catalog import (
+    PREPROCESS_CATALOG,
+    SOLVER_CATALOG,
+    tactic_name_for_action,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +56,8 @@ class BaseMCTSRun:
     """
 
     stage: int
+    #: If set, trace file name under ``log_folder`` instead of ``stage{N}_mcts_trace.log``.
+    TRACE_LOG_FILENAME: ClassVar[str | None] = None
 
     def __init__(
         self,
@@ -75,10 +82,12 @@ class BaseMCTSRun:
         self.log_folder = Path(log_folder)
         self._init_stage_state()
 
-        self.trace_log = attach_file_logger(
-            f"z3alpha.s{self.stage}mcts",
-            self.log_folder / f"stage{self.stage}_mcts_trace.log",
+        trace_path = (
+            self.log_folder / self.TRACE_LOG_FILENAME
+            if self.TRACE_LOG_FILENAME
+            else self.log_folder / f"stage{self.stage}_mcts_trace.log"
         )
+        self.trace_log = attach_file_logger(f"z3alpha.s{self.stage}mcts", trace_path)
 
         self.root = MCTSNode()
         self.top_strategies: list[Any] = [None, None, None]
@@ -104,40 +113,117 @@ class BaseMCTSRun:
         """Return mapping action -> prior P for expansion; ``None`` means uniform (1.0 per child)."""
         return None
 
-    def _puct(self, child_node: MCTSNode, parent_node: MCTSNode, action) -> float:
-        """PUCT: V + c * P * sqrt(N_parent) / (1 + N_child); P is ``child_node.prior``."""
-        value_score = child_node.value_est
-        parent_n = max(1, parent_node.visit_count)
-        p = child_node.prior
-        explore_score = (
-            self.c_uct * p * math.sqrt(parent_n) / (1 + child_node.visit_count)
+    def _trace_format_action(self, action: Any) -> str:
+        """Pretty-print ``action`` for MCTS trace logs (linear SMT tactic ids vs stage-2 values)."""
+        if isinstance(action, int):
+            return f"{tactic_name_for_action(action)} ({action})"
+        return str(action)
+
+    def _trace_format_node(self, node: MCTSNode) -> str:
+        inner = ", ".join(self._trace_format_action(a) for a in node.action_history)
+        return f"[{inner}]"
+
+    def _candidate_row_bucket(self, action: Any) -> int:
+        """Order key for grouping: 0 solver, 1 preprocessing, 2 other."""
+        if isinstance(action, int):
+            if action in SOLVER_CATALOG:
+                return 0
+            if action in PREPROCESS_CATALOG:
+                return 1
+        return 2
+
+    def _trace_group_candidate_rows(
+        self, rows: list[tuple[Any, MCTSNode, float, float, float, int, float, int]]
+    ) -> list[tuple[str, list[tuple[Any, MCTSNode, float, float, float, int, float, int]]]]:
+        bucket_label = ["Solver tactics", "Preprocessing tactics", "Other actions"]
+        buckets: dict[int, list] = {0: [], 1: [], 2: []}
+        label_key = lambda r: self._trace_format_action(r[0])
+        for row in rows:
+            buckets[self._candidate_row_bucket(row[0])].append(row)
+        out: list[tuple[str, list]] = []
+        for i in range(3):
+            grp = buckets[i]
+            if not grp:
+                continue
+            grp.sort(key=label_key)
+            out.append((bucket_label[i], grp))
+        return out
+
+    def _trace_log_selection_candidates(
+        self,
+        node: MCTSNode,
+        rows: list[tuple[Any, MCTSNode, float, float, float, int, float, int]],
+    ) -> None:
+        """Emit one grouped, aligned DEBUG block instead of per-action lines."""
+        label_w = 42
+        groups = self._trace_group_candidate_rows(rows)
+        lines = [f"\nSelect at {self._trace_format_node(node)}"]
+        hdr = (
+            f"{'action':<{label_w}}"
+            f"{'V_est':>9} {'Exp':>10} {'N_vis/p':>9} {'P':>9} {'PUCT':>9}"
         )
-        puct = value_score + explore_score
-        self.trace_log.debug(
-            f"  Value of {action}: V est: {value_score:.05f}; Exp: {explore_score:.05f} "
-            f"({child_node.visit_count}/{parent_n}); P={p:.05f}; PUCT: {puct:.05f}"
-        )
-        return puct
+        ruler = "-" * len(hdr.expandtabs())
+        for title, grp in groups:
+            lines.append(f"  {title}:")
+            lines.append(f"    {hdr}")
+            lines.append(f"    {ruler}")
+            for (
+                action,
+                _cn,
+                puct,
+                v_est,
+                exp,
+                p_n,
+                prior,
+                n_ch,
+            ) in grp:
+                lab_full = self._trace_format_action(action)
+                lab = (
+                    lab_full
+                    if len(lab_full) <= label_w
+                    else lab_full[: label_w - 3] + "..."
+                )
+                vis = f"{n_ch}/{p_n}"
+                lines.append(
+                    f"    {lab:<{label_w}}"
+                    f"{v_est:9.5f} {exp:10.5f} {vis:>9} {prior:9.5f} {puct:9.5f}"
+                )
+        self.trace_log.debug("\n".join(lines))
 
     def _select(self):
         search_path = [self.root]
         node = self.root
         while node.is_expanded() and not self.env.is_terminal():
-            self.trace_log.debug(f"\n  Select at {node}")
+            rows: list[tuple[Any, MCTSNode, float, float, float, int, float, int]] = []
+            for action, child_node in node.children.items():
+                value_score = child_node.value_est
+                parent_n = max(1, node.visit_count)
+                p = child_node.prior
+                n_ch = child_node.visit_count
+                explore_score = (
+                    self.c_uct * p * math.sqrt(parent_n) / (1 + n_ch)
+                )
+                puct = value_score + explore_score
+                rows.append(
+                    (action, child_node, puct, value_score, explore_score, parent_n, p, n_ch)
+                )
 
             selected = None
             best_puct = float("-inf")
             next_node: MCTSNode | None = None
-            for action, child_node in node.children.items():
-                puct = self._puct(child_node, node, action)
+            for action, child_node, puct, *_rest in rows:
                 if puct > best_puct:
                     selected = action
                     best_puct = puct
                     next_node = child_node
-            assert best_puct > float("-inf")
+            assert selected is not None
             assert next_node is not None
+            assert best_puct > float("-inf")
+
+            self._trace_log_selection_candidates(node, rows)
+
             node = next_node
-            self.trace_log.debug(f"  Selected action {selected}")
+            self.trace_log.debug(f"  Selected action {self._trace_format_action(selected)}")
             search_path.append(node)
             self.env.step(selected)
         return node, search_path
@@ -170,7 +256,7 @@ class BaseMCTSRun:
     def _one_simulation(self) -> None:
         self.env = self._create_env()
         selected_node, search_path = self._select()
-        self.trace_log.info("Selected Node: " + str(selected_node))
+        self.trace_log.info(f"Selected Node: {self._trace_format_node(selected_node)}")
         self.trace_log.info("Selected Strategy ParseTree: " + str(self.env))
         if self.env.is_terminal():
             self.trace_log.info("Terminal Strategy: no rollout")
