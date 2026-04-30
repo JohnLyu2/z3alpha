@@ -170,8 +170,8 @@ def main():
     parser.add_argument(
         "--llm-model",
         type=str,
-        default="gpt-4o-mini",
-        help="OpenAI model id for --llm-prior (default: gpt-4o-mini)",
+        default="gpt-5.4-mini",
+        help="OpenAI model id for --llm-prior (default: gpt-5.4-mini)",
     )
     parser.add_argument(
         "--llm-base-url",

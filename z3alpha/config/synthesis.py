@@ -89,7 +89,7 @@ def resolve_mcts_config(args: MctsCliArgs, experiment: ExperimentConfig) -> Mcts
     if getattr(args, "llm_prior", False):
         llm_prior = LLMPriorConfig(
             enabled=True,
-            model=(getattr(args, "llm_model", None) or "gpt-4o-mini"),
+            model=(getattr(args, "llm_model", None) or "gpt-5.4-mini"),
             base_url=(
                 getattr(args, "llm_base_url", None) or "https://api.openai.com/v1"
             ),

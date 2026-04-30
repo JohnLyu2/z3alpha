@@ -1,4 +1,4 @@
-"""LLM-derived PUCT priors (stage-1): OpenAI Chat Completions over HTTP, no SDK."""
+"""LLM-derived PUCT priors via OpenAI Responses API + structured outputs."""
 
 from __future__ import annotations
 
@@ -6,26 +6,48 @@ import hashlib
 import json
 import logging
 import os
-import re
-import urllib.error
-import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from openai import OpenAI
+from pydantic import BaseModel, ConfigDict, Field
+
 log = logging.getLogger(__name__)
 
-_SYSTEM_PROMPT = (
-    "You score Z3 SMT tactics for the next step. Reply with a single JSON object "
-    "only: keys are exactly the tactic names given by the user, values are integers "
-    "from 0 to 5 (higher = more promising). No markdown, no explanation."
+# instructions = system; input = user (Responses API)
+_INSTRUCTIONS = (
+    "You score Z3 SMT tactics for the next MCTS search step. "
+    "Output must follow the response schema: a list of scores, with exactly one entry "
+    "per candidate tactic name from the user message. "
+    "Each value is an integer from 0 to 5 (higher = more promising). "
+    "tactic_name strings must match the provided candidate names exactly (character-for-character)."
 )
+
+
+class TacticScoreItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    tactic_name: str = Field(
+        description="Z3 tactic name from the candidate list, match exactly (e.g. smt, ctx-simplify)"
+    )
+    value: int = Field(ge=0, le=5, description="Score 0-5, higher = more promising")
+
+
+class TacticPriorScores(BaseModel):
+    """Structured output: see OpenAI structured outputs (JSON Schema via Pydantic)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    scores: list[TacticScoreItem] = Field(
+        description="One object per candidate tactic, tactic_name + value 0-5"
+    )
 
 
 @dataclass(frozen=True)
 class LLMPriorConfig:
     enabled: bool = False
-    model: str = "gpt-4o-mini"
+    model: str = "gpt-5.4-mini"
     base_url: str = "https://api.openai.com/v1"
     api_key_env: str = "OPENAI_API_KEY"
     timeout_s: float = 30.0
@@ -51,23 +73,8 @@ def _clamp_score(v: Any) -> int:
     return max(0, min(5, n))
 
 
-def _extract_json_object(text: str) -> dict[str, Any] | None:
-    text = text.strip()
-    if not text:
-        return None
-    # Strip ```json ... ``` if present
-    fence = re.match(r"^```(?:json)?\s*([\s\S]*?)\s*```$", text, re.IGNORECASE)
-    if fence:
-        text = fence.group(1).strip()
-    try:
-        obj = json.loads(text)
-    except json.JSONDecodeError:
-        return None
-    return obj if isinstance(obj, dict) else None
-
-
 class LLMPriorScorer:
-    """Scores candidate tactics via OpenAI REST API; caches on disk + memory."""
+    """Scores candidate tactics via OpenAI Responses API; caches on disk + memory."""
 
     def __init__(self, cfg: LLMPriorConfig) -> None:
         self._cfg = cfg
@@ -117,44 +124,43 @@ class LLMPriorScorer:
         raw = json.dumps(payload, sort_keys=True)
         return hashlib.sha256(raw.encode()).hexdigest()
 
-    def _call_chat_completions(self, user_content: str) -> str | None:
+    def _responses_parse_scores(
+        self, user_content: str
+    ) -> TacticPriorScores | None:
+        """Call ``POST /v1/responses`` with ``text_format`` = Pydantic schema (structured outputs)."""
         if not self._api_key:
             return None
-        url = f"{self._cfg.base_url.rstrip('/')}/chat/completions"
-        body = {
-            "model": self._cfg.model,
-            "messages": [
-                {"role": "system", "content": _SYSTEM_PROMPT},
-                {"role": "user", "content": user_content},
-            ],
-            "temperature": self._cfg.temperature,
-        }
-        req = urllib.request.Request(
-            url,
-            data=json.dumps(body).encode("utf-8"),
-            headers={
-                "Authorization": f"Bearer {self._api_key}",
-                "Content-Type": "application/json",
-            },
-            method="POST",
-        )
+        client = OpenAI(api_key=self._api_key, base_url=self._cfg.base_url.rstrip("/"))
         try:
-            with urllib.request.urlopen(req, timeout=self._cfg.timeout_s) as resp:
-                raw = resp.read().decode("utf-8")
-        except (urllib.error.URLError, OSError, TimeoutError) as e:
-            log.warning("OpenAI chat request failed: %s", e)
+            response = client.responses.parse(
+                model=self._cfg.model,
+                instructions=_INSTRUCTIONS,
+                input=user_content,
+                text_format=TacticPriorScores,
+                temperature=self._cfg.temperature,
+                timeout=self._cfg.timeout_s,
+            )
+        except Exception as e:
+            log.warning("OpenAI Responses request failed: %s", e)
             return None
-        try:
-            outer = json.loads(raw)
-        except json.JSONDecodeError:
-            log.warning("OpenAI response was not JSON")
+
+        status = getattr(response, "status", None)
+        if status and status != "completed":
+            log.warning("OpenAI Responses status=%s (expected completed); using uniform", status)
             return None
-        choices = outer.get("choices")
-        if not choices or not isinstance(choices, list):
+        if getattr(response, "error", None) is not None:
+            log.warning("OpenAI Responses error field set; using uniform")
             return None
-        msg = choices[0].get("message") or {}
-        content = msg.get("content")
-        return content if isinstance(content, str) else None
+        inc = getattr(response, "incomplete_details", None)
+        if inc is not None:
+            log.warning("OpenAI Responses incomplete: %s; using uniform", inc)
+            return None
+
+        parsed: TacticPriorScores | None = response.output_parsed
+        if parsed is None:
+            log.warning("LLM prior: no structured output (refusal, parse miss, or empty)")
+            return None
+        return parsed
 
     def _uniform(self, candidate_actions: list[str]) -> dict[str, float]:
         return {a: 1.0 for a in candidate_actions}
@@ -180,37 +186,32 @@ class LLMPriorScorer:
             self._save_disk_cache()
             return u
 
-        user_lines = [
-            f"Logic: {logic}",
-            "",
-            "Current partial Z3 strategy (SMT-LIB tactic script):",
-            partial_strategy,
-            "",
-            "Candidate tactic names for the next step (JSON keys must match exactly):",
-            json.dumps(candidate_actions),
-        ]
-        user_content = "\n".join(user_lines)
-        content = self._call_chat_completions(user_content)
-        if content is None:
+        user_content = "\n".join(
+            [
+                f"Logic: {logic}",
+                "",
+                "Current partial Z3 strategy (SMT-LIB tactic script):",
+                partial_strategy,
+                "",
+                "Candidate Z3 tactic names for the next step. Include each name exactly once in "
+                "`scores` with a 0-5 value (names are JSON strings, e.g. \"smt\", \"ctx-simplify\"):",
+                json.dumps(candidate_actions),
+            ]
+        )
+        parsed = self._responses_parse_scores(user_content)
+        if parsed is None:
             u = self._uniform(candidate_actions)
             self._memory[key] = u
             self._save_disk_cache()
             return u
 
-        parsed = _extract_json_object(content)
-        if parsed is None:
-            log.warning("LLM prior: could not parse JSON from model output")
-            u = self._uniform(candidate_actions)
-            self._memory[key] = u
-            self._save_disk_cache()
-            return u
+        by_name: dict[str, int] = {}
+        for item in parsed.scores:
+            by_name[str(item.tactic_name)] = _clamp_score(item.value)
 
         scores: dict[str, int] = {}
         for a in candidate_actions:
-            if a in parsed:
-                scores[a] = _clamp_score(parsed[a])
-            else:
-                scores[a] = 0
+            scores[a] = by_name.get(a, 0)
 
         priors = _scores_to_priors(scores)
         self._memory[key] = priors

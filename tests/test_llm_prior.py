@@ -9,7 +9,12 @@ import pytest
 
 from z3alpha.config import MctsConfig, parse_experiment_config, resolve_mcts_config
 from z3alpha.mcts.linear import LinearStrategySearchRun
-from z3alpha.mcts.llm_prior import LLMPriorConfig, LLMPriorScorer
+from z3alpha.mcts.llm_prior import (
+    LLMPriorConfig,
+    LLMPriorScorer,
+    TacticPriorScores,
+    TacticScoreItem,
+)
 
 
 def test_resolve_mcts_config_llm_prior_flags():
@@ -53,15 +58,20 @@ def test_llm_prior_scorer_normalize_and_cache(monkeypatch, tmp_path):
     scorer = LLMPriorScorer(cfg)
     calls = {"n": 0}
 
-    def fake_chat(self, user_content: str) -> str | None:
+    def fake_parse(self, user_content: str):
         calls["n"] += 1
-        return '{"10": 1, "11": 4}'
+        return TacticPriorScores(
+            scores=[
+                TacticScoreItem(tactic_name="smt", value=1),
+                TacticScoreItem(tactic_name="qfnra-nlsat", value=4),
+            ]
+        )
 
-    monkeypatch.setattr(LLMPriorScorer, "_call_chat_completions", fake_chat)
-    out1 = scorer.score("QF_NIA", "(then simplify)", ["10", "11"])
-    assert out1 == {"10": pytest.approx(0.2), "11": pytest.approx(0.8)}
+    monkeypatch.setattr(LLMPriorScorer, "_responses_parse_scores", fake_parse)
+    out1 = scorer.score("QF_NIA", "(then simplify)", ["smt", "qfnra-nlsat"])
+    assert out1 == {"smt": pytest.approx(0.2), "qfnra-nlsat": pytest.approx(0.8)}
     assert calls["n"] == 1
-    out2 = scorer.score("QF_NIA", "(then simplify)", ["10", "11"])
+    out2 = scorer.score("QF_NIA", "(then simplify)", ["smt", "qfnra-nlsat"])
     assert out2 == out1
     assert calls["n"] == 1
     assert cache.exists()
@@ -71,10 +81,15 @@ def test_llm_prior_scorer_all_zero_uniform(monkeypatch, tmp_path):
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
     cfg = LLMPriorConfig(enabled=True, cache_path=tmp_path / "c.json")
 
-    def fake_chat(self, user_content: str) -> str | None:
-        return '{"a": 0, "b": 0}'
+    def fake_parse(self, user_content: str):
+        return TacticPriorScores(
+            scores=[
+                TacticScoreItem(tactic_name="a", value=0),
+                TacticScoreItem(tactic_name="b", value=0),
+            ]
+        )
 
-    monkeypatch.setattr(LLMPriorScorer, "_call_chat_completions", fake_chat)
+    monkeypatch.setattr(LLMPriorScorer, "_responses_parse_scores", fake_parse)
     scorer = LLMPriorScorer(cfg)
     out = scorer.score("L", "x", ["a", "b"])
     assert out == {"a": 1.0, "b": 1.0}
@@ -84,10 +99,10 @@ def test_llm_prior_scorer_bad_json_uniform(monkeypatch, tmp_path):
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
     cfg = LLMPriorConfig(enabled=True, cache_path=tmp_path / "c.json")
 
-    def fake_chat(self, user_content: str) -> str | None:
-        return "not json"
+    def fake_parse(self, user_content: str) -> None:
+        return None
 
-    monkeypatch.setattr(LLMPriorScorer, "_call_chat_completions", fake_chat)
+    monkeypatch.setattr(LLMPriorScorer, "_responses_parse_scores", fake_parse)
     scorer = LLMPriorScorer(cfg)
     out = scorer.score("L", "x", ["x", "y"])
     assert out == {"x": 1.0, "y": 1.0}
@@ -99,11 +114,16 @@ def test_llm_prior_scorer_disk_reload(monkeypatch, tmp_path):
     cfg = LLMPriorConfig(enabled=True, model="m1", cache_path=cache)
     calls = {"n": 0}
 
-    def fake_chat(self, user_content: str) -> str | None:
+    def fake_parse(self, user_content: str):
         calls["n"] += 1
-        return '{"p": 3, "q": 1}'
+        return TacticPriorScores(
+            scores=[
+                TacticScoreItem(tactic_name="p", value=3),
+                TacticScoreItem(tactic_name="q", value=1),
+            ]
+        )
 
-    monkeypatch.setattr(LLMPriorScorer, "_call_chat_completions", fake_chat)
+    monkeypatch.setattr(LLMPriorScorer, "_responses_parse_scores", fake_parse)
     s1 = LLMPriorScorer(cfg)
     assert s1.score("L", "s", ["p", "q"]) == {
         "p": pytest.approx(0.75),
@@ -111,10 +131,10 @@ def test_llm_prior_scorer_disk_reload(monkeypatch, tmp_path):
     }
     assert calls["n"] == 1
 
-    def boom(self, user_content: str) -> str | None:
-        raise AssertionError("no HTTP")
+    def boom(self, user_content: str) -> None:
+        raise AssertionError("no API")
 
-    monkeypatch.setattr(LLMPriorScorer, "_call_chat_completions", boom)
+    monkeypatch.setattr(LLMPriorScorer, "_responses_parse_scores", boom)
     s2 = LLMPriorScorer(cfg)
     assert s2.score("L", "s", ["p", "q"]) == {
         "p": pytest.approx(0.75),

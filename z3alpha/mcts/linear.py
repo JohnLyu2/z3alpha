@@ -10,6 +10,7 @@ from typing import Any
 from z3alpha.environment import LinearStrategyGame
 from z3alpha.mcts.llm_prior import LLMPriorScorer
 from z3alpha.mcts.run import BaseMCTSRun, MctsConfig
+from z3alpha.tactics.catalog import tactic_name_for_action
 from z3alpha.utils import encode_strat_row
 
 logger = logging.getLogger(__name__)
@@ -56,9 +57,9 @@ class LinearStrategySearchRun(BaseMCTSRun):
     def _priors_for(self, actions: list) -> dict[Any, float] | None:
         if self._scorer is None:
             return None
-        names = [str(a) for a in actions]
+        names = [tactic_name_for_action(int(a)) for a in actions]
         by_name = self._scorer.score(self.logic, str(self.env), names)
-        return {a: float(by_name[str(a)]) for a in actions}
+        return {a: float(by_name[names[i]]) for i, a in enumerate(actions)}
 
     def _create_env(self):
         return LinearStrategyGame(

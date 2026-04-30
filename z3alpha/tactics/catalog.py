@@ -73,6 +73,16 @@ SOLVER_NAME_TO_ID = {n: i for i, n in SOLVER_CATALOG.items()}
 PREPROCESS_NAME_TO_ID = {n: i for i, n in PREPROCESS_CATALOG.items()}
 NAME_TO_ID = {**SOLVER_NAME_TO_ID, **PREPROCESS_NAME_TO_ID}
 
+
+def tactic_name_for_action(action: int) -> str:
+    """Map linear MCTS action id to SMT-LIB tactic name (same strings as in logic JSON)."""
+    if action in SOLVER_CATALOG:
+        return SOLVER_CATALOG[action]
+    if action in PREPROCESS_CATALOG:
+        return PREPROCESS_CATALOG[action]
+    return str(action)
+
+
 __all__ = [
     "NAME_TO_ID",
     "PREPROCESS_CATALOG",
@@ -82,4 +92,5 @@ __all__ = [
     "SOLVER_NAME_TO_ID",
     "SOLVER_TACTICS",
     "SUPPORTED_TACTIC_PARAMS",
+    "tactic_name_for_action",
 ]
