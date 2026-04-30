@@ -160,7 +160,7 @@ class BaseMCTSRun:
         lines = [f"\nSelect at {self._trace_format_node(node)}"]
         hdr = (
             f"{'action':<{label_w}}"
-            f"{'V_est':>9} {'Exp':>10} {'N_vis/p':>9} {'P':>9} {'PUCT':>9}"
+            f"{'PUCT':>9} {'Exploit':>9} {'Explore':>9} {'N_c/N_p':>9} {'Prior':>9}"
         )
         ruler = "-" * len(hdr.expandtabs())
         for title, grp in groups:
@@ -186,7 +186,7 @@ class BaseMCTSRun:
                 vis = f"{n_ch}/{p_n}"
                 lines.append(
                     f"    {lab:<{label_w}}"
-                    f"{v_est:9.5f} {exp:10.5f} {vis:>9} {prior:9.5f} {puct:9.5f}"
+                    f"{puct:9.3f} {v_est:9.3f} {exp:9.3f} {vis:>9} {prior:9.3f}"
                 )
         self.trace_log.debug("\n".join(lines))
 

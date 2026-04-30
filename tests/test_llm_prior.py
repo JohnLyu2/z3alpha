@@ -60,7 +60,7 @@ def test_llm_prior_scorer_normalize_and_cache(monkeypatch):
     scorer = LLMPriorScorer(cfg)
     calls = {"n": 0}
 
-    def fake_parse(self, user_content: str):
+    def fake_parse(self, user_content: str, sim_id=None):
         calls["n"] += 1
         return TacticPriorScores(
             scores=[
@@ -82,7 +82,7 @@ def test_llm_prior_scorer_all_zero_uniform(monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
     cfg = LLMPriorConfig(enabled=True)
 
-    def fake_parse(self, user_content: str):
+    def fake_parse(self, user_content: str, sim_id=None):
         return TacticPriorScores(
             scores=[
                 TacticScoreItem(tactic_name="a", value=0),
@@ -100,13 +100,51 @@ def test_llm_prior_scorer_bad_json_uniform(monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
     cfg = LLMPriorConfig(enabled=True)
 
-    def fake_parse(self, user_content: str) -> None:
+    def fake_parse(self, user_content: str, sim_id=None) -> None:
         return None
 
     monkeypatch.setattr(LLMPriorScorer, "_responses_parse_scores", fake_parse)
     scorer = LLMPriorScorer(cfg)
     out = scorer.score("L", "x", ["x", "y"])
     assert out == {"x": 1.0, "y": 1.0}
+
+
+def test_llm_prior_scorer_writes_qa_log(monkeypatch, tmp_path):
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    qa_log = tmp_path / "llm_prior_qa.log"
+    cfg = LLMPriorConfig(enabled=True, qa_log_path=str(qa_log))
+
+    parsed = TacticPriorScores(
+        scores=[
+            TacticScoreItem(tactic_name="smt", value=2),
+            TacticScoreItem(tactic_name="qfnra-nlsat", value=3),
+        ]
+    )
+
+    class _Resp:
+        status = "completed"
+        error = None
+        incomplete_details = None
+        output_text = '{"scores":[{"tactic_name":"smt","value":2},{"tactic_name":"qfnra-nlsat","value":3}]}'
+        output_parsed = parsed
+
+    class _Responses:
+        @staticmethod
+        def parse(**kwargs):
+            return _Resp()
+
+    class _Client:
+        def __init__(self, **kwargs):
+            self.responses = _Responses()
+
+    monkeypatch.setattr("z3alpha.mcts.llm_prior.OpenAI", _Client)
+    scorer = LLMPriorScorer(cfg)
+    out = scorer.score("QF_NIA", "(then simplify)", ["smt", "qfnra-nlsat"], sim_id=7)
+    assert out == {"smt": pytest.approx(0.4), "qfnra-nlsat": pytest.approx(0.6)}
+    txt = qa_log.read_text(encoding="utf-8")
+    assert "kind: llm_prior_qa" in txt
+    assert "sim_id: 7" in txt
+    assert "kind: llm_prior_scores" not in txt
 
 
 class FixedPriorLinearRun(LinearStrategySearchRun):

@@ -3,7 +3,7 @@
   "batch_size": 2,
   "train_dir": "data/smoke/benchmarks",
   "timeout": 1,
-  "mcts_sims": 5,
+  "mcts_sims": 10,
   "branched_sims": 50,
   "ln_strat_num": 3
 }

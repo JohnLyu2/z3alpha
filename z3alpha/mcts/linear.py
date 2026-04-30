@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import logging
+from dataclasses import replace
 from typing import Any
 
 from z3alpha.environment import LinearStrategyGame
@@ -56,13 +57,16 @@ class LinearStrategySearchRun(BaseMCTSRun):
         self._scorer: LLMPriorScorer | None = None
         lp = self.config.llm_prior
         if lp is not None and lp.enabled:
-            self._scorer = LLMPriorScorer(lp)
+            llm_log_path = str(self.log_folder / "llm_prior_qa.log")
+            self._scorer = LLMPriorScorer(replace(lp, qa_log_path=llm_log_path))
 
     def _priors_for(self, actions: list) -> dict[Any, float] | None:
         if self._scorer is None:
             return None
         names = [tactic_name_for_action(int(a)) for a in actions]
-        by_name = self._scorer.score(self.logic, str(self.env), names)
+        by_name = self._scorer.score(
+            self.logic, str(self.env), names, sim_id=self.num_sim
+        )
         return {a: float(by_name[names[i]]) for i, a in enumerate(actions)}
 
     def _create_env(self):
