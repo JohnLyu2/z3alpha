@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import csv
 import logging
-from dataclasses import replace
 from typing import Any
 
 from z3alpha.environment import LinearStrategyGame
@@ -51,8 +50,7 @@ class LinearStrategySearchRun(BaseMCTSRun):
         self._scorer: LLMPriorScorer | None = None
         lp = self.config.llm_prior
         if lp is not None and lp.enabled:
-            cfg = replace(lp, cache_path=self.log_folder / "llm_priors.json")
-            self._scorer = LLMPriorScorer(cfg)
+            self._scorer = LLMPriorScorer(lp)
 
     def _priors_for(self, actions: list) -> dict[Any, float] | None:
         if self._scorer is None:

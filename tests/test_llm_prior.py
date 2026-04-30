@@ -43,18 +43,20 @@ def test_resolve_mcts_config_llm_prior_flags():
     assert cfg.llm_prior.enabled is True
     assert cfg.llm_prior.model == "gpt-4o"
     assert cfg.llm_prior.base_url == "https://example.invalid/v1"
-    assert cfg.llm_prior.timeout_s == 42.0
+    assert cfg.llm_prior.llm_timeout == 42.0
     assert cfg.llm_prior.temperature == pytest.approx(0.1)
 
 
-def test_llm_prior_scorer_normalize_and_cache(monkeypatch, tmp_path):
+def test_llm_prior_scorer_requires_api_key_when_enabled(monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    cfg = LLMPriorConfig(enabled=True)
+    with pytest.raises(RuntimeError, match="OPENAI_API_KEY"):
+        LLMPriorScorer(cfg)
+
+
+def test_llm_prior_scorer_normalize_and_cache(monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
-    cache = tmp_path / "llm_priors.json"
-    cfg = LLMPriorConfig(
-        enabled=True,
-        model="m",
-        cache_path=cache,
-    )
+    cfg = LLMPriorConfig(enabled=True, model="m")
     scorer = LLMPriorScorer(cfg)
     calls = {"n": 0}
 
@@ -74,12 +76,11 @@ def test_llm_prior_scorer_normalize_and_cache(monkeypatch, tmp_path):
     out2 = scorer.score("QF_NIA", "(then simplify)", ["smt", "qfnra-nlsat"])
     assert out2 == out1
     assert calls["n"] == 1
-    assert cache.exists()
 
 
-def test_llm_prior_scorer_all_zero_uniform(monkeypatch, tmp_path):
+def test_llm_prior_scorer_all_zero_uniform(monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
-    cfg = LLMPriorConfig(enabled=True, cache_path=tmp_path / "c.json")
+    cfg = LLMPriorConfig(enabled=True)
 
     def fake_parse(self, user_content: str):
         return TacticPriorScores(
@@ -95,9 +96,9 @@ def test_llm_prior_scorer_all_zero_uniform(monkeypatch, tmp_path):
     assert out == {"a": 1.0, "b": 1.0}
 
 
-def test_llm_prior_scorer_bad_json_uniform(monkeypatch, tmp_path):
+def test_llm_prior_scorer_bad_json_uniform(monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
-    cfg = LLMPriorConfig(enabled=True, cache_path=tmp_path / "c.json")
+    cfg = LLMPriorConfig(enabled=True)
 
     def fake_parse(self, user_content: str) -> None:
         return None
@@ -106,40 +107,6 @@ def test_llm_prior_scorer_bad_json_uniform(monkeypatch, tmp_path):
     scorer = LLMPriorScorer(cfg)
     out = scorer.score("L", "x", ["x", "y"])
     assert out == {"x": 1.0, "y": 1.0}
-
-
-def test_llm_prior_scorer_disk_reload(monkeypatch, tmp_path):
-    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
-    cache = tmp_path / "llm_priors.json"
-    cfg = LLMPriorConfig(enabled=True, model="m1", cache_path=cache)
-    calls = {"n": 0}
-
-    def fake_parse(self, user_content: str):
-        calls["n"] += 1
-        return TacticPriorScores(
-            scores=[
-                TacticScoreItem(tactic_name="p", value=3),
-                TacticScoreItem(tactic_name="q", value=1),
-            ]
-        )
-
-    monkeypatch.setattr(LLMPriorScorer, "_responses_parse_scores", fake_parse)
-    s1 = LLMPriorScorer(cfg)
-    assert s1.score("L", "s", ["p", "q"]) == {
-        "p": pytest.approx(0.75),
-        "q": pytest.approx(0.25),
-    }
-    assert calls["n"] == 1
-
-    def boom(self, user_content: str) -> None:
-        raise AssertionError("no API")
-
-    monkeypatch.setattr(LLMPriorScorer, "_responses_parse_scores", boom)
-    s2 = LLMPriorScorer(cfg)
-    assert s2.score("L", "s", ["p", "q"]) == {
-        "p": pytest.approx(0.75),
-        "q": pytest.approx(0.25),
-    }
 
 
 class FixedPriorLinearRun(LinearStrategySearchRun):

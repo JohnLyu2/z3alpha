@@ -183,7 +183,7 @@ def main():
         "--llm-timeout",
         type=float,
         default=None,
-        help="HTTP timeout in seconds for --llm-prior (default: 30)",
+        help="LLM HTTP timeout in seconds for --llm-prior (default: 30)",
     )
     parser.add_argument(
         "--llm-temperature",

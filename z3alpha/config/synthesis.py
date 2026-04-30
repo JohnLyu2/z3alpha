@@ -93,7 +93,7 @@ def resolve_mcts_config(args: MctsCliArgs, experiment: ExperimentConfig) -> Mcts
             base_url=(
                 getattr(args, "llm_base_url", None) or "https://api.openai.com/v1"
             ),
-            timeout_s=(
+            llm_timeout=(
                 30.0
                 if getattr(args, "llm_timeout", None) is None
                 else float(args.llm_timeout)

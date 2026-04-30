@@ -2,13 +2,10 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 import logging
 import os
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Any
 
 from openai import OpenAI
 from pydantic import BaseModel, ConfigDict, Field
@@ -35,7 +32,7 @@ class TacticScoreItem(BaseModel):
 
 
 class TacticPriorScores(BaseModel):
-    """Structured output: see OpenAI structured outputs (JSON Schema via Pydantic)."""
+    """Structured output."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -50,9 +47,8 @@ class LLMPriorConfig:
     model: str = "gpt-5.4-mini"
     base_url: str = "https://api.openai.com/v1"
     api_key_env: str = "OPENAI_API_KEY"
-    timeout_s: float = 30.0
+    llm_timeout: float = 30.0
     temperature: float = 0.0
-    cache_path: Path | None = None
 
 
 def _scores_to_priors(scores: dict[str, int]) -> dict[str, float]:
@@ -65,64 +61,17 @@ def _scores_to_priors(scores: dict[str, int]) -> dict[str, float]:
     return {k: scores[k] / total for k in scores}
 
 
-def _clamp_score(v: Any) -> int:
-    try:
-        n = int(v)
-    except (TypeError, ValueError):
-        return 0
-    return max(0, min(5, n))
-
-
 class LLMPriorScorer:
-    """Scores candidate tactics via OpenAI Responses API; caches on disk + memory."""
+    """Scores candidate tactics via OpenAI Responses API; in-memory cache keyed by ``partial_strategy``."""
 
     def __init__(self, cfg: LLMPriorConfig) -> None:
         self._cfg = cfg
         self._memory: dict[str, dict[str, float]] = {}
         self._api_key = os.environ.get(cfg.api_key_env, "")
         if cfg.enabled and not self._api_key:
-            log.warning(
-                "LLM prior enabled but %s is unset; using uniform priors until set.",
-                cfg.api_key_env,
+            raise RuntimeError(
+                f"LLM prior is enabled but {cfg.api_key_env!r} is not set or empty."
             )
-        if cfg.cache_path is not None:
-            self._load_disk_cache()
-
-    def _load_disk_cache(self) -> None:
-        path = self._cfg.cache_path
-        assert path is not None
-        if not path.exists():
-            return
-        try:
-            with open(path, encoding="utf-8") as f:
-                data = json.load(f)
-        except (OSError, json.JSONDecodeError) as e:
-            log.warning("Could not load LLM prior cache %s: %s", path, e)
-            return
-        if isinstance(data, dict):
-            for k, v in data.items():
-                if isinstance(k, str) and isinstance(v, dict):
-                    self._memory[k] = {str(a): float(p) for a, p in v.items()}
-
-    def _save_disk_cache(self) -> None:
-        path = self._cfg.cache_path
-        if path is None:
-            return
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(self._memory, f, indent=0, sort_keys=True)
-
-    def _cache_key(
-        self, logic: str, partial_strategy: str, candidate_actions: list[str]
-    ) -> str:
-        payload = [
-            logic,
-            partial_strategy,
-            sorted(candidate_actions),
-            self._cfg.model,
-        ]
-        raw = json.dumps(payload, sort_keys=True)
-        return hashlib.sha256(raw.encode()).hexdigest()
 
     def _responses_parse_scores(
         self, user_content: str
@@ -138,7 +87,7 @@ class LLMPriorScorer:
                 input=user_content,
                 text_format=TacticPriorScores,
                 temperature=self._cfg.temperature,
-                timeout=self._cfg.timeout_s,
+                timeout=self._cfg.llm_timeout,
             )
         except Exception as e:
             log.warning("OpenAI Responses request failed: %s", e)
@@ -174,17 +123,10 @@ class LLMPriorScorer:
         """Return normalized prior per candidate name; uniform on any failure."""
         if not candidate_actions:
             return {}
-        key = self._cache_key(logic, partial_strategy, candidate_actions)
-        if key in self._memory:
-            cached = self._memory[key]
+        if partial_strategy in self._memory:
+            cached = self._memory[partial_strategy]
             if all(a in cached for a in candidate_actions):
                 return {a: cached[a] for a in candidate_actions}
-
-        if not self._api_key:
-            u = self._uniform(candidate_actions)
-            self._memory[key] = u
-            self._save_disk_cache()
-            return u
 
         user_content = "\n".join(
             [
@@ -201,19 +143,17 @@ class LLMPriorScorer:
         parsed = self._responses_parse_scores(user_content)
         if parsed is None:
             u = self._uniform(candidate_actions)
-            self._memory[key] = u
-            self._save_disk_cache()
+            self._memory[partial_strategy] = u
             return u
 
         by_name: dict[str, int] = {}
         for item in parsed.scores:
-            by_name[str(item.tactic_name)] = _clamp_score(item.value)
+            by_name[str(item.tactic_name)] = item.value
 
         scores: dict[str, int] = {}
         for a in candidate_actions:
             scores[a] = by_name.get(a, 0)
 
         priors = _scores_to_priors(scores)
-        self._memory[key] = priors
-        self._save_disk_cache()
+        self._memory[partial_strategy] = priors
         return {a: priors[a] for a in candidate_actions}
