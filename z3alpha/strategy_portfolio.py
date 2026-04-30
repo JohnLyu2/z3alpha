@@ -30,11 +30,14 @@ N = 10
 
 
 def create_greedy_linear_strategy_portfolio(max_selected, result_database, timeout):
-    assert max_selected <= len(result_database)
+    if not result_database:
+        return [], "\n(no strategies evaluated)\n"
+    n = len(result_database)
+    effective = min(max_selected, n)
     selected_strat = []
     log_str = "\n"
     best_res = [(False, None)] * len(result_database[list(result_database.keys())[0]])
-    for i in range(max_selected):
+    for i in range(effective):
         best_strat = None
         best_value = par_n_reward(best_res, N, timeout)
         for strat in result_database:
