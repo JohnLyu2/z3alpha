@@ -1,0 +1,7 @@
+{
+  "machine_name": "John_ubuntu",
+  "z3_path": "z3",
+  "z3_version": "4.16.0",
+  "batch_size": 4,
+  "res_dir": "experiments/evaluation/smtlib_z3"
+}
