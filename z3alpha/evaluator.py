@@ -111,7 +111,7 @@ class SolverEvaluator:
         )
         return runner.execute()
 
-    def evaluate(self, strat_str):
+    def evaluate(self, strat_str, progress_callback=None):
         """Run the solver/strategy across ``benchmark_list`` and return one
         ``(solved, time, result_str)`` tuple per instance, in benchmark order.
         """
@@ -123,10 +123,14 @@ class SolverEvaluator:
                 executor.submit(self._run_single, i, strat_str): i
                 for i in range(size)
             }
-            for future in concurrent.futures.as_completed(futures):
+            for completed, future in enumerate(
+                concurrent.futures.as_completed(futures), start=1
+            ):
                 run_id, resTask, timeTask, pathTask = future.result()
                 solved = resTask == "sat" or resTask == "unsat"
                 results[run_id] = (solved, timeTask, resTask)
+                if progress_callback is not None:
+                    progress_callback(completed, size)
 
         for i in range(size):
             assert results[i] is not None

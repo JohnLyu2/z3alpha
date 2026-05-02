@@ -19,7 +19,15 @@ _DEFAULT_CONFIG_PATH = pathlib.Path(__file__).with_name("smtlib_z3_evaluator_con
 
 def _evaluate_and_write(evaluator, strategy_str, csv_path):
     """Run ``evaluator.evaluate`` and dump per-instance results + PAR summary."""
-    results = evaluator.evaluate(strategy_str)
+    total = evaluator.get_benchmark_size()
+    report_every = min(max(1, total // 20), 50)
+
+    def _progress(completed: int, size: int) -> None:
+        if completed % report_every == 0 or completed == size:
+            pct = (completed * 100.0) / size
+            log.info("Evaluation progress: %d/%d (%.1f%%)", completed, size, pct)
+
+    results = evaluator.evaluate(strategy_str, progress_callback=_progress)
     with open(csv_path, "w") as f:
         writer = csv.writer(f)
         writer.writerow(["id", "path", "solved", "time", "result"])
@@ -42,7 +50,7 @@ def _load_default_config(config_path: pathlib.Path) -> dict:
         sys.exit(f"Invalid JSON in config {config_path}: {exc}")
 
 
-def _resolve_eval_list(eval_list_file: str) -> list[str]:
+def _resolve_eval_list(eval_list_file: str, smtlib_root: str | None) -> list[str]:
     list_path = pathlib.Path(eval_list_file)
     if not list_path.is_file():
         sys.exit(f"eval_list_file does not exist or is not a file: {eval_list_file}")
@@ -52,9 +60,15 @@ def _resolve_eval_list(eval_list_file: str) -> list[str]:
         p = line.strip()
         if not p or p.startswith("#"):
             continue
-        path = pathlib.Path(p).resolve()
+        rel_path = pathlib.Path(p)
+        if rel_path.is_absolute():
+            path = rel_path
+        elif smtlib_root:
+            path = pathlib.Path(smtlib_root) / rel_path
+        else:
+            path = rel_path.resolve()
         if path.is_file():
-            eval_lst.append(str(path))
+            eval_lst.append(str(path.resolve()))
         else:
             sys.exit(f"Path in eval_list_file does not exist or is not a file: {p}")
 
@@ -161,6 +175,7 @@ def main():
     batch_size = (
         args.batch_size if args.batch_size is not None else config.get("batch_size", 4)
     )
+    smtlib_root = config.get("smtlib_root")
     timeout = args.timeout
     res_dir = (
         pathlib.Path(args.res_dir)
@@ -181,7 +196,7 @@ def main():
     eval_lst = (
         _resolve_eval_dir(args.eval_dir)
         if args.eval_dir is not None
-        else _resolve_eval_list(args.eval_list_file)
+        else _resolve_eval_list(args.eval_list_file, smtlib_root)
     )
 
     if args.strategy_file is not None:
@@ -205,6 +220,9 @@ def main():
     detail_csv = run_dir / "instance_results.csv"
     summary_json = run_dir / "summary.json"
     solved, par2, par10 = _evaluate_and_write(evaluator, strategy, str(detail_csv))
+    instance_count = len(eval_lst)
+    par2_avg = par2 / instance_count
+    par10_avg = par10 / instance_count
 
     summary_payload = {
         "timestamp": timestamp,
@@ -213,18 +231,19 @@ def main():
             "z3_path": z3_path,
             "z3_version": z3_version,
             "batch_size": batch_size,
+            "smtlib_root": smtlib_root,
         },
         "run_config": {
             "mode": "eval_dir" if args.eval_dir is not None else "eval_list_file",
             "source": args.eval_dir if args.eval_dir is not None else args.eval_list_file,
             "timeout": timeout,
             "strategy": strategy,
-            "instances_total": len(eval_lst),
+            "instances_total": instance_count,
         },
         "results": {
             "solved": solved,
-            "par2": par2,
-            "par10": par10,
+            "par2": par2_avg,
+            "par10": par10_avg,
             "detail_csv": str(detail_csv),
         },
     }
