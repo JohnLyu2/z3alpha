@@ -22,10 +22,18 @@ def _evaluate_and_write(evaluator, strategy_str, csv_path):
     total = evaluator.get_benchmark_size()
     report_every = min(max(1, total // 20), 50)
 
-    def _progress(completed: int, size: int) -> None:
+    def _progress(completed: int, size: int, solved: int) -> None:
         if completed % report_every == 0 or completed == size:
             pct = (completed * 100.0) / size
-            log.info("Evaluation progress: %d/%d (%.1f%%)", completed, size, pct)
+            solve_rate = (solved * 100.0) / completed
+            log.info(
+                "Evaluation progress: %d/%d (%.1f%%) | solved %d (%.1f%% solve rate)",
+                completed,
+                size,
+                pct,
+                solved,
+                solve_rate,
+            )
 
     results = evaluator.evaluate(strategy_str, progress_callback=_progress)
     with open(csv_path, "w") as f:
@@ -86,6 +94,21 @@ def _resolve_eval_dir(eval_dir: str) -> list[str]:
     if not eval_lst:
         sys.exit(f"No .smt2 files found under eval_dir: {eval_dir}")
     return eval_lst
+
+
+_CLI_ONLY_CONFIG_KEYS = frozenset(
+    {"strategy", "strategy_file", "z3_extra_params"},
+)
+
+
+def _reject_cli_only_config_keys(config: dict) -> None:
+    forbidden = sorted(k for k in _CLI_ONLY_CONFIG_KEYS if k in config)
+    if forbidden:
+        sys.exit(
+            "Set via CLI only (not config JSON): "
+            + ", ".join(forbidden)
+            + ". Use --strategy/--strategy-file and/or --z3-param."
+        )
 
 
 def _check_z3_version(z3_path: str, expected_version: str | None) -> None:
@@ -161,10 +184,21 @@ def main():
         type=str,
         help="Z3 strategy string passed to tactic.default_tactic.",
     )
+    parser.add_argument(
+        "--z3-param",
+        action="append",
+        default=[],
+        metavar="ARG",
+        help=(
+            "Extra Z3 command-line argument (repeatable), e.g. smt.random_seed=1 "
+            "or -v:10."
+        ),
+    )
     args = parser.parse_args()
 
     setup_logging()
     config = _load_default_config(pathlib.Path(args.config))
+    _reject_cli_only_config_keys(config)
 
     z3_path = args.z3_path if args.z3_path is not None else config.get("z3_path", "z3")
     z3_version = (
@@ -176,6 +210,7 @@ def main():
         args.batch_size if args.batch_size is not None else config.get("batch_size", 4)
     )
     smtlib_root = config.get("smtlib_root")
+    z3_extra_params = [p.strip() for p in args.z3_param if p and p.strip()]
     timeout = args.timeout
     res_dir = (
         pathlib.Path(args.res_dir)
@@ -215,7 +250,9 @@ def main():
     run_dir = res_dir / timestamp
     os.makedirs(run_dir, exist_ok=True)
 
-    evaluator = SolverEvaluator(z3_path, eval_lst, timeout, batch_size)
+    evaluator = SolverEvaluator(
+        z3_path, eval_lst, timeout, batch_size, z3_extra_params=z3_extra_params
+    )
 
     detail_csv = run_dir / "instance_results.csv"
     summary_json = run_dir / "summary.json"
@@ -238,6 +275,7 @@ def main():
             "source": args.eval_dir if args.eval_dir is not None else args.eval_list_file,
             "timeout": timeout,
             "strategy": strategy,
+            "z3_extra_params": z3_extra_params,
             "instances_total": instance_count,
         },
         "results": {
