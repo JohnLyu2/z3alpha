@@ -94,38 +94,6 @@ def synthesize_linear_strategies(run: SynthesisRun, log_folder: Path):
     return selected_strat, s1_bench_lst, shortlist
 
 
-def add_fail_if_undecided(strat):
-    return f"(then {strat} fail-if-undecided)"
-
-
-def parallel_linear_strategies(ln_strat_lst, fail_if_undecided=True):
-    assert len(ln_strat_lst) > 0, "No linear strategies provided"
-    if len(ln_strat_lst) == 1:
-        return ln_strat_lst[0]
-    parallel_strats = "(par-or"
-    for strat in ln_strat_lst:
-        if fail_if_undecided:
-            strat = add_fail_if_undecided(strat)
-        parallel_strats += f" {strat}"
-    parallel_strats += ")"
-    return parallel_strats
-
-
-def parallel_synthesize(run: SynthesisRun, log_folder: Path):
-    start_time = time.time()
-
-    selected_strats, _, _ = synthesize_linear_strategies(run, log_folder)
-
-    parallel_strat = parallel_linear_strategies(selected_strats)
-
-    parallel_strat_path = Path(log_folder) / "synthesized_strategy.txt"
-    with open(parallel_strat_path, "w") as f:
-        f.write(parallel_strat)
-    log.info(f"Final parallel strategy saved to {parallel_strat_path}")
-
-    _log_elapsed(start_time, "Total synthesis time")
-
-
 def branched_synthesize(run: SynthesisRun, log_folder: Path):
     start_time = time.time()
 
@@ -142,12 +110,6 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "json_config", type=str, help="The experiment configuration file in json"
-    )
-    parser.add_argument(
-        "--parallel",
-        "-p",
-        action="store_true",
-        help="Synthesize parallel strategy instead of branched strategy",
     )
     parser.add_argument(
         "--c-uct",
@@ -211,10 +173,7 @@ def main():
     assert not log_folder.exists()
     log_folder.mkdir(parents=True)
 
-    if args.parallel:
-        parallel_synthesize(run, log_folder)
-    else:
-        branched_synthesize(run, log_folder)
+    branched_synthesize(run, log_folder)
 
 
 if __name__ == "__main__":
