@@ -1,0 +1,27 @@
+{
+  "timestamp": "20260516_110432",
+  "environment": {
+    "machine_name": "snork",
+    "z3_path": "/home/z52lu/z3alpha/.venv/bin/z3",
+    "z3_version": "4.16.0",
+    "batch_size": 40,
+    "smtlib_root": "/home/z52lu/smtlib25/non-incremental"
+  },
+  "run_config": {
+    "mode": "eval_list_file",
+    "source": "/home/z52lu/z3alpha/data/smtcomp26/benchamrk_list25/bv.txt",
+    "timeout": 120,
+    "strategy": null,
+    "z3_extra_params": [
+      "smt.mbqi.max_cexs=4",
+      "smt.mbqi.max_cexs_incr=1"
+    ],
+    "instances_total": 1040
+  },
+  "results": {
+    "solved": 776,
+    "par2": 62.69776395903184,
+    "par10": 306.39007165133955,
+    "detail_csv": "experiments/evaluation/smtlib_z3/20260516_110432/instance_results.csv"
+  }
+}
