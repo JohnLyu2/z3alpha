@@ -15,6 +15,7 @@ from z3alpha.config import (
     setup_logging,
 )
 from z3alpha.mcts import LinearStrategySearchRun
+from z3alpha.ml_selector import train_pwc_selector
 from z3alpha.stage2.search_runtime import run_branched_synthesis
 from z3alpha.strategy_portfolio import create_greedy_linear_strategy_portfolio
 from z3alpha.tactics.logic_config import load_logic_config
@@ -94,12 +95,31 @@ def synthesize_linear_strategies(run: SynthesisRun, log_folder: Path):
     return selected_strat, s1_bench_lst, shortlist
 
 
+def ml_synthesize(run: SynthesisRun, log_folder: Path):
+    start_time = time.time()
+
+    selected_strats, bench_lst, shortlist = synthesize_linear_strategies(run, log_folder)
+
+    bench_results = {s: r for s, r in shortlist}
+    selector = train_pwc_selector(
+        strategies=selected_strats,
+        bench_paths=bench_lst,
+        bench_results=bench_results,
+        timeout=run.experiment.timeout,
+        random_seed=run.mcts.random_seed,
+    )
+
+    selector_path = Path(log_folder) / "selector.pkl"
+    selector.save(selector_path)
+    log.info(f"PWC selector saved to {selector_path}")
+
+    _log_elapsed(start_time, "Total synthesis time")
+
+
 def branched_synthesize(run: SynthesisRun, log_folder: Path):
     start_time = time.time()
 
-    _, bench_lst, shortlist = synthesize_linear_strategies(
-        run, log_folder
-    )
+    _, bench_lst, shortlist = synthesize_linear_strategies(run, log_folder)
 
     run_branched_synthesis(run, shortlist, bench_lst, log_folder)
 
@@ -123,6 +143,11 @@ def main():
         default=None,
         dest="random_seed",
         help="Override random seed (default: z3alpha.config.synthesis.DEFAULT_RANDOM_SEED)",
+    )
+    parser.add_argument(
+        "--stage2",
+        action="store_true",
+        help="Use MCTS branched strategy search (Stage 2) instead of the default PWC ML selector",
     )
     parser.add_argument(
         "--llm-prior",
@@ -173,7 +198,10 @@ def main():
     assert not log_folder.exists()
     log_folder.mkdir(parents=True)
 
-    branched_synthesize(run, log_folder)
+    if args.stage2:
+        branched_synthesize(run, log_folder)
+    else:
+        ml_synthesize(run, log_folder)
 
 
 if __name__ == "__main__":
