@@ -32,7 +32,7 @@ _PERF_DIFF_THRESHOLD = 0.1
 
 # ─── Feature extraction ───────────────────────────────────────────────────────
 
-def _bench_features(path: str | Path) -> Optional[np.ndarray]:
+def bench_feature_vector(path: str | Path) -> Optional[np.ndarray]:
     """Extract a flat feature vector from an SMT-LIB 2 benchmark.
 
     For incremental benchmarks (multiple check-sat calls), structural counts
@@ -92,13 +92,13 @@ class PwcSelector:
 
     def select(self, path: str | Path) -> str:
         """Return the strategy string predicted to work best on this benchmark."""
-        raw = _bench_features(path)
+        if len(self.strategies) == 1:
+            return self.strategies[0]
+
+        raw = bench_feature_vector(path)
         if raw is None:
             log.warning(f"Feature extraction failed for {path}; using fallback strategy")
             return self.strategies[self.fallback_idx]
-
-        if len(self.strategies) == 1:
-            return self.strategies[0]
 
         x = self.scaler.transform(raw.reshape(1, -1))
         k = len(self.strategies)
@@ -130,30 +130,35 @@ def _par2(solved: bool, time_s: float, timeout: float) -> float:
 
 
 def train_pwc_selector(
-    strategies: list[str],
+    shortlist: list[tuple[str, list[tuple[bool, float, str]]]],
     bench_paths: list[str | Path],
-    bench_results: dict[str, list[tuple[bool, float, str]]],
     timeout: float,
     random_seed: int = 42,
 ) -> PwcSelector:
     """Train a PWC selector from Stage 1 results.
 
     Args:
-        strategies: shortlisted strategy strings.
-        bench_paths: benchmark file paths (same order as bench_results lists).
-        bench_results: maps strategy_str → list of (solved, time_s, status),
-            one entry per benchmark in the same order as bench_paths.
+        shortlist: list of (strategy_str, per_bench_results) pairs from Stage 1,
+            where per_bench_results is a list of (solved, time_s, status) tuples
+            in the same order as bench_paths.
+        bench_paths: benchmark file paths.
         timeout: solver timeout used during Stage 1 evaluation (seconds).
         random_seed: used for SVM and tie-breaking.
 
     Returns:
         A trained PwcSelector ready for serialization and inference.
     """
+    strategies = [s for s, _ in shortlist]
+    bench_results = {s: r for s, r in shortlist}
+
     k = len(strategies)
     if k == 1:
         log.warning("Only 1 strategy in shortlist; selector always returns it")
+        # Fit scaler on real features so the stored object is internally consistent
+        feats = [bench_feature_vector(p) for p in bench_paths]
+        sample = next((f for f in feats if f is not None), np.zeros(1))
         scaler = StandardScaler()
-        scaler.fit(np.zeros((1, 1)))  # dummy fit
+        scaler.fit(sample.reshape(1, -1))
         return PwcSelector(
             strategies=strategies,
             model_matrix=np.empty((1, 1), dtype=object),
@@ -166,7 +171,7 @@ def train_pwc_selector(
     raw_features: list[np.ndarray] = []
     valid_indices: list[int] = []
     for idx, path in enumerate(bench_paths):
-        feat = _bench_features(path)
+        feat = bench_feature_vector(path)
         if feat is not None:
             raw_features.append(feat)
             valid_indices.append(idx)

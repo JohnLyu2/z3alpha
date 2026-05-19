@@ -18,12 +18,11 @@ CLI use:
 from __future__ import annotations
 
 import argparse
-import subprocess
 import sys
-import time
 from pathlib import Path
 from typing import Optional
 
+from z3alpha.evaluator import SolverRunner
 from z3alpha.ml_selector import PwcSelector
 
 
@@ -42,13 +41,18 @@ def run_z3(
     """Run Z3 with the given strategy on a benchmark.
 
     Returns:
-        (result, elapsed_seconds) where result is the stdout from Z3.
+        (result, elapsed_seconds) where result is the solver verdict
+        ("sat", "unsat", "unknown", "timeout", or "error").
     """
-    cmd = [z3_path, f"tactic.default_tactic={strategy}", str(benchmark_path)]
-    start = time.time()
-    proc = subprocess.run(cmd, timeout=timeout, capture_output=True)
-    elapsed = time.time() - start
-    return proc.stdout.decode("utf-8", errors="replace"), elapsed
+    runner = SolverRunner(
+        solver_path=z3_path,
+        smt_file=str(benchmark_path),
+        timeout=timeout,
+        run_id=0,
+        z3_strategy=strategy,
+    )
+    _, result, elapsed, _ = runner.execute()
+    return result, elapsed
 
 
 def main():
@@ -83,12 +87,9 @@ def main():
         return
 
     try:
-        output, elapsed = run_z3(args.z3, args.benchmark, strategy, timeout=args.timeout)
-        print(output, end="")
+        result, elapsed = run_z3(args.z3, args.benchmark, strategy, timeout=args.timeout)
+        print(result)
         sys.stderr.write(f"; time: {elapsed:.3f}s\n")
-    except subprocess.TimeoutExpired:
-        print("timeout")
-        sys.exit(1)
     except FileNotFoundError:
         print(f"Error: Z3 binary not found at '{args.z3}'", file=sys.stderr)
         sys.exit(1)

@@ -19,6 +19,7 @@ from z3alpha.ml_selector import train_pwc_selector
 from z3alpha.stage2.search_runtime import run_branched_synthesis
 from z3alpha.strategy_portfolio import create_greedy_linear_strategy_portfolio
 from z3alpha.tactics.logic_config import load_logic_config
+from z3alpha.utils import create_benchmark_list
 
 log = logging.getLogger(__name__)
 
@@ -28,18 +29,6 @@ def _train_dir(experiment: ExperimentConfig) -> str:
     if not isinstance(raw, str):
         raise TypeError("train_dir must be a string (path to a directory)")
     return raw
-
-
-def create_benchmark_list(benchmark_directories):
-    """Collect all .smt2 files from the given directories."""
-    benchmark_lst = []
-    for dir in benchmark_directories:
-        assert Path(dir).exists()
-        benchmark_lst += [
-            str(p) for p in sorted(list(Path(dir).rglob("*.smt2")))
-        ]
-    benchmark_lst.sort()
-    return benchmark_lst
 
 
 def _log_elapsed(start_time, label):
@@ -92,19 +81,17 @@ def synthesize_linear_strategies(run: SynthesisRun, log_folder: Path):
 
     _log_elapsed(start_time, "Linear strategy search time")
     shortlist = [(s, s1_res_dict[s]) for s in selected_strat]
-    return selected_strat, s1_bench_lst, shortlist
+    return s1_bench_lst, shortlist
 
 
 def ml_synthesize(run: SynthesisRun, log_folder: Path):
     start_time = time.time()
 
-    selected_strats, bench_lst, shortlist = synthesize_linear_strategies(run, log_folder)
+    bench_lst, shortlist = synthesize_linear_strategies(run, log_folder)
 
-    bench_results = {s: r for s, r in shortlist}
     selector = train_pwc_selector(
-        strategies=selected_strats,
+        shortlist=shortlist,
         bench_paths=bench_lst,
-        bench_results=bench_results,
         timeout=run.experiment.timeout,
         random_seed=run.mcts.random_seed,
     )
@@ -119,7 +106,7 @@ def ml_synthesize(run: SynthesisRun, log_folder: Path):
 def branched_synthesize(run: SynthesisRun, log_folder: Path):
     start_time = time.time()
 
-    _, bench_lst, shortlist = synthesize_linear_strategies(run, log_folder)
+    bench_lst, shortlist = synthesize_linear_strategies(run, log_folder)
 
     run_branched_synthesis(run, shortlist, bench_lst, log_folder)
 
