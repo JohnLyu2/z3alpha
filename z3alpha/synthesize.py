@@ -14,6 +14,7 @@ from z3alpha.config import (
     resolve_mcts_config,
     setup_logging,
 )
+from z3alpha.experiment_metrics import append_run_metrics_row, compute_run_metrics
 from z3alpha.mcts import LinearStrategySearchRun
 from z3alpha.stage2.search_runtime import run_branched_synthesis
 from z3alpha.strategy_portfolio import create_greedy_linear_strategy_portfolio
@@ -91,7 +92,7 @@ def synthesize_linear_strategies(run: SynthesisRun, log_folder: Path):
 
     _log_elapsed(start_time, "Linear strategy search time")
     shortlist = [(s, s1_res_dict[s]) for s in selected_strat]
-    return selected_strat, s1_bench_lst, shortlist
+    return selected_strat, s1_bench_lst, shortlist, run1
 
 
 def add_fail_if_undecided(strat):
@@ -111,10 +112,14 @@ def parallel_linear_strategies(ln_strat_lst, fail_if_undecided=True):
     return parallel_strats
 
 
-def parallel_synthesize(run: SynthesisRun, log_folder: Path):
+def parallel_synthesize(
+    run: SynthesisRun,
+    log_folder: Path,
+    metrics_csv: Path,
+):
     start_time = time.time()
 
-    selected_strats, _, _ = synthesize_linear_strategies(run, log_folder)
+    selected_strats, _, _, linear_run = synthesize_linear_strategies(run, log_folder)
 
     parallel_strat = parallel_linear_strategies(selected_strats)
 
@@ -123,13 +128,28 @@ def parallel_synthesize(run: SynthesisRun, log_folder: Path):
         f.write(parallel_strat)
     log.info(f"Final parallel strategy saved to {parallel_strat_path}")
 
-    _log_elapsed(start_time, "Total synthesis time")
+    wall_time_s = _log_elapsed(start_time, "Total synthesis time")
+    metrics = compute_run_metrics(linear_run.res_database)
+    append_run_metrics_row(
+        metrics_csv,
+        {
+            "run_name": log_folder.name,
+            "sims": run.experiment.mcts_sims,
+            "num_strategies": metrics["num_strategies"],
+            "union": metrics["union"],
+            "best_single": metrics["best_single"],
+            "k_for_90_union": metrics["k_for_90_union"],
+            "wall_time_s": int(wall_time_s),
+            "llm_calls": 0,
+        },
+    )
+    log.info("Appended run metrics to %s", metrics_csv)
 
 
 def branched_synthesize(run: SynthesisRun, log_folder: Path):
     start_time = time.time()
 
-    _, bench_lst, shortlist = synthesize_linear_strategies(
+    _, bench_lst, shortlist, _ = synthesize_linear_strategies(
         run, log_folder
     )
 
@@ -211,8 +231,10 @@ def main():
     assert not log_folder.exists()
     log_folder.mkdir(parents=True)
 
+    metrics_csv = parent_dir.parent / "run_metrics.csv"
+
     if args.parallel:
-        parallel_synthesize(run, log_folder)
+        parallel_synthesize(run, log_folder, metrics_csv)
     else:
         branched_synthesize(run, log_folder)
 
