@@ -22,7 +22,7 @@ from sklearn.dummy import DummyClassifier
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
 
-from z3alpha.smtlib_features import extract_features
+from z3alpha.smtlib_features import extract_features, SMTLIB_SYMBOLS
 
 log = logging.getLogger(__name__)
 
@@ -31,6 +31,22 @@ _PERF_DIFF_THRESHOLD = 0.1
 
 
 # ─── Feature extraction ───────────────────────────────────────────────────────
+
+_STRUCTURAL_NAMES = [
+    "assertsCount",
+    "declareFunCount",
+    "declareConstCount",
+    "declareSortCount",
+    "defineFunCount",
+    "defineFunRecCount",
+    "constantFunCount",
+    "defineSortCount",
+    "declareDatatypeCount",
+    "maxTermDepth",
+]
+
+FEATURE_NAMES: list[str] = _STRUCTURAL_NAMES + [f"sym_{s}" for s in SMTLIB_SYMBOLS]
+
 
 def bench_feature_vector(path: str | Path) -> Optional[np.ndarray]:
     """Extract a flat feature vector from an SMT-LIB 2 benchmark.
@@ -50,7 +66,6 @@ def bench_feature_vector(path: str | Path) -> Optional[np.ndarray]:
         return None
 
     vec = [
-        sum(q["normalizedSize"]        for q in queries),
         sum(q["assertsCount"]          for q in queries),
         sum(q["declareFunCount"]       for q in queries),
         sum(q["declareConstCount"]     for q in queries),
@@ -100,6 +115,13 @@ class PwcSelector:
             log.warning(f"Feature extraction failed for {path}; using fallback strategy")
             return self.strategies[self.fallback_idx]
 
+        return self.select_vec(raw)
+
+    def select_vec(self, raw: np.ndarray) -> str:
+        """Return the strategy string predicted to work best given a precomputed feature vector."""
+        if len(self.strategies) == 1:
+            return self.strategies[0]
+
         x = self.scaler.transform(raw.reshape(1, -1))
         k = len(self.strategies)
         votes = [0] * k
@@ -134,6 +156,7 @@ def train_pwc_selector(
     bench_paths: list[str | Path],
     timeout: float,
     random_seed: int = 42,
+    precomputed_features: Optional[dict[str, np.ndarray]] = None,
 ) -> PwcSelector:
     """Train a PWC selector from Stage 1 results.
 
@@ -141,9 +164,11 @@ def train_pwc_selector(
         shortlist: list of (strategy_str, per_bench_results) pairs from Stage 1,
             where per_bench_results is a list of (solved, time_s, status) tuples
             in the same order as bench_paths.
-        bench_paths: benchmark file paths.
+        bench_paths: benchmark file paths (used as keys into precomputed_features).
         timeout: solver timeout used during Stage 1 evaluation (seconds).
         random_seed: used for SVM and tie-breaking.
+        precomputed_features: optional dict mapping path str -> feature vector.
+            If provided, feature extraction from disk is skipped entirely.
 
     Returns:
         A trained PwcSelector ready for serialization and inference.
@@ -154,9 +179,11 @@ def train_pwc_selector(
     k = len(strategies)
     if k == 1:
         log.warning("Only 1 strategy in shortlist; selector always returns it")
-        # Fit scaler on real features so the stored object is internally consistent
-        feats = [bench_feature_vector(p) for p in bench_paths]
-        sample = next((f for f in feats if f is not None), np.zeros(1))
+        if precomputed_features:
+            sample = next(iter(precomputed_features.values()), np.zeros(1))
+        else:
+            feats = [bench_feature_vector(p) for p in bench_paths]
+            sample = next((f for f in feats if f is not None), np.zeros(1))
         scaler = StandardScaler()
         scaler.fit(sample.reshape(1, -1))
         return PwcSelector(
@@ -167,11 +194,15 @@ def train_pwc_selector(
         )
     assert k >= 2
 
-    # ── Extract features ──────────────────────────────────────────────────
+    # ── Extract or look up features ───────────────────────────────────────
     raw_features: list[np.ndarray] = []
     valid_indices: list[int] = []
     for idx, path in enumerate(bench_paths):
-        feat = bench_feature_vector(path)
+        path_key = str(path)
+        if precomputed_features is not None:
+            feat = precomputed_features.get(path_key)
+        else:
+            feat = bench_feature_vector(path)
         if feat is not None:
             raw_features.append(feat)
             valid_indices.append(idx)
