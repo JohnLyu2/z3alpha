@@ -1,0 +1,7 @@
+non-incremental/UFLRA/FFT/smtlib.620487.smt2
+non-incremental/UFLRA/FFT/smtlib.620535.smt2
+non-incremental/UFLRA/misc/list2.smt2
+non-incremental/UFLRA/misc/set14.smt2
+non-incremental/UFLRA/misc/set16.smt2
+non-incremental/UFLRA/misc/set19.smt2
+non-incremental/UFLRA/misc/set9.smt2
