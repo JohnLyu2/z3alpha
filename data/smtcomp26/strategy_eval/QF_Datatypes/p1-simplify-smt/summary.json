@@ -1,0 +1,31 @@
+{
+  "timestamp": "20260523_120008",
+  "label": "p1-simplify-smt",
+  "group": "QF_DT_UFDT_t30",
+  "environment": {
+    "machine_name": "snork",
+    "z3_path": ".venv/bin/z3",
+    "z3_version": "4.16.0",
+    "batch_size": 45,
+    "smtlib_root": "/home/z52lu/smtlib25"
+  },
+  "run_config": {
+    "mode": "eval_list_file",
+    "source": "experiments/smtcomp25/bench_lists/QF_DT_UFDT_combined.txt",
+    "timeout": 30,
+    "strategy": "(then simplify smt)",
+    "z3_extra_params": [
+      "smt.auto_config=false",
+      "smt.case_split=3",
+      "smt.dt_lazy_splits=2",
+      "smt.theory_case_split=true"
+    ],
+    "instances_total": 552
+  },
+  "results": {
+    "solved": 125,
+    "par2_avg": 48.3356,
+    "par10_avg": 233.9878,
+    "detail_csv": "experiments/smtcomp25/results/QF_DT_UFDT_t30/p1-simplify-smt/instance_results.csv"
+  }
+}
