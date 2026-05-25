@@ -14,7 +14,7 @@ from z3alpha.utils import par_n, solved_num
 
 log = logging.getLogger(__name__)
 
-_DEFAULT_CONFIG_PATH = pathlib.Path(__file__).with_name("smtlib_z3_evaluator_config.json")
+_DEFAULT_CONFIG_PATH = pathlib.Path(__file__).parent.parent / "env_config.json"
 
 
 def _evaluate_and_write(evaluator, strategy_str, csv_path):
@@ -172,7 +172,7 @@ def main():
         required=True,
         help="Timeout in seconds (required CLI argument).",
     )
-    parser.add_argument("--res-dir", type=str, help="Override result output directory.")
+    parser.add_argument("--res-dir", type=str, required=True, help="Result output directory.")
     strategy_group = parser.add_mutually_exclusive_group(required=False)
     strategy_group.add_argument(
         "--strategy-file",
@@ -207,16 +207,14 @@ def main():
         else config.get("z3_version")
     )
     batch_size = (
-        args.batch_size if args.batch_size is not None else config.get("batch_size", 4)
+        args.batch_size if args.batch_size is not None else config.get("workers", config.get("batch_size", 4))
     )
-    smtlib_root = config.get("smtlib_root")
+    smtlib_root = str(pathlib.Path(config["smtlib_root"]) / "non-incremental") if config.get("smtlib_root") else None
     z3_extra_params = [p.strip() for p in args.z3_param if p and p.strip()]
     timeout = args.timeout
-    res_dir = (
-        pathlib.Path(args.res_dir)
-        if args.res_dir is not None
-        else pathlib.Path(config.get("res_dir", "experiments/evaluation/smtlib_z3"))
-    )
+    if args.res_dir is None:
+        sys.exit("--res-dir is required")
+    res_dir = pathlib.Path(args.res_dir)
 
     if batch_size <= 0:
         sys.exit("batch_size must be > 0")
