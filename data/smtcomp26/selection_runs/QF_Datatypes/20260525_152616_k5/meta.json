@@ -1,0 +1,51 @@
+{
+  "shortlist": [
+    "p1-simplify-smt",
+    "h3-case-split-3",
+    "h4-case-split-6",
+    "h10-case-2-lazy2",
+    "h2-dt-lazy-all"
+  ],
+  "n_instances": 552,
+  "timeout": 30,
+  "n_pairs": 10,
+  "strategy_cli": {
+    "p1-simplify-smt": {
+      "strategy": "(then simplify smt)",
+      "z3_extra_params": [
+        "smt.auto_config=false",
+        "smt.case_split=3",
+        "smt.dt_lazy_splits=2",
+        "smt.theory_case_split=true"
+      ]
+    },
+    "h3-case-split-3": {
+      "strategy": null,
+      "z3_extra_params": [
+        "smt.auto_config=false",
+        "smt.case_split=3"
+      ]
+    },
+    "h4-case-split-6": {
+      "strategy": null,
+      "z3_extra_params": [
+        "smt.auto_config=false",
+        "smt.case_split=6"
+      ]
+    },
+    "h10-case-2-lazy2": {
+      "strategy": null,
+      "z3_extra_params": [
+        "smt.auto_config=false",
+        "smt.case_split=2",
+        "smt.dt_lazy_splits=2"
+      ]
+    },
+    "h2-dt-lazy-all": {
+      "strategy": null,
+      "z3_extra_params": [
+        "smt.dt_lazy_splits=2"
+      ]
+    }
+  }
+}

@@ -117,11 +117,13 @@ def load_or_build_features(bench_paths: list[str]) -> dict[str, np.ndarray]:
 def load_results(eval_dir: Path):
     """Load per-instance results from all strategy subdirs.
 
-    Returns (result_database, bench_paths, timeout) where:
+    Returns (result_database, bench_paths, timeout, strategy_cli) where:
       result_database: label -> list of (solved, time, status)
       bench_paths: ordered list of benchmark file paths
+      strategy_cli: label -> {"strategy": str|None, "z3_extra_params": list}
     """
     result_database: dict[str, list] = {}
+    strategy_cli: dict[str, dict] = {}
     bench_paths: list[str] = []
     timeout = 30
 
@@ -138,10 +140,17 @@ def load_results(eval_dir: Path):
         if summary_path.exists():
             with open(summary_path) as f:
                 summary = json.load(f)
-            timeout = summary.get("run_config", {}).get("timeout", timeout)
+            run_cfg = summary.get("run_config", {})
+            timeout = run_cfg.get("timeout", timeout)
             label = summary.get("label", subdir.name)
+            strategy = run_cfg.get("strategy")
+            z3_params = run_cfg.get("z3_extra_params", [])[:]
+            if strategy:
+                z3_params = [f"tactic.default_tactic={strategy}"] + z3_params
+            strategy_cli[label] = z3_params
         else:
             label = subdir.name
+            strategy_cli[label] = []
 
         rows: dict[str, tuple] = {}
         with open(csv_path, newline="") as f:
@@ -161,7 +170,7 @@ def load_results(eval_dir: Path):
     if not result_database:
         sys.exit(f"No instance_results.csv files found under {eval_dir}")
 
-    return result_database, bench_paths, timeout
+    return result_database, bench_paths, timeout, strategy_cli
 
 
 def db2(result_database):
@@ -252,7 +261,7 @@ def run_selection(selector, bench_paths, result_database, timeout, n, vb_solved,
     return predictions
 
 
-def save_outputs(out_dir: Path, selector, predictions, shortlist_labels, timeout, n):
+def save_outputs(out_dir: Path, selector, predictions, shortlist_labels, timeout, n, strategy_cli):
     out_dir.mkdir(parents=True, exist_ok=True)
 
     selector.save(out_dir / "selector.joblib")
@@ -268,6 +277,7 @@ def save_outputs(out_dir: Path, selector, predictions, shortlist_labels, timeout
         "n_instances": n,
         "timeout": timeout,
         "n_pairs": len(shortlist_labels) * (len(shortlist_labels) - 1) // 2,
+        "strategy_cli": {s: strategy_cli.get(s, []) for s in shortlist_labels},
     }
     with open(out_dir / "meta.json", "w") as f:
         json.dump(meta, f, indent=2)
@@ -275,7 +285,7 @@ def save_outputs(out_dir: Path, selector, predictions, shortlist_labels, timeout
     print(f"\n  Saved to {out_dir}/")
     print(f"    selector.joblib   — trained PWC selector")
     print(f"    predictions.csv   — per-instance strategy assignments")
-    print(f"    meta.json         — shortlist and run config")
+    print(f"    meta.json         — shortlist, run config, and strategy CLI args")
 
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
@@ -284,13 +294,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("eval_dir", type=Path, help="Path to a strategy_eval logic directory")
     parser.add_argument("--output-dir", type=Path, default=None,
-                        help="Directory under which a timestamped run folder is created (default: <eval_dir>/selection_runs)")
+                        help="Directory under which a timestamped run folder is created (default: data/smtcomp26/selection_runs/<logic>)")
     args = parser.parse_args()
 
     if not args.eval_dir.is_dir():
         sys.exit(f"Directory not found: {args.eval_dir}")
 
-    result_database, bench_paths, timeout = load_results(args.eval_dir)
+    result_database, bench_paths, timeout, strategy_cli = load_results(args.eval_dir)
     n = len(bench_paths)
     n_strats = len(result_database)
     print(f"Loaded {n_strats} strategies, {n} instances, timeout={timeout}s")
@@ -354,10 +364,12 @@ def main():
     predictions = run_selection(selector, bench_paths, result_database, timeout, n, vb_solved, sbs_solved, sbs_par2, feature_dict)
 
     # ── Save outputs ──────────────────────────────────────────────────────────
-    base_dir = args.output_dir if args.output_dir else args.eval_dir / "selection_runs"
+    _smtcomp26 = REPO_ROOT / "data/smtcomp26"
+    _default_out = _smtcomp26 / "selection_runs" / args.eval_dir.resolve().name
+    base_dir = args.output_dir if args.output_dir else _default_out
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     run_dir = base_dir / f"{timestamp}_k{k}"
-    save_outputs(run_dir, selector, predictions, shortlist_labels, timeout, n)
+    save_outputs(run_dir, selector, predictions, shortlist_labels, timeout, n, strategy_cli)
 
 
 if __name__ == "__main__":
