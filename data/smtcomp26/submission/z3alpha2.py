@@ -3,8 +3,7 @@
 z3-alpha2 submission entry point for SMT-COMP 2026.
 
 Detects the logic of the input benchmark, loads the corresponding trained
-PWC algorithm selector, selects the best Z3 strategy, and invokes Z3.
-Falls back to plain Z3 for logics without a trained selector.
+SMT-Select algorithm selector, selects the best Z3 strategy, and invokes Z3.
 
 Usage (as called by SMT-COMP infrastructure):
     ./z3alpha2.py <benchmark.smt2>
@@ -21,14 +20,6 @@ SELECTORS_DIR  = SUBMISSION_DIR / "selectors"
 
 sys.path.insert(0, str(SUBMISSION_DIR / "vendor"))
 sys.path.insert(0, str(SUBMISSION_DIR / "lib"))
-
-# Selectors were pickled as z3alpha.ml_selector.PwcSelector; register an alias
-# so joblib can unpickle them without the full z3alpha package installed.
-import types as _types
-import ml_selector as _ml_selector_mod
-_z3alpha_pkg = _types.ModuleType("z3alpha")
-sys.modules.setdefault("z3alpha", _z3alpha_pkg)
-sys.modules["z3alpha.ml_selector"] = _ml_selector_mod
 
 # Map from SMT-LIB logic name -> selector group directory
 LOGIC_TO_GROUP: dict[str, str] = {

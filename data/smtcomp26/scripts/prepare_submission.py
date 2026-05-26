@@ -99,6 +99,42 @@ def copy_selectors():
         print(f"  copied {group}/{run_name} → submission/selectors/{group}/")
 
 
+def repackage_selectors():
+    """Re-save selector.joblib files so the pickled class is ml_selector.PwcSelector.
+
+    Selectors are saved during training when PwcSelector lives in the z3alpha
+    package (z3alpha.ml_selector.PwcSelector). Temporarily patching __module__
+    before re-saving causes pickle to record the standalone module name instead,
+    so the submission needs no z3alpha reference at inference time.
+
+    Runs as a subprocess under .venv/bin/python which has z3alpha and all deps.
+    """
+    venv_python = REPO_ROOT / ".venv" / "bin" / "python"
+    if not venv_python.is_file():
+        sys.exit(f"venv not found at {venv_python}; activate venv or create it first")
+
+    paths = [
+        str(SUBMISSION_DIR / "selectors" / group / "selector.joblib")
+        for group in SELECTOR_PINS
+    ]
+    inline = (
+        "import sys, joblib\n"
+        "sys.path.insert(0, sys.argv[1])\n"
+        "import z3alpha.ml_selector as _z3ml\n"
+        "sys.modules['ml_selector'] = _z3ml\n"
+        "from z3alpha.ml_selector import PwcSelector\n"
+        "PwcSelector.__module__ = 'ml_selector'\n"
+        "for p in sys.argv[2:]:\n"
+        "    sel = joblib.load(p); joblib.dump(sel, p)\n"
+        "    print(f'  re-saved {p.split(\"/selectors/\")[1].split(\"/\")[0]}"
+        "/selector.joblib (class: ml_selector.PwcSelector)')\n"
+    )
+    subprocess.run(
+        [str(venv_python), "-c", inline, str(REPO_ROOT)] + paths,
+        check=True,
+    )
+
+
 def verify():
     errors = []
 
@@ -135,6 +171,9 @@ def main():
 
     print("\n── Copying pinned selectors ─────────────────────────────────────")
     copy_selectors()
+
+    print("\n── Repackaging selectors (fixing pickle module path) ────────────")
+    repackage_selectors()
 
     print("\n── Verifying submission directory ───────────────────────────────")
     errors = verify()
