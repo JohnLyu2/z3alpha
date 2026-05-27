@@ -9,14 +9,25 @@ Usage (as called by SMT-COMP infrastructure):
     ./z3alpha2.py <benchmark.smt2>
 """
 
+import argparse
 import json
 import re
+import subprocess
 import sys
+import time
 from pathlib import Path
 
 SUBMISSION_DIR = Path(__file__).resolve().parent
 Z3             = SUBMISSION_DIR / "bin" / "z3"
 SELECTORS_DIR  = SUBMISSION_DIR / "selectors"
+
+DEBUG = False
+
+
+def dbg(msg: str) -> None:
+    if DEBUG:
+        print(f"[z3alpha2] {msg}", file=sys.stderr)
+
 
 sys.path.insert(0, str(SUBMISSION_DIR / "vendor"))
 sys.path.insert(0, str(SUBMISSION_DIR / "lib"))
@@ -38,19 +49,42 @@ def detect_logic(benchmark: Path) -> str | None:
         return None
 
 
-def run_z3(z3_params: list[str], benchmark: Path) -> None:
-    """Exec Z3 — replaces this process so SMT-COMP sees Z3's exit code."""
-    import os
-    os.execv(str(Z3), [str(Z3)] + z3_params + [str(benchmark)])
+def run_z3(z3_params: list[str], benchmark: Path, timeout: float | None = None) -> int:
+    """Run Z3 and return its exit code.
+
+    stdout/stderr are inherited so SMT-COMP sees Z3's output directly.
+    timeout (seconds) raises subprocess.TimeoutExpired if Z3 does not finish in time.
+    """
+    result = subprocess.run(
+        [str(Z3)] + z3_params + [str(benchmark)],
+        timeout=timeout,
+    )
+    return result.returncode
+
+
+def solve(z3_params: list[str], benchmark: Path) -> None:
+    """Run the solving schedule and exit with Z3's exit code.
+
+    Currently a single-strategy run.
+    """
+    rc = run_z3(z3_params, benchmark)
+    sys.exit(rc)
 
 
 def main():
-    if len(sys.argv) < 2:
-        sys.exit("Usage: z3alpha2.py <benchmark.smt2>")
+    global DEBUG
 
-    benchmark = Path(sys.argv[1])
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("benchmark")
+    parser.add_argument("--debug", action="store_true")
+    args = parser.parse_args()
+
+    DEBUG = args.debug
+
+    benchmark = Path(args.benchmark)
     if not benchmark.is_file():
-        sys.exit(f"Benchmark not found: {benchmark}")
+        dbg(f"Benchmark not found: {benchmark}")
+        sys.exit(1)
 
     logic = detect_logic(benchmark)
     group = LOGIC_TO_GROUP.get(logic) if logic else None
@@ -63,14 +97,15 @@ def main():
             meta     = json.loads((selector_dir / "meta.json").read_text())
             label    = selector.select(benchmark)
             z3_params = meta["strategy_cli"].get(label, [])
+            dbg(f"logic={logic} label={label} params={z3_params}")
         except Exception as e:
-            sys.stderr.write(f"; selector failed ({e}), using plain Z3\n")
+            dbg(f"selector failed ({e}), using plain Z3")
             z3_params = []
     else:
-        sys.stderr.write(f"; no selector for logic {logic!r}, using plain Z3\n")
+        dbg(f"no selector for logic {logic!r}, using plain Z3")
         z3_params = []
 
-    run_z3(z3_params, benchmark)
+    solve(z3_params, benchmark)
 
 
 if __name__ == "__main__":
