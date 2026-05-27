@@ -15,7 +15,7 @@ from z3alpha.config import (
     setup_logging,
 )
 from z3alpha.mcts import LinearStrategySearchRun
-from z3alpha.ml_selector import train_pwc_selector
+from z3alpha.smt_select import train_pwc_selector
 from z3alpha.stage2.search_runtime import run_branched_synthesis
 from z3alpha.strategy_portfolio import create_greedy_linear_strategy_portfolio
 from z3alpha.tactics.logic_config import load_logic_config

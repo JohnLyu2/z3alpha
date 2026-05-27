@@ -58,8 +58,8 @@ def main():
     if group:
         selector_dir = SELECTORS_DIR / group
         try:
-            from ml_selector import PwcSelector
-            selector = PwcSelector.load(selector_dir / "selector.joblib")
+            from smt_select import PairwiseSelector
+            selector = PairwiseSelector.load(selector_dir / "selector.joblib")
             meta     = json.loads((selector_dir / "meta.json").read_text())
             label    = selector.select(benchmark)
             z3_params = meta["strategy_cli"].get(label, [])

@@ -27,7 +27,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
-from z3alpha.ml_selector import bench_feature_vector, train_pwc_selector, FEATURE_NAMES
+from z3alpha.smt_select import bench_feature_vector, train_pwc_selector, FEATURE_NAMES
 from z3alpha.strategy_portfolio import create_greedy_linear_strategy_portfolio, virtual_add_strategy
 from z3alpha.utils import solved_num, par_n
 

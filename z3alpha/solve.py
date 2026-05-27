@@ -23,12 +23,12 @@ from pathlib import Path
 from typing import Optional
 
 from z3alpha.evaluator import SolverRunner
-from z3alpha.ml_selector import PwcSelector
+from z3alpha.smt_select import PairwiseSelector
 
 
 def select_strategy(selector_path: str | Path, benchmark_path: str | Path) -> str:
     """Load a trained selector and return the predicted strategy for a benchmark."""
-    selector = PwcSelector.load(selector_path)
+    selector = PairwiseSelector.load(selector_path)
     return selector.select(benchmark_path)
 
 

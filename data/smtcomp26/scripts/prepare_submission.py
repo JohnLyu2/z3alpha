@@ -30,7 +30,7 @@ SELECTOR_PINS: dict[str, str] = {
 
 # ── Inference library files to bundle ─────────────────────────────────────────
 LIB_SOURCES = [
-    REPO_ROOT / "z3alpha/ml_selector.py",
+    REPO_ROOT / "z3alpha/smt_select.py",
     REPO_ROOT / "z3alpha/smtlib_features.py",
 ]
 
@@ -100,10 +100,10 @@ def copy_selectors():
 
 
 def repackage_selectors():
-    """Re-save selector.joblib files so the pickled class is ml_selector.PwcSelector.
+    """Re-save selector.joblib files so the pickled class is smt_select.PairwiseSelector.
 
-    Selectors are saved during training when PwcSelector lives in the z3alpha
-    package (z3alpha.ml_selector.PwcSelector). Temporarily patching __module__
+    Selectors are saved during training when PairwiseSelector lives in the z3alpha
+    package (z3alpha.smt_select.PairwiseSelector). Temporarily patching __module__
     before re-saving causes pickle to record the standalone module name instead,
     so the submission needs no z3alpha reference at inference time.
 
@@ -120,14 +120,15 @@ def repackage_selectors():
     inline = (
         "import sys, joblib\n"
         "sys.path.insert(0, sys.argv[1])\n"
-        "import z3alpha.ml_selector as _z3ml\n"
-        "sys.modules['ml_selector'] = _z3ml\n"
-        "from z3alpha.ml_selector import PwcSelector\n"
-        "PwcSelector.__module__ = 'ml_selector'\n"
+        "import z3alpha.smt_select as _z3sel\n"
+        # Register standalone name so pickle can verify the save lookup.
+        "sys.modules['smt_select'] = _z3sel\n"
+        "from z3alpha.smt_select import PairwiseSelector\n"
+        "PairwiseSelector.__module__ = 'smt_select'\n"
         "for p in sys.argv[2:]:\n"
         "    sel = joblib.load(p); joblib.dump(sel, p)\n"
         "    print(f'  re-saved {p.split(\"/selectors/\")[1].split(\"/\")[0]}"
-        "/selector.joblib (class: ml_selector.PwcSelector)')\n"
+        "/selector.joblib (class: smt_select.PairwiseSelector)')\n"
     )
     subprocess.run(
         [str(venv_python), "-c", inline, str(REPO_ROOT)] + paths,

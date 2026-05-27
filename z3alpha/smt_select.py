@@ -92,7 +92,7 @@ def bench_feature_vector(path: str | Path) -> Optional[np.ndarray]:
 # ─── Selector ─────────────────────────────────────────────────────────────────
 
 @dataclass
-class PwcSelector:
+class PairwiseSelector:
     """Trained pairwise comparison strategy selector.
 
     Attributes:
@@ -144,7 +144,7 @@ class PwcSelector:
         log.info(f"Selector saved to {path}")
 
     @staticmethod
-    def load(path: str | Path) -> PwcSelector:
+    def load(path: str | Path) -> PairwiseSelector:
         return joblib.load(path)
 
 
@@ -160,7 +160,7 @@ def train_pwc_selector(
     timeout: float,
     random_seed: int = 42,
     precomputed_features: Optional[dict[str, np.ndarray]] = None,
-) -> PwcSelector:
+) -> PairwiseSelector:
     """Train a PWC selector from Stage 1 results.
 
     Args:
@@ -174,7 +174,7 @@ def train_pwc_selector(
             If provided, feature extraction from disk is skipped entirely.
 
     Returns:
-        A trained PwcSelector ready for serialization and inference.
+        A trained PairwiseSelector ready for serialization and inference.
     """
     strategies = [s for s, _ in shortlist]
     bench_results = {s: r for s, r in shortlist}
@@ -189,7 +189,7 @@ def train_pwc_selector(
             sample = next((f for f in feats if f is not None), np.zeros(1))
         scaler = StandardScaler()
         scaler.fit(sample.reshape(1, -1))
-        return PwcSelector(
+        return PairwiseSelector(
             strategies=strategies,
             model_matrix=np.empty((1, 1), dtype=object),
             scaler=scaler,
@@ -252,7 +252,7 @@ def train_pwc_selector(
                       f"type={type(model).__name__}")
 
     log.info(f"Trained {k*(k-1)//2} pairwise models for {k} strategies")
-    return PwcSelector(
+    return PairwiseSelector(
         strategies=strategies,
         model_matrix=model_matrix,
         scaler=scaler,
