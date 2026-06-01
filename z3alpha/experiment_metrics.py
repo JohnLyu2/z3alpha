@@ -1,13 +1,12 @@
-"""Stage-1 run metrics (union coverage, k-for-90%-union) and CSV ledger append."""
+"""Stage-1 run metrics (union coverage, k_union, coverage curve)."""
 
 from __future__ import annotations
 
 import csv
-import math
 from pathlib import Path
 from typing import Any
 
-from z3alpha.utils import solved_num
+from z3alpha.utils import par_n, solved_num
 
 RUN_METRICS_COLUMNS: tuple[str, ...] = (
     "run_name",
@@ -15,9 +14,21 @@ RUN_METRICS_COLUMNS: tuple[str, ...] = (
     "num_strategies",
     "union",
     "best_single",
-    "k_for_90_union",
+    "union_gap",
+    "best_single_par2",
+    "best_single_par10",
+    "k_union",
     "wall_time_s",
     "llm_calls",
+)
+
+COVERAGE_CURVE_COLUMNS: tuple[str, ...] = (
+    "sim",
+    "num_strategies",
+    "union",
+    "best_single",
+    "union_gap",
+    "k_union",
 )
 
 
@@ -42,17 +53,12 @@ def _solved_indices(res_list: list) -> set[int]:
     return {i for i, row in enumerate(res_list) if row[0]}
 
 
-def k_for_union_fraction(
-    result_database: dict[str, list],
-    union_fraction: float = 0.9,
-) -> int:
-    """Greedy count of strategies needed to cover ``union_fraction`` of final union."""
+def k_union(result_database: dict[str, list]) -> int:
+    """Greedy min strategies needed to cover 100% of final union."""
     final_union = _union_indices(result_database)
     if not final_union:
         return 0
-    target = math.ceil(union_fraction * len(final_union))
-    if target <= 0:
-        return 0
+    target = len(final_union)
 
     covered: set[int] = set()
     remaining = set(result_database.keys())
@@ -73,18 +79,28 @@ def k_for_union_fraction(
     return k
 
 
-def compute_run_metrics(
+def filter_res_database_by_max_sim(
     result_database: dict[str, list],
-    *,
-    union_fraction: float = 0.9,
-) -> dict[str, int]:
-    """Return num_strategies, union, best_single, k_for_90_union from an MCTS res_database."""
+    strat_first_sim: dict[str, int],
+    max_sim: int,
+) -> dict[str, list]:
+    """Keep strategies first discovered at or before ``max_sim`` (0-based sim index)."""
+    return {
+        strat: result_database[strat]
+        for strat in result_database
+        if strat_first_sim.get(strat, max_sim + 1) <= max_sim
+    }
+
+
+def compute_coverage_metrics(result_database: dict[str, list]) -> dict[str, int]:
+    """Return search coverage metrics without PAR (for coverage curve checkpoints)."""
     if not result_database:
         return {
             "num_strategies": 0,
             "union": 0,
             "best_single": 0,
-            "k_for_90_union": 0,
+            "union_gap": 0,
+            "k_union": 0,
         }
     union = len(_union_indices(result_database))
     best_single = max(solved_num(res) for res in result_database.values())
@@ -92,7 +108,29 @@ def compute_run_metrics(
         "num_strategies": len(result_database),
         "union": union,
         "best_single": best_single,
-        "k_for_90_union": k_for_union_fraction(result_database, union_fraction),
+        "union_gap": union - best_single,
+        "k_union": k_union(result_database),
+    }
+
+
+def compute_run_metrics(
+    result_database: dict[str, list],
+    timeout: float,
+) -> dict[str, int | float]:
+    """Return end-of-run coverage and best-single PAR metrics from an MCTS res_database."""
+    coverage = compute_coverage_metrics(result_database)
+    if not result_database:
+        return {
+            **coverage,
+            "best_single_par2": 0.0,
+            "best_single_par10": 0.0,
+        }
+    best_single_par2 = min(par_n(res, 2, timeout) for res in result_database.values())
+    best_single_par10 = min(par_n(res, 10, timeout) for res in result_database.values())
+    return {
+        **coverage,
+        "best_single_par2": best_single_par2,
+        "best_single_par10": best_single_par10,
     }
 
 
@@ -106,6 +144,42 @@ def append_run_metrics_row(csv_path: Path, row: dict[str, Any]) -> None:
         if write_header:
             writer.writeheader()
         writer.writerow({col: row[col] for col in RUN_METRICS_COLUMNS})
+
+
+def init_coverage_curve_csv(csv_path: Path) -> None:
+    """Create ``coverage_curve.csv`` with header in a run output folder."""
+    csv_path = Path(csv_path)
+    csv_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(csv_path, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=COVERAGE_CURVE_COLUMNS)
+        writer.writeheader()
+
+
+def append_coverage_curve_row(csv_path: Path, row: dict[str, Any]) -> None:
+    """Append one checkpoint row to ``coverage_curve.csv``."""
+    csv_path = Path(csv_path)
+    with open(csv_path, "a", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=COVERAGE_CURVE_COLUMNS)
+        writer.writerow({col: row[col] for col in COVERAGE_CURVE_COLUMNS})
+
+
+_LLM_API_QA_LOG_KINDS = frozenset({"llm_prior_qa", "llm_prior_request_error"})
+
+
+def llm_calls_from_qa_log(qa_log_path: Path) -> int:
+    """Count live LLM API attempts recorded in ``llm_prior_qa.log``."""
+    qa_log_path = Path(qa_log_path)
+    if not qa_log_path.is_file():
+        return 0
+    count = 0
+    with open(qa_log_path, encoding="utf-8") as f:
+        for line in f:
+            if not line.startswith("kind: "):
+                continue
+            kind = line[len("kind: ") :].strip()
+            if kind in _LLM_API_QA_LOG_KINDS:
+                count += 1
+    return count
 
 
 def res_database_from_per_benchmark_csv(csv_path: Path) -> dict[str, list[tuple]]:

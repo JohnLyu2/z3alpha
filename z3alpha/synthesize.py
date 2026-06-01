@@ -7,6 +7,8 @@ import logging
 import json
 import datetime
 
+from dotenv import load_dotenv
+
 from z3alpha.config import (
     ExperimentConfig,
     SynthesisRun,
@@ -129,7 +131,12 @@ def parallel_synthesize(
     log.info(f"Final parallel strategy saved to {parallel_strat_path}")
 
     wall_time_s = _log_elapsed(start_time, "Total synthesis time")
-    metrics = compute_run_metrics(linear_run.res_database)
+    metrics = compute_run_metrics(linear_run.res_database, run.experiment.timeout)
+    llm_calls = (
+        linear_run._scorer.api_call_count
+        if linear_run._scorer is not None
+        else 0
+    )
     append_run_metrics_row(
         metrics_csv,
         {
@@ -138,9 +145,12 @@ def parallel_synthesize(
             "num_strategies": metrics["num_strategies"],
             "union": metrics["union"],
             "best_single": metrics["best_single"],
-            "k_for_90_union": metrics["k_for_90_union"],
+            "union_gap": metrics["union_gap"],
+            "best_single_par2": metrics["best_single_par2"],
+            "best_single_par10": metrics["best_single_par10"],
+            "k_union": metrics["k_union"],
             "wall_time_s": int(wall_time_s),
-            "llm_calls": 0,
+            "llm_calls": llm_calls,
         },
     )
     log.info("Appended run metrics to %s", metrics_csv)
@@ -185,33 +195,14 @@ def main():
     parser.add_argument(
         "--llm-prior",
         action="store_true",
-        help="Use OpenAI Chat Completions to score legal tactics as PUCT priors (stage 1 only; needs OPENAI_API_KEY)",
-    )
-    parser.add_argument(
-        "--llm-model",
-        type=str,
-        default="gpt-5.4-mini",
-        help="OpenAI model id for --llm-prior (default: gpt-5.4-mini)",
-    )
-    parser.add_argument(
-        "--llm-base-url",
-        type=str,
-        default=None,
-        help="OpenAI API base URL for --llm-prior (default: https://api.openai.com/v1)",
-    )
-    parser.add_argument(
-        "--llm-timeout",
-        type=float,
-        default=None,
-        help="LLM HTTP timeout in seconds for --llm-prior (default: 30)",
-    )
-    parser.add_argument(
-        "--llm-temperature",
-        type=float,
-        default=None,
-        help="Sampling temperature for --llm-prior (default: 0)",
+        help=(
+            "Use the stage-1 LLM prior. Configure model/base URL/timeout/temperature in .env "
+            "via Z3ALPHA_LLM_MODEL, Z3ALPHA_LLM_BASE_URL, Z3ALPHA_LLM_TIMEOUT, "
+            "and Z3ALPHA_LLM_TEMPERATURE."
+        ),
     )
     args = parser.parse_args()
+    load_dotenv()
     with open(args.json_config, encoding="utf-8") as f:
         user = json.load(f)
     experiment = parse_experiment_config(user)

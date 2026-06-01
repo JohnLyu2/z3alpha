@@ -8,10 +8,18 @@ from dataclasses import replace
 from typing import Any
 
 from z3alpha.environment import LinearStrategyGame
+from z3alpha.experiment_metrics import (
+    append_coverage_curve_row,
+    compute_coverage_metrics,
+    filter_res_database_by_max_sim,
+    init_coverage_curve_csv,
+)
 from z3alpha.mcts.llm_prior import LLMPriorScorer
 from z3alpha.mcts.run import BaseMCTSRun, MctsConfig
 from z3alpha.tactics.catalog import tactic_name_for_action
 from z3alpha.utils import par_n, solved_num
+
+COVERAGE_CHECKPOINT_INTERVAL = 5
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +55,9 @@ class LinearStrategySearchRun(BaseMCTSRun):
         self._strat_first_sim: dict[str, int] = {}
         self._summary_csv_path = self.log_folder / "linear_strategy_summary.csv"
         self._per_bench_csv_path = self.log_folder / "linear_strategy_per_benchmark.csv"
+        self._coverage_curve_path = self.log_folder / "coverage_curve.csv"
         self._written_strats: set = set()
+        init_coverage_curve_csv(self._coverage_curve_path)
         with open(self._summary_csv_path, "w", newline="") as f:
             csv.writer(f).writerow(
                 ["id", "strategy", "n_solved", "par2_avg", "par10_avg"]
@@ -93,6 +103,20 @@ class LinearStrategySearchRun(BaseMCTSRun):
             if strat not in self._strat_first_sim:
                 self._strat_first_sim[strat] = self.num_sim
         self._write_new_results()
+        self._maybe_write_coverage_checkpoint()
+
+    def _maybe_write_coverage_checkpoint(self) -> None:
+        sims_done = self.num_sim + 1
+        if sims_done % COVERAGE_CHECKPOINT_INTERVAL != 0:
+            return
+        subset = filter_res_database_by_max_sim(
+            self.res_database,
+            self._strat_first_sim,
+            self.num_sim,
+        )
+        row = compute_coverage_metrics(subset)
+        row["sim"] = sims_done
+        append_coverage_curve_row(self._coverage_curve_path, row)
 
     def _write_summary_table(self) -> None:
         with open(self._summary_csv_path, "w", newline="") as f:
