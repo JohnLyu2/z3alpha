@@ -15,19 +15,26 @@ if str(_REPO_ROOT) not in sys.path:
 from z3alpha.experiment_metrics import (  # noqa: E402
     append_run_metrics_row,
     compute_run_metrics,
+    llm_calls_from_qa_log,
     res_database_from_per_benchmark_csv,
 )
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Compute union / k-for-90%% metrics from a synthesis run directory.",
+        description="Compute coverage and best-single PAR metrics from a synthesis run directory.",
     )
     parser.add_argument(
         "--run-dir",
         type=Path,
         required=True,
         help="Run folder containing linear_strategy_per_benchmark.csv",
+    )
+    parser.add_argument(
+        "--timeout",
+        type=float,
+        required=True,
+        help="Per-instance timeout used for the run (required for PAR metrics)",
     )
     parser.add_argument(
         "--sims",
@@ -57,14 +64,15 @@ def main() -> None:
 
     per_bench = args.run_dir / "linear_strategy_per_benchmark.csv"
     res_database = res_database_from_per_benchmark_csv(per_bench)
-    metrics = compute_run_metrics(res_database)
+    metrics = compute_run_metrics(res_database, args.timeout)
+    llm_calls = llm_calls_from_qa_log(args.run_dir / "llm_prior_qa.log")
 
     out = {
         "run_name": args.run_dir.name,
         "sims": args.sims,
         **metrics,
         "wall_time_s": args.wall_time,
-        "llm_calls": 0,
+        "llm_calls": llm_calls,
     }
 
     if args.append:
@@ -78,9 +86,12 @@ def main() -> None:
                 "num_strategies": metrics["num_strategies"],
                 "union": metrics["union"],
                 "best_single": metrics["best_single"],
-                "k_for_90_union": metrics["k_for_90_union"],
+                "union_gap": metrics["union_gap"],
+                "best_single_par2": metrics["best_single_par2"],
+                "best_single_par10": metrics["best_single_par10"],
+                "k_union": metrics["k_union"],
                 "wall_time_s": int(args.wall_time),
-                "llm_calls": 0,
+                "llm_calls": llm_calls,
             },
         )
         print(f"Appended row to {args.metrics_csv}")
