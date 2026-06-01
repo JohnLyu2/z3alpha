@@ -22,10 +22,6 @@ def test_resolve_mcts_config_llm_prior_flags():
         c_uct = None
         random_seed = None
         llm_prior = True
-        llm_model = "gpt-4o"
-        llm_base_url = "https://example.invalid/v1"
-        llm_timeout = 42.0
-        llm_temperature = 0.1
 
     experiment = parse_experiment_config(
         {
@@ -38,13 +34,53 @@ def test_resolve_mcts_config_llm_prior_flags():
             "ln_strat_num": 1,
         }
     )
-    cfg = resolve_mcts_config(Args(), experiment)
+
+    with patch.dict(
+        "os.environ",
+        {
+            "Z3ALPHA_LLM_MODEL": "gpt-4o",
+            "Z3ALPHA_LLM_BASE_URL": "https://example.invalid/v1",
+            "Z3ALPHA_LLM_TIMEOUT": "42.0",
+            "Z3ALPHA_LLM_TEMPERATURE": "0.1",
+        },
+        clear=False,
+    ):
+        cfg = resolve_mcts_config(Args(), experiment)
     assert cfg.llm_prior is not None
     assert cfg.llm_prior.enabled is True
     assert cfg.llm_prior.model == "gpt-4o"
     assert cfg.llm_prior.base_url == "https://example.invalid/v1"
+    assert cfg.llm_prior.api_key_env == "OPENAI_API_KEY"
     assert cfg.llm_prior.llm_timeout == 42.0
     assert cfg.llm_prior.temperature == pytest.approx(0.1)
+
+
+def test_resolve_mcts_config_llm_prior_defaults_to_openrouter():
+    class Args:
+        c_uct = None
+        random_seed = None
+        llm_prior = True
+
+    experiment = parse_experiment_config(
+        {
+            "logic": "QF_NIA",
+            "batch_size": 1,
+            "train_dir": "data/smoke/benchmarks",
+            "timeout": 1,
+            "mcts_sims": 3,
+            "branched_sims": 1,
+            "ln_strat_num": 1,
+        }
+    )
+    with patch.dict("os.environ", {}, clear=True):
+        cfg = resolve_mcts_config(Args(), experiment)
+    assert cfg.llm_prior is not None
+    assert cfg.llm_prior.enabled is True
+    assert cfg.llm_prior.model == "openrouter/free"
+    assert cfg.llm_prior.base_url == "https://openrouter.ai/api/v1"
+    assert cfg.llm_prior.api_key_env == "OPENROUTER_API_KEY"
+    assert cfg.llm_prior.llm_timeout == 30.0
+    assert cfg.llm_prior.temperature == pytest.approx(0.0)
 
 
 def test_llm_prior_scorer_requires_api_key_when_enabled(monkeypatch):
@@ -54,9 +90,17 @@ def test_llm_prior_scorer_requires_api_key_when_enabled(monkeypatch):
         LLMPriorScorer(cfg)
 
 
-def test_llm_prior_scorer_normalize_and_cache(monkeypatch):
+def test_llm_prior_scorer_uses_openrouter_env(monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    cfg = LLMPriorConfig(enabled=True, base_url="https://openrouter.ai/api/v1")
+    with pytest.raises(RuntimeError, match="OPENROUTER_API_KEY"):
+        LLMPriorScorer(cfg)
+
+
+def test_llm_prior_scorer_thresholded_softmax_and_cache(monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
-    cfg = LLMPriorConfig(enabled=True, model="m")
+    cfg = LLMPriorConfig(enabled=True, model="m", softmax_temperature=2.0)
     scorer = LLMPriorScorer(cfg)
     calls = {"n": 0}
 
@@ -64,18 +108,78 @@ def test_llm_prior_scorer_normalize_and_cache(monkeypatch):
         calls["n"] += 1
         return TacticPriorScores(
             scores=[
-                TacticScoreItem(tactic_name="smt", value=1),
-                TacticScoreItem(tactic_name="qfnra-nlsat", value=4),
+                TacticScoreItem(tactic_name="smt", value=2),
+                TacticScoreItem(tactic_name="qfnra-nlsat", value=8),
             ]
         )
 
     monkeypatch.setattr(LLMPriorScorer, "_responses_parse_scores", fake_parse)
     out1 = scorer.score("QF_NIA", "(then simplify)", ["smt", "qfnra-nlsat"])
-    assert out1 == {"smt": pytest.approx(0.2), "qfnra-nlsat": pytest.approx(0.8)}
+    assert out1 == {
+        "smt": pytest.approx(0.04742587317756679),
+        "qfnra-nlsat": pytest.approx(0.9525741268224334),
+    }
     assert calls["n"] == 1
     out2 = scorer.score("QF_NIA", "(then simplify)", ["smt", "qfnra-nlsat"])
     assert out2 == out1
     assert calls["n"] == 1
+
+
+def test_llm_prior_scorer_counts_api_calls(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    cfg = LLMPriorConfig(enabled=True)
+    scorer = LLMPriorScorer(cfg)
+
+    parsed = TacticPriorScores(
+        scores=[
+            TacticScoreItem(tactic_name="a", value=8),
+            TacticScoreItem(tactic_name="b", value=2),
+        ]
+    )
+
+    class _Resp:
+        status = "completed"
+        error = None
+        incomplete_details = None
+        output_text = ""
+        output_parsed = parsed
+
+    class _Responses:
+        @staticmethod
+        def parse(**kwargs):
+            return _Resp()
+
+    class _Client:
+        def __init__(self, **kwargs):
+            self.responses = _Responses()
+
+    monkeypatch.setattr("z3alpha.mcts.llm_prior.OpenAI", _Client)
+    scorer.score("L", "partial-a", ["a", "b"])
+    assert scorer.api_call_count == 1
+    scorer.score("L", "partial-a", ["a", "b"])
+    assert scorer.api_call_count == 1
+    scorer.score("L", "partial-b", ["a", "b"])
+    assert scorer.api_call_count == 2
+
+
+def test_llm_prior_scorer_counts_failed_api_calls(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    cfg = LLMPriorConfig(enabled=True)
+    scorer = LLMPriorScorer(cfg)
+
+    class _Responses:
+        @staticmethod
+        def parse(**kwargs):
+            raise RuntimeError("401 Unauthorized")
+
+    class _Client:
+        def __init__(self, **kwargs):
+            self.responses = _Responses()
+
+    monkeypatch.setattr("z3alpha.mcts.llm_prior.OpenAI", _Client)
+    out = scorer.score("L", "partial-a", ["a", "b"])
+    assert out == {"a": 1.0, "b": 1.0}
+    assert scorer.api_call_count == 1
 
 
 def test_llm_prior_scorer_all_zero_uniform(monkeypatch):
@@ -87,6 +191,24 @@ def test_llm_prior_scorer_all_zero_uniform(monkeypatch):
             scores=[
                 TacticScoreItem(tactic_name="a", value=0),
                 TacticScoreItem(tactic_name="b", value=0),
+            ]
+        )
+
+    monkeypatch.setattr(LLMPriorScorer, "_responses_parse_scores", fake_parse)
+    scorer = LLMPriorScorer(cfg)
+    out = scorer.score("L", "x", ["a", "b"])
+    assert out == {"a": 1.0, "b": 1.0}
+
+
+def test_llm_prior_scorer_uncertain_uniform(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    cfg = LLMPriorConfig(enabled=True)
+
+    def fake_parse(self, user_content: str, sim_id=None):
+        return TacticPriorScores(
+            scores=[
+                TacticScoreItem(tactic_name="a", value=4),
+                TacticScoreItem(tactic_name="b", value=5),
             ]
         )
 
@@ -117,7 +239,7 @@ def test_llm_prior_scorer_writes_qa_log(monkeypatch, tmp_path):
     parsed = TacticPriorScores(
         scores=[
             TacticScoreItem(tactic_name="smt", value=2),
-            TacticScoreItem(tactic_name="qfnra-nlsat", value=3),
+            TacticScoreItem(tactic_name="qfnra-nlsat", value=8),
         ]
     )
 
@@ -125,7 +247,7 @@ def test_llm_prior_scorer_writes_qa_log(monkeypatch, tmp_path):
         status = "completed"
         error = None
         incomplete_details = None
-        output_text = '{"scores":[{"tactic_name":"smt","value":2},{"tactic_name":"qfnra-nlsat","value":3}]}'
+        output_text = '{"scores":[{"tactic_name":"smt","value":2},{"tactic_name":"qfnra-nlsat","value":8}]}'
         output_parsed = parsed
 
     class _Responses:
@@ -140,11 +262,17 @@ def test_llm_prior_scorer_writes_qa_log(monkeypatch, tmp_path):
     monkeypatch.setattr("z3alpha.mcts.llm_prior.OpenAI", _Client)
     scorer = LLMPriorScorer(cfg)
     out = scorer.score("QF_NIA", "(then simplify)", ["smt", "qfnra-nlsat"], sim_id=7)
-    assert out == {"smt": pytest.approx(0.4), "qfnra-nlsat": pytest.approx(0.6)}
+    assert out == {
+        "smt": pytest.approx(0.04742587317756679),
+        "qfnra-nlsat": pytest.approx(0.9525741268224334),
+    }
+    assert scorer.api_call_count == 1
     txt = qa_log.read_text(encoding="utf-8")
     assert "kind: llm_prior_qa" in txt
+    assert "kind: llm_prior_scores" in txt
     assert "sim_id: 7" in txt
-    assert "kind: llm_prior_scores" not in txt
+    assert "mapping_mode: thresholded_softmax" in txt
+    assert "ranked_priors" in txt
 
 
 class FixedPriorLinearRun(LinearStrategySearchRun):
