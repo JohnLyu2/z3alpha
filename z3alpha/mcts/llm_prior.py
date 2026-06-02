@@ -1,4 +1,4 @@
-"""LLM-derived PUCT priors via OpenAI-compatible Responses API + structured outputs."""
+"""LLM-derived PUCT priors via OpenAI-compatible Chat Completions + structured outputs."""
 
 from __future__ import annotations
 
@@ -15,14 +15,14 @@ from pydantic import BaseModel, ConfigDict, Field
 
 log = logging.getLogger(__name__)
 
-# instructions = system; input = user (Responses API)
 _INSTRUCTIONS = (
     "You score Z3 SMT tactics for the next MCTS search step. "
     "Output must follow the response schema: a list of scores, with exactly one entry "
     "per candidate tactic name from the user message. "
     "Each value is an integer from 0 to 10. "
     "Interpret the score as confidence that the tactic is a good next step in the current tactic chain. "
-    "Use 0 or 1 for tactics that are very unlikely to help. "
+    "Use 0 or 1 for tactics that are very unlikely to help; reserve 8-10 for strong next steps. "
+    "Differentiate candidates clearly—avoid giving every tactic similar mid-range scores. "
     "tactic_name strings must match the provided candidate names exactly (character-for-character)."
 )
 
@@ -71,7 +71,7 @@ def _default_api_key_env(base_url: str) -> str:
 
 
 class LLMPriorScorer:
-    """Scores candidate tactics via OpenAI-compatible Responses API."""
+    """Scores candidate tactics via OpenAI-compatible Chat Completions API."""
 
     def __init__(self, cfg: LLMPriorConfig) -> None:
         self._cfg = cfg
@@ -134,10 +134,10 @@ class LLMPriorScorer:
         with open(self._qa_log_path, "a", encoding="utf-8") as f:
             f.write("\n".join(lines))
 
-    def _responses_parse_scores(
+    def _chat_completions_parse_scores(
         self, user_content: str, sim_id: int | None = None
     ) -> TacticPriorScores | None:
-        """Call ``POST /v1/responses`` with ``text_format`` = Pydantic schema (structured outputs)."""
+        """Call ``POST /v1/chat/completions`` with Pydantic structured output."""
         if not self._api_key:
             self._append_qa_log(
                 {
@@ -150,18 +150,21 @@ class LLMPriorScorer:
             )
             return None
         client = OpenAI(api_key=self._api_key, base_url=self._cfg.base_url.rstrip("/"))
+        messages = [
+            {"role": "system", "content": _INSTRUCTIONS},
+            {"role": "user", "content": user_content},
+        ]
         try:
             self.api_call_count += 1
-            response = client.responses.parse(
+            completion = client.chat.completions.parse(
                 model=self._cfg.model,
-                instructions=_INSTRUCTIONS,
-                input=user_content,
-                text_format=TacticPriorScores,
+                messages=messages,
+                response_format=TacticPriorScores,
                 temperature=self._cfg.temperature,
                 timeout=self._cfg.llm_timeout,
             )
         except Exception as e:
-            log.warning("OpenAI Responses request failed: %s", e)
+            log.warning("Chat Completions request failed: %s", e)
             self._append_qa_log(
                 {
                     "kind": "llm_prior_request_error",
@@ -173,48 +176,56 @@ class LLMPriorScorer:
             )
             return None
 
-        status = getattr(response, "status", None)
-        if status and status != "completed":
-            log.warning("OpenAI Responses status=%s (expected completed); using uniform", status)
+        if not completion.choices:
+            log.warning("Chat Completions returned no choices; using uniform")
             self._append_qa_log(
                 {
                     "kind": "llm_prior_response_rejected",
                     "sim_id": sim_id,
-                    "reason": "status_not_completed",
+                    "reason": "no_choices",
                     "request": {"input": user_content},
-                    "response": {"status": status},
-                }
-            )
-            return None
-        if getattr(response, "error", None) is not None:
-            log.warning("OpenAI Responses error field set; using uniform")
-            self._append_qa_log(
-                {
-                    "kind": "llm_prior_response_rejected",
-                    "sim_id": sim_id,
-                    "reason": "error_field_set",
-                    "request": {"input": user_content},
-                    "response": {"status": status, "error": str(getattr(response, "error", None))},
-                }
-            )
-            return None
-        inc = getattr(response, "incomplete_details", None)
-        if inc is not None:
-            log.warning("OpenAI Responses incomplete: %s; using uniform", inc)
-            self._append_qa_log(
-                {
-                    "kind": "llm_prior_response_rejected",
-                    "sim_id": sim_id,
-                    "reason": "incomplete_details",
-                    "request": {"input": user_content},
-                    "response": {"status": status, "incomplete_details": str(inc)},
+                    "response": {},
                 }
             )
             return None
 
-        parsed: TacticPriorScores | None = response.output_parsed
+        choice = completion.choices[0]
+        finish_reason = getattr(choice, "finish_reason", None)
+        if finish_reason == "length":
+            log.warning("Chat Completions finish_reason=length; using uniform")
+            self._append_qa_log(
+                {
+                    "kind": "llm_prior_response_rejected",
+                    "sim_id": sim_id,
+                    "reason": "finish_reason_length",
+                    "request": {"input": user_content},
+                    "response": {
+                        "finish_reason": finish_reason,
+                        "content": getattr(choice.message, "content", None),
+                    },
+                }
+            )
+            return None
+
+        message = choice.message
+        refusal = getattr(message, "refusal", None)
+        if refusal:
+            log.warning("Chat Completions refusal: %s; using uniform", refusal)
+            self._append_qa_log(
+                {
+                    "kind": "llm_prior_response_rejected",
+                    "sim_id": sim_id,
+                    "reason": "refusal",
+                    "request": {"input": user_content},
+                    "response": {"refusal": refusal},
+                }
+            )
+            return None
+
+        parsed: TacticPriorScores | None = message.parsed
+        raw_content = getattr(message, "content", None)
         if parsed is None:
-            log.warning("LLM prior: no structured output (refusal, parse miss, or empty)")
+            log.warning("LLM prior: no structured output (parse miss or empty)")
             self._append_qa_log(
                 {
                     "kind": "llm_prior_response_rejected",
@@ -222,12 +233,30 @@ class LLMPriorScorer:
                     "reason": "no_structured_output",
                     "request": {"input": user_content},
                     "response": {
-                        "status": status,
-                        "output_text": getattr(response, "output_text", None),
+                        "finish_reason": finish_reason,
+                        "content": raw_content,
                     },
                 }
             )
             return None
+
+        if not parsed.scores:
+            log.warning("LLM prior: empty scores list; using uniform")
+            self._append_qa_log(
+                {
+                    "kind": "llm_prior_response_rejected",
+                    "sim_id": sim_id,
+                    "reason": "empty_scores",
+                    "request": {"input": user_content},
+                    "response": {
+                        "finish_reason": finish_reason,
+                        "content": raw_content,
+                        "parsed_scores": [],
+                    },
+                }
+            )
+            return None
+
         self._append_qa_log(
             {
                 "kind": "llm_prior_qa",
@@ -235,8 +264,8 @@ class LLMPriorScorer:
                 "api_key_env": self._api_key_env,
                 "request": {"input": user_content},
                 "response": {
-                    "status": status,
-                    "output_text": getattr(response, "output_text", None),
+                    "finish_reason": finish_reason,
+                    "content": raw_content,
                     "parsed_scores": [it.model_dump() for it in parsed.scores],
                 },
             }
@@ -321,6 +350,7 @@ class LLMPriorScorer:
                 )
                 return subset
 
+        n_candidates = len(candidate_actions)
         user_content = "\n".join(
             [
                 f"Logic: {logic}",
@@ -328,16 +358,15 @@ class LLMPriorScorer:
                 "Current partial Z3 strategy (SMT-LIB tactic script):",
                 partial_strategy,
                 "",
-                "Candidate Z3 tactic names for the next step. Include each name exactly once in "
-                "`scores` with a 0-10 confidence value (names are JSON strings, e.g. "
-                "\"smt\", \"ctx-simplify\"):",
+                f"Candidate Z3 tactic names for the next step ({n_candidates} tactics). "
+                "Include each name exactly once in `scores` with a 0-10 confidence value "
+                "(names are JSON strings, e.g. \"smt\", \"ctx-simplify\"):",
                 json.dumps(candidate_actions),
             ]
         )
-        parsed = self._responses_parse_scores(user_content, sim_id=sim_id)
+        parsed = self._chat_completions_parse_scores(user_content, sim_id=sim_id)
         if parsed is None:
             u = self._uniform(candidate_actions)
-            self._memory[partial_strategy] = ("uniform_api_fallback", u)
             self._append_qa_log(
                 {
                     "kind": "llm_prior_uniform_fallback",

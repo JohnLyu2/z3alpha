@@ -17,6 +17,45 @@ from z3alpha.mcts.llm_prior import (
 )
 
 
+def _install_mock_chat_client(monkeypatch, *, parsed: TacticPriorScores | None, error: Exception | None = None):
+    """Mock OpenAI client with chat.completions.parse."""
+
+    class _Message:
+        def __init__(self):
+            self.parsed = parsed
+            self.content = (
+                parsed.model_dump_json()
+                if parsed is not None
+                else None
+            )
+            self.refusal = None
+
+    class _Choice:
+        def __init__(self):
+            self.message = _Message()
+            self.finish_reason = "stop"
+
+    class _Completion:
+        def __init__(self):
+            self.choices = [_Choice()]
+
+    class _Completions:
+        @staticmethod
+        def parse(**kwargs):
+            if error is not None:
+                raise error
+            return _Completion()
+
+    class _Chat:
+        completions = _Completions()
+
+    class _Client:
+        def __init__(self, **kwargs):
+            self.chat = _Chat()
+
+    monkeypatch.setattr("z3alpha.mcts.llm_prior.OpenAI", _Client)
+
+
 def test_resolve_mcts_config_llm_prior_flags():
     class Args:
         c_uct = None
@@ -113,7 +152,7 @@ def test_llm_prior_scorer_thresholded_softmax_and_cache(monkeypatch):
             ]
         )
 
-    monkeypatch.setattr(LLMPriorScorer, "_responses_parse_scores", fake_parse)
+    monkeypatch.setattr(LLMPriorScorer, "_chat_completions_parse_scores", fake_parse)
     out1 = scorer.score("QF_NIA", "(then simplify)", ["smt", "qfnra-nlsat"])
     assert out1 == {
         "smt": pytest.approx(0.04742587317756679),
@@ -136,24 +175,7 @@ def test_llm_prior_scorer_counts_api_calls(monkeypatch):
             TacticScoreItem(tactic_name="b", value=2),
         ]
     )
-
-    class _Resp:
-        status = "completed"
-        error = None
-        incomplete_details = None
-        output_text = ""
-        output_parsed = parsed
-
-    class _Responses:
-        @staticmethod
-        def parse(**kwargs):
-            return _Resp()
-
-    class _Client:
-        def __init__(self, **kwargs):
-            self.responses = _Responses()
-
-    monkeypatch.setattr("z3alpha.mcts.llm_prior.OpenAI", _Client)
+    _install_mock_chat_client(monkeypatch, parsed=parsed)
     scorer.score("L", "partial-a", ["a", "b"])
     assert scorer.api_call_count == 1
     scorer.score("L", "partial-a", ["a", "b"])
@@ -167,16 +189,9 @@ def test_llm_prior_scorer_counts_failed_api_calls(monkeypatch):
     cfg = LLMPriorConfig(enabled=True)
     scorer = LLMPriorScorer(cfg)
 
-    class _Responses:
-        @staticmethod
-        def parse(**kwargs):
-            raise RuntimeError("401 Unauthorized")
-
-    class _Client:
-        def __init__(self, **kwargs):
-            self.responses = _Responses()
-
-    monkeypatch.setattr("z3alpha.mcts.llm_prior.OpenAI", _Client)
+    _install_mock_chat_client(
+        monkeypatch, parsed=None, error=RuntimeError("401 Unauthorized")
+    )
     out = scorer.score("L", "partial-a", ["a", "b"])
     assert out == {"a": 1.0, "b": 1.0}
     assert scorer.api_call_count == 1
@@ -194,7 +209,7 @@ def test_llm_prior_scorer_all_zero_uniform(monkeypatch):
             ]
         )
 
-    monkeypatch.setattr(LLMPriorScorer, "_responses_parse_scores", fake_parse)
+    monkeypatch.setattr(LLMPriorScorer, "_chat_completions_parse_scores", fake_parse)
     scorer = LLMPriorScorer(cfg)
     out = scorer.score("L", "x", ["a", "b"])
     assert out == {"a": 1.0, "b": 1.0}
@@ -212,7 +227,7 @@ def test_llm_prior_scorer_uncertain_uniform(monkeypatch):
             ]
         )
 
-    monkeypatch.setattr(LLMPriorScorer, "_responses_parse_scores", fake_parse)
+    monkeypatch.setattr(LLMPriorScorer, "_chat_completions_parse_scores", fake_parse)
     scorer = LLMPriorScorer(cfg)
     out = scorer.score("L", "x", ["a", "b"])
     assert out == {"a": 1.0, "b": 1.0}
@@ -225,10 +240,30 @@ def test_llm_prior_scorer_bad_json_uniform(monkeypatch):
     def fake_parse(self, user_content: str, sim_id=None) -> None:
         return None
 
-    monkeypatch.setattr(LLMPriorScorer, "_responses_parse_scores", fake_parse)
+    monkeypatch.setattr(LLMPriorScorer, "_chat_completions_parse_scores", fake_parse)
     scorer = LLMPriorScorer(cfg)
     out = scorer.score("L", "x", ["x", "y"])
     assert out == {"x": 1.0, "y": 1.0}
+
+
+def test_llm_prior_scorer_empty_scores_uniform(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    cfg = LLMPriorConfig(enabled=True)
+    _install_mock_chat_client(monkeypatch, parsed=TacticPriorScores(scores=[]))
+    scorer = LLMPriorScorer(cfg)
+    out = scorer.score("L", "x", ["a", "b"])
+    assert out == {"a": 1.0, "b": 1.0}
+    assert "x" not in scorer._memory
+
+
+def test_llm_prior_scorer_api_fallback_not_cached(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    cfg = LLMPriorConfig(enabled=True)
+    _install_mock_chat_client(monkeypatch, parsed=None)
+    scorer = LLMPriorScorer(cfg)
+    scorer.score("L", "partial-z", ["a", "b"])
+    scorer.score("L", "partial-z", ["a", "b"])
+    assert scorer.api_call_count == 2
 
 
 def test_llm_prior_scorer_writes_qa_log(monkeypatch, tmp_path):
@@ -243,23 +278,7 @@ def test_llm_prior_scorer_writes_qa_log(monkeypatch, tmp_path):
         ]
     )
 
-    class _Resp:
-        status = "completed"
-        error = None
-        incomplete_details = None
-        output_text = '{"scores":[{"tactic_name":"smt","value":2},{"tactic_name":"qfnra-nlsat","value":8}]}'
-        output_parsed = parsed
-
-    class _Responses:
-        @staticmethod
-        def parse(**kwargs):
-            return _Resp()
-
-    class _Client:
-        def __init__(self, **kwargs):
-            self.responses = _Responses()
-
-    monkeypatch.setattr("z3alpha.mcts.llm_prior.OpenAI", _Client)
+    _install_mock_chat_client(monkeypatch, parsed=parsed)
     scorer = LLMPriorScorer(cfg)
     out = scorer.score("QF_NIA", "(then simplify)", ["smt", "qfnra-nlsat"], sim_id=7)
     assert out == {
