@@ -153,13 +153,15 @@ def test_llm_prior_scorer_thresholded_softmax_and_cache(monkeypatch):
         )
 
     monkeypatch.setattr(LLMPriorScorer, "_chat_completions_parse_scores", fake_parse)
-    out1 = scorer.score("QF_NIA", "(then simplify)", ["smt", "qfnra-nlsat"])
+    out1 = scorer.score("QF_NIA", "(then simplify)", ["smt", "qfnra-nlsat"], sim_id=0)
+    assert scorer.last_prior_source == "api_call"
     assert out1 == {
         "smt": pytest.approx(0.04742587317756679),
         "qfnra-nlsat": pytest.approx(0.9525741268224334),
     }
     assert calls["n"] == 1
-    out2 = scorer.score("QF_NIA", "(then simplify)", ["smt", "qfnra-nlsat"])
+    out2 = scorer.score("QF_NIA", "(then simplify)", ["smt", "qfnra-nlsat"], sim_id=1)
+    assert scorer.last_prior_source == "cache_hit"
     assert out2 == out1
     assert calls["n"] == 1
 
@@ -254,6 +256,33 @@ def test_llm_prior_scorer_empty_scores_uniform(monkeypatch):
     out = scorer.score("L", "x", ["a", "b"])
     assert out == {"a": 1.0, "b": 1.0}
     assert "x" not in scorer._memory
+
+
+def test_llm_prior_scorer_rejects_none_choices(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    cfg = LLMPriorConfig(enabled=True)
+    scorer = LLMPriorScorer(cfg)
+
+    class _Completion:
+        choices = None
+
+    class _Completions:
+        @staticmethod
+        def parse(**kwargs):
+            return _Completion()
+
+    class _Chat:
+        completions = _Completions()
+
+    class _Client:
+        def __init__(self, **kwargs):
+            self.chat = _Chat()
+
+    monkeypatch.setattr("z3alpha.mcts.llm_prior.OpenAI", _Client)
+    out = scorer.score("L", "partial-none-choices", ["a", "b"], sim_id=3)
+    assert out == {"a": 1.0, "b": 1.0}
+    assert scorer.api_call_count == 1
+    assert scorer.last_prior_source == "api_call_failed"
 
 
 def test_llm_prior_scorer_api_fallback_not_cached(monkeypatch):

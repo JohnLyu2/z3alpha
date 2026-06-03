@@ -65,10 +65,20 @@ class LinearStrategySearchRun(BaseMCTSRun):
         with open(self._per_bench_csv_path, "w", newline="") as f:
             csv.writer(f).writerow(["strat", "benchmark", "status", "time_s", "solved"])
         self._scorer: LLMPriorScorer | None = None
+        self._llm_prior_expansion_this_sim = False
         lp = self.config.llm_prior
         if lp is not None and lp.enabled:
             llm_log_path = str(self.log_folder / "llm_prior_qa.log")
             self._scorer = LLMPriorScorer(replace(lp, qa_log_path=llm_log_path))
+
+    def _one_simulation(self) -> None:
+        self._llm_prior_expansion_this_sim = False
+        super()._one_simulation()
+        if self._scorer is not None and not self._llm_prior_expansion_this_sim:
+            logger.info(
+                "LLM prior sim %s: source=no_expansion (terminal or existing frontier)",
+                self.num_sim,
+            )
 
     def _seed_expanded_children(self, node, value: float) -> None:
         for child in node.children.values():
@@ -78,6 +88,7 @@ class LinearStrategySearchRun(BaseMCTSRun):
     def _priors_for(self, actions: list) -> dict[Any, float] | None:
         if self._scorer is None:
             return None
+        self._llm_prior_expansion_this_sim = True
         names = [tactic_name_for_action(int(a)) for a in actions]
         by_name = self._scorer.score(
             self.logic, str(self.env), names, sim_id=self.num_sim

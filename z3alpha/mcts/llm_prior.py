@@ -9,11 +9,14 @@ import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Literal
 
 from openai import OpenAI
 from pydantic import BaseModel, ConfigDict, Field
 
 log = logging.getLogger(__name__)
+
+PriorSource = Literal["api_call", "cache_hit", "api_call_failed"]
 
 _INSTRUCTIONS = (
     "You score Z3 SMT tactics for the next MCTS search step. "
@@ -84,6 +87,23 @@ class LLMPriorScorer:
             )
         self._qa_log_path = Path(cfg.qa_log_path) if cfg.qa_log_path else None
         self.api_call_count = 0
+        self.last_prior_source: PriorSource | None = None
+        self.last_mapping_mode: str | None = None
+
+    def _log_prior_event(
+        self,
+        sim_id: int | None,
+        source: PriorSource,
+        *,
+        mapping_mode: str | None = None,
+        detail: str | None = None,
+    ) -> None:
+        parts = [f"LLM prior sim {sim_id}: source={source}"]
+        if mapping_mode is not None:
+            parts.append(f"mapping={mapping_mode}")
+        if detail:
+            parts.append(detail)
+        log.info(" ".join(parts))
 
     def _append_qa_log(self, payload: dict) -> None:
         if self._qa_log_path is None:
@@ -106,6 +126,7 @@ class LLMPriorScorer:
         ]
         for key in (
             "sim_id",
+            "prior_source",
             "reason",
             "mapping_mode",
             "logic",
@@ -134,6 +155,28 @@ class LLMPriorScorer:
         with open(self._qa_log_path, "a", encoding="utf-8") as f:
             f.write("\n".join(lines))
 
+    def _reject_chat_response(
+        self,
+        sim_id: int | None,
+        reason: str,
+        user_content: str,
+        *,
+        response: dict | None = None,
+        log_detail: str | None = None,
+    ) -> None:
+        detail = log_detail or reason
+        log.warning("Chat Completions rejected (%s); using uniform", detail)
+        self._append_qa_log(
+            {
+                "kind": "llm_prior_response_rejected",
+                "sim_id": sim_id,
+                "prior_source": "api_call_failed",
+                "reason": reason,
+                "request": {"input": user_content},
+                "response": response or {},
+            }
+        )
+
     def _chat_completions_parse_scores(
         self, user_content: str, sim_id: int | None = None
     ) -> TacticPriorScores | None:
@@ -143,6 +186,7 @@ class LLMPriorScorer:
                 {
                     "kind": "llm_prior_request_skipped",
                     "sim_id": sim_id,
+                    "prior_source": "api_call_failed",
                     "reason": "missing_api_key",
                     "api_key_env": self._api_key_env,
                     "request": {"input": user_content},
@@ -163,12 +207,26 @@ class LLMPriorScorer:
                 temperature=self._cfg.temperature,
                 timeout=self._cfg.llm_timeout,
             )
+        except (TypeError, AttributeError) as e:
+            log.warning("Chat Completions malformed response: %s", e)
+            self._append_qa_log(
+                {
+                    "kind": "llm_prior_request_error",
+                    "sim_id": sim_id,
+                    "prior_source": "api_call_failed",
+                    "api_key_env": self._api_key_env,
+                    "request": {"input": user_content},
+                    "error": str(e),
+                }
+            )
+            return None
         except Exception as e:
             log.warning("Chat Completions request failed: %s", e)
             self._append_qa_log(
                 {
                     "kind": "llm_prior_request_error",
                     "sim_id": sim_id,
+                    "prior_source": "api_call_failed",
                     "api_key_env": self._api_key_env,
                     "request": {"input": user_content},
                     "error": str(e),
@@ -176,84 +234,85 @@ class LLMPriorScorer:
             )
             return None
 
-        if not completion.choices:
-            log.warning("Chat Completions returned no choices; using uniform")
-            self._append_qa_log(
-                {
-                    "kind": "llm_prior_response_rejected",
-                    "sim_id": sim_id,
-                    "reason": "no_choices",
-                    "request": {"input": user_content},
-                    "response": {},
-                }
+        if completion is None:
+            self._reject_chat_response(
+                sim_id, "completion_none", user_content, log_detail="completion is None"
             )
             return None
 
-        choice = completion.choices[0]
+        choices = getattr(completion, "choices", None)
+        if choices is None:
+            self._reject_chat_response(
+                sim_id,
+                "choices_none",
+                user_content,
+                log_detail="choices is None",
+            )
+            return None
+        if len(choices) == 0:
+            self._reject_chat_response(sim_id, "no_choices", user_content)
+            return None
+
+        choice = choices[0]
+        if choice is None:
+            self._reject_chat_response(sim_id, "choice_none", user_content)
+            return None
+
         finish_reason = getattr(choice, "finish_reason", None)
         if finish_reason == "length":
-            log.warning("Chat Completions finish_reason=length; using uniform")
-            self._append_qa_log(
-                {
-                    "kind": "llm_prior_response_rejected",
-                    "sim_id": sim_id,
-                    "reason": "finish_reason_length",
-                    "request": {"input": user_content},
-                    "response": {
-                        "finish_reason": finish_reason,
-                        "content": getattr(choice.message, "content", None),
-                    },
-                }
+            message = getattr(choice, "message", None)
+            self._reject_chat_response(
+                sim_id,
+                "finish_reason_length",
+                user_content,
+                response={
+                    "finish_reason": finish_reason,
+                    "content": getattr(message, "content", None) if message else None,
+                },
             )
             return None
 
-        message = choice.message
+        message = getattr(choice, "message", None)
+        if message is None:
+            self._reject_chat_response(sim_id, "message_none", user_content)
+            return None
+
         refusal = getattr(message, "refusal", None)
         if refusal:
-            log.warning("Chat Completions refusal: %s; using uniform", refusal)
-            self._append_qa_log(
-                {
-                    "kind": "llm_prior_response_rejected",
-                    "sim_id": sim_id,
-                    "reason": "refusal",
-                    "request": {"input": user_content},
-                    "response": {"refusal": refusal},
-                }
+            self._reject_chat_response(
+                sim_id,
+                "refusal",
+                user_content,
+                response={"refusal": refusal},
+                log_detail=f"refusal={refusal!r}",
             )
             return None
 
-        parsed: TacticPriorScores | None = message.parsed
+        parsed: TacticPriorScores | None = getattr(message, "parsed", None)
         raw_content = getattr(message, "content", None)
         if parsed is None:
-            log.warning("LLM prior: no structured output (parse miss or empty)")
-            self._append_qa_log(
-                {
-                    "kind": "llm_prior_response_rejected",
-                    "sim_id": sim_id,
-                    "reason": "no_structured_output",
-                    "request": {"input": user_content},
-                    "response": {
-                        "finish_reason": finish_reason,
-                        "content": raw_content,
-                    },
-                }
+            self._reject_chat_response(
+                sim_id,
+                "no_structured_output",
+                user_content,
+                response={
+                    "finish_reason": finish_reason,
+                    "content": raw_content,
+                },
             )
             return None
 
-        if not parsed.scores:
-            log.warning("LLM prior: empty scores list; using uniform")
-            self._append_qa_log(
-                {
-                    "kind": "llm_prior_response_rejected",
-                    "sim_id": sim_id,
-                    "reason": "empty_scores",
-                    "request": {"input": user_content},
-                    "response": {
-                        "finish_reason": finish_reason,
-                        "content": raw_content,
-                        "parsed_scores": [],
-                    },
-                }
+        scores_list = getattr(parsed, "scores", None)
+        if scores_list is None or len(scores_list) == 0:
+            self._reject_chat_response(
+                sim_id,
+                "empty_scores",
+                user_content,
+                response={
+                    "finish_reason": finish_reason,
+                    "content": raw_content,
+                    "parsed_scores": [],
+                },
             )
             return None
 
@@ -261,12 +320,13 @@ class LLMPriorScorer:
             {
                 "kind": "llm_prior_qa",
                 "sim_id": sim_id,
+                "prior_source": "api_call",
                 "api_key_env": self._api_key_env,
                 "request": {"input": user_content},
                 "response": {
                     "finish_reason": finish_reason,
                     "content": raw_content,
-                    "parsed_scores": [it.model_dump() for it in parsed.scores],
+                    "parsed_scores": [it.model_dump() for it in scores_list],
                 },
             }
         )
@@ -330,10 +390,13 @@ class LLMPriorScorer:
             cached_mode, cached_priors = self._memory[partial_strategy]
             if all(a in cached_priors for a in candidate_actions):
                 subset = {a: cached_priors[a] for a in candidate_actions}
+                self.last_prior_source = "cache_hit"
+                self.last_mapping_mode = cached_mode
                 self._append_qa_log(
                     {
                         "kind": "llm_prior_cache_hit",
                         "sim_id": sim_id,
+                        "prior_source": "cache_hit",
                         "mapping_mode": cached_mode,
                         "logic": logic,
                         "partial_strategy": partial_strategy,
@@ -342,11 +405,11 @@ class LLMPriorScorer:
                         "ranked_priors": self._ranked_priors(subset),
                     }
                 )
-                log.info(
-                    "LLM prior sim %s: using cached %s priors: %s",
+                self._log_prior_event(
                     sim_id,
-                    cached_mode,
-                    self._format_ranked_priors(subset),
+                    "cache_hit",
+                    mapping_mode=cached_mode,
+                    detail=self._format_ranked_priors(subset),
                 )
                 return subset
 
@@ -367,10 +430,13 @@ class LLMPriorScorer:
         parsed = self._chat_completions_parse_scores(user_content, sim_id=sim_id)
         if parsed is None:
             u = self._uniform(candidate_actions)
+            self.last_prior_source = "api_call_failed"
+            self.last_mapping_mode = "uniform_api_fallback"
             self._append_qa_log(
                 {
                     "kind": "llm_prior_uniform_fallback",
                     "sim_id": sim_id,
+                    "prior_source": "api_call_failed",
                     "mapping_mode": "uniform_api_fallback",
                     "logic": logic,
                     "partial_strategy": partial_strategy,
@@ -379,10 +445,11 @@ class LLMPriorScorer:
                     "ranked_priors": self._ranked_priors(u),
                 }
             )
-            log.info(
-                "LLM prior sim %s: using uniform prior (api fallback): %s",
+            self._log_prior_event(
                 sim_id,
-                self._format_ranked_priors(u),
+                "api_call_failed",
+                mapping_mode="uniform_api_fallback",
+                detail=self._format_ranked_priors(u),
             )
             return u
 
@@ -396,11 +463,14 @@ class LLMPriorScorer:
 
         mapping_mode, priors, reason = self._thresholded_softmax(scores)
         self._memory[partial_strategy] = (mapping_mode, priors)
+        self.last_prior_source = "api_call"
+        self.last_mapping_mode = mapping_mode
         ranked = self._ranked_priors(priors)
         self._append_qa_log(
             {
                 "kind": "llm_prior_scores",
                 "sim_id": sim_id,
+                "prior_source": "api_call",
                 "reason": reason,
                 "mapping_mode": mapping_mode,
                 "logic": logic,
@@ -411,18 +481,14 @@ class LLMPriorScorer:
                 "ranked_priors": ranked,
             }
         )
-        if mapping_mode.startswith("uniform"):
-            log.info(
-                "LLM prior sim %s: using uniform prior (%s): %s",
-                sim_id,
-                reason or mapping_mode,
-                self._format_ranked_priors(priors),
-            )
-        else:
-            log.info(
-                "LLM prior sim %s: using llm ratings (%s): %s",
-                sim_id,
-                mapping_mode,
-                self._format_ranked_priors(priors),
-            )
+        self._log_prior_event(
+            sim_id,
+            "api_call",
+            mapping_mode=mapping_mode,
+            detail=(
+                f"reason={reason} {self._format_ranked_priors(priors)}"
+                if reason
+                else self._format_ranked_priors(priors)
+            ),
+        )
         return {a: priors[a] for a in candidate_actions}
