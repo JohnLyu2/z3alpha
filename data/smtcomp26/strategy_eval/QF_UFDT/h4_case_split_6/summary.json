@@ -1,0 +1,29 @@
+{
+  "timestamp": "20260603_051000",
+  "label": "h4_case_split_6",
+  "group": "QF_UFDT_t600",
+  "environment": {
+    "machine_name": "snork",
+    "z3_path": ".venv/bin/z3",
+    "z3_version": "4.16.0",
+    "batch_size": 45,
+    "smtlib_root": "/home/z52lu/smtlib25"
+  },
+  "run_config": {
+    "mode": "eval_list_file",
+    "source": "experiments/smtcomp25/bench_lists/QF_UFDT.txt",
+    "timeout": 600,
+    "strategy": null,
+    "z3_extra_params": [
+      "smt.auto_config=false",
+      "smt.case_split=6"
+    ],
+    "instances_total": 200
+  },
+  "results": {
+    "solved": 71,
+    "par2_avg": 852.8644,
+    "par10_avg": 3948.8644,
+    "detail_csv": "experiments/smtcomp25/results/QF_UFDT_t600/h4_case_split_6/instance_results.csv"
+  }
+}
