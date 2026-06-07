@@ -1,0 +1,26 @@
+{
+  "timestamp": "20260605_193452",
+  "label": "H15_propvals_seed100",
+  "group": "QF_UFDTNIA_qfeqnla_t600",
+  "environment": {
+    "machine_name": "snork",
+    "z3_path": ".venv/bin/z3",
+    "z3_version": "4.16.0",
+    "batch_size": 45,
+    "smtlib_root": "/home/z52lu/smtlib25"
+  },
+  "run_config": {
+    "mode": "eval_list_file",
+    "source": "experiments/smtcomp25/bench_lists/QF_UFDTNIA.txt",
+    "timeout": 600,
+    "strategy": "(then (using-params propagate-values :push_ite_bv true) (using-params smt :random_seed 100))",
+    "z3_extra_params": [],
+    "instances_total": 80
+  },
+  "results": {
+    "solved": 54,
+    "par2_avg": 415.8016,
+    "par10_avg": 1975.8016,
+    "detail_csv": "experiments/smtcomp25/results/QF_UFDTNIA_qfeqnla_t600/H15_propvals_seed100/instance_results.csv"
+  }
+}

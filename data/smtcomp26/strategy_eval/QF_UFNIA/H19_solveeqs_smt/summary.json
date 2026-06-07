@@ -1,0 +1,26 @@
+{
+  "timestamp": "20260605_224651",
+  "label": "H19_solveeqs_smt",
+  "group": "QF_UFNIA_qfeqnla_t600",
+  "environment": {
+    "machine_name": "snork",
+    "z3_path": ".venv/bin/z3",
+    "z3_version": "4.16.0",
+    "batch_size": 45,
+    "smtlib_root": "/home/z52lu/smtlib25"
+  },
+  "run_config": {
+    "mode": "eval_list_file",
+    "source": "experiments/smtcomp25/bench_lists/QF_UFNIA.txt",
+    "timeout": 600,
+    "strategy": "(then solve-eqs solve-eqs elim-uncnstr propagate-values smt)",
+    "z3_extra_params": [],
+    "instances_total": 339
+  },
+  "results": {
+    "solved": 197,
+    "par2_avg": 520.7365,
+    "par10_avg": 2531.356,
+    "detail_csv": "experiments/smtcomp25/results/QF_UFNIA_qfeqnla_t600/H19_solveeqs_smt/instance_results.csv"
+  }
+}
