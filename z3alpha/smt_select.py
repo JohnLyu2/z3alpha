@@ -1,9 +1,7 @@
 """
 PWC (pairwise comparison) based algorithm selector for Z3 tactic strategies.
 
-Trains one binary SVM per pair of shortlisted strategies. At inference time,
-features are extracted from the benchmark using smtlib_features.py, pairwise
-votes are collected, and the strategy with the most votes is selected.
+Training API. Inference (feature extraction, ranking) is in smt_select_infer.py.
 
 Approach adapted from SMT-Select (syntactic/PWC variant):
   https://github.com/JohnLyu2/smt-select
@@ -12,146 +10,35 @@ Approach adapted from SMT-Select (syntactic/PWC variant):
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-import joblib
 import numpy as np
 from sklearn.dummy import DummyClassifier
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
+from xgboost import XGBClassifier
 
-try:
-    from z3alpha.smtlib_features import extract_features, SMTLIB_SYMBOLS
-except ImportError:
-    from smtlib_features import extract_features, SMTLIB_SYMBOLS  # type: ignore[no-redef]
+from z3alpha.smt_select_infer import (
+    FEATURE_NAMES,
+    PairwiseSelector,
+    bench_feature_vector,
+)
 
 log = logging.getLogger(__name__)
 
-# Ignore pairwise samples where the performance gap is smaller than this (seconds)
 _PERF_DIFF_THRESHOLD = 0.1
 
-
-# ─── Feature extraction ───────────────────────────────────────────────────────
-
-_STRUCTURAL_NAMES = [
-    "assertsCount",
-    "declareFunCount",
-    "declareConstCount",
-    "declareSortCount",
-    "defineFunCount",
-    "defineFunRecCount",
-    "constantFunCount",
-    "defineSortCount",
-    "declareDatatypeCount",
-    "maxTermDepth",
+__all__ = [
+    "FEATURE_NAMES",
+    "PairwiseSelector",
+    "bench_feature_vector",
+    "train_pwc_selector",
 ]
 
-FEATURE_NAMES: list[str] = _STRUCTURAL_NAMES + [f"sym_{s}" for s in SMTLIB_SYMBOLS]
 
-
-def bench_feature_vector(path: str | Path) -> Optional[np.ndarray]:
-    """Extract a flat feature vector from an SMT-LIB 2 benchmark.
-
-    For incremental benchmarks (multiple check-sat calls), structural counts
-    are summed and max_term_depth is taken as the maximum across all queries.
-    Returns None if extraction fails.
-    """
-    try:
-        entries = extract_features(path)
-    except Exception:
-        log.debug(f"Feature extraction failed for {path}", exc_info=True)
-        return None
-
-    queries = entries[:-1]  # last entry is benchmark-level metadata
-    if not queries:
-        return None
-
-    vec = [
-        sum(q["assertsCount"]          for q in queries),
-        sum(q["declareFunCount"]       for q in queries),
-        sum(q["declareConstCount"]     for q in queries),
-        sum(q["declareSortCount"]      for q in queries),
-        sum(q["defineFunCount"]        for q in queries),
-        sum(q["defineFunRecCount"]     for q in queries),
-        sum(q["constantFunCount"]      for q in queries),
-        sum(q["defineSortCount"]       for q in queries),
-        sum(q["declareDatatypeCount"]  for q in queries),
-        max(q["maxTermDepth"]          for q in queries),
-    ]
-    # Sum symbol frequencies across all queries
-    freq = [0] * len(queries[0]["symbolFrequency"])
-    for q in queries:
-        for i, v in enumerate(q["symbolFrequency"]):
-            freq[i] += v
-    vec.extend(freq)
-    return np.array(vec, dtype=float)
-
-
-# ─── Selector ─────────────────────────────────────────────────────────────────
-
-@dataclass
-class PairwiseSelector:
-    """Trained pairwise comparison strategy selector.
-
-    Attributes:
-        strategies: shortlisted strategy strings (index matches model_matrix).
-        model_matrix: upper-triangular K×K array; model_matrix[i,j] (i<j)
-            predicts 1 if strategy i is better than j, 0 otherwise.
-        scaler: fitted StandardScaler used during training.
-        fallback_idx: index of the single-best-strategy fallback.
-    """
-
-    strategies: list[str]
-    model_matrix: np.ndarray
-    scaler: StandardScaler
-    fallback_idx: int
-
-    def select(self, path: str | Path) -> str:
-        """Return the strategy string predicted to work best on this benchmark."""
-        if len(self.strategies) == 1:
-            return self.strategies[0]
-
-        raw = bench_feature_vector(path)
-        if raw is None:
-            log.warning(f"Feature extraction failed for {path}; using fallback strategy")
-            return self.strategies[self.fallback_idx]
-
-        return self.select_vec(raw)
-
-    def select_vec(self, raw: np.ndarray) -> str:
-        """Return the strategy string predicted to work best given a precomputed feature vector."""
-        if len(self.strategies) == 1:
-            return self.strategies[0]
-
-        x = self.scaler.transform(raw.reshape(1, -1))
-        k = len(self.strategies)
-        votes = [0] * k
-
-        for i in range(k):
-            for j in range(i + 1, k):
-                pred = int(self.model_matrix[i, j].predict(x)[0])
-                if pred == 1:
-                    votes[i] += 1
-                else:
-                    votes[j] += 1
-
-        return self.strategies[int(np.argmax(votes))]
-
-    def save(self, path: str | Path) -> None:
-        joblib.dump(self, path)
-        log.info(f"Selector saved to {path}")
-
-    @staticmethod
-    def load(path: str | Path) -> PairwiseSelector:
-        return joblib.load(path)
-
-
-# ─── Training ─────────────────────────────────────────────────────────────────
-
-def _par2(solved: bool, time_s: float, timeout: float) -> float:
-    return time_s if solved else 2.0 * timeout
+def _par_n(solved: bool, time_s: float, timeout: float, n: float) -> float:
+    return time_s if solved else n * timeout
 
 
 def train_pwc_selector(
@@ -160,6 +47,11 @@ def train_pwc_selector(
     timeout: float,
     random_seed: int = 42,
     precomputed_features: Optional[dict[str, np.ndarray]] = None,
+    perf_diff_threshold: int | float = _PERF_DIFF_THRESHOLD,
+    model_type: str = "svm",
+    weight_type: str = "par2",
+    n_estimators: int = 100,
+    max_depth: int = 6,
 ) -> PairwiseSelector:
     """Train a PWC selector from Stage 1 results.
 
@@ -197,7 +89,6 @@ def train_pwc_selector(
         )
     assert k >= 2
 
-    # ── Extract or look up features ───────────────────────────────────────
     raw_features: list[np.ndarray] = []
     valid_indices: list[int] = []
     for idx, path in enumerate(bench_paths):
@@ -218,31 +109,44 @@ def train_pwc_selector(
     X_scaled = scaler.fit_transform(X)
     log.info(f"Features extracted for {len(valid_indices)}/{len(bench_paths)} benchmarks")
 
-    # ── PAR-2 matrix (n_valid × k) ────────────────────────────────────────
     par2 = np.zeros((len(valid_indices), k), dtype=float)
     for si, strat in enumerate(strategies):
         results = bench_results[strat]
         for row, bi in enumerate(valid_indices):
             solved, time_s, _ = results[bi]
-            par2[row, si] = _par2(solved, time_s, timeout)
+            par2[row, si] = _par_n(solved, time_s, timeout, 2)
 
     fallback_idx = int(np.argmin(par2.mean(axis=0)))
     log.info(f"SBS fallback: strategy {fallback_idx} ({strategies[fallback_idx][:60]}...)")
 
-    # ── Train pairwise models ─────────────────────────────────────────────
+    w_n = 10 if weight_type == "par10" else 2
+    if w_n != 2:
+        w_matrix = np.zeros_like(par2)
+        for si, strat in enumerate(strategies):
+            results = bench_results[strat]
+            for row, bi in enumerate(valid_indices):
+                solved, time_s, _ = results[bi]
+                w_matrix[row, si] = _par_n(solved, time_s, timeout, w_n)
+    else:
+        w_matrix = par2
+
     model_matrix = np.empty((k, k), dtype=object)
     for i in range(k):
         for j in range(i + 1, k):
-            diff = par2[:, i] - par2[:, j]
-            labels = (diff < 0).astype(int)   # 1 = strategy i is better
+            diff = w_matrix[:, i] - w_matrix[:, j]
+            labels = (diff < 0).astype(int)
             costs = np.abs(diff)
-            mask = costs > _PERF_DIFF_THRESHOLD
+            mask = costs > perf_diff_threshold
 
             if mask.sum() == 0 or len(np.unique(labels[mask])) < 2:
                 model = DummyClassifier(strategy="most_frequent")
                 fit_X = X_scaled[mask] if mask.sum() > 0 else X_scaled
                 fit_y = labels[mask] if mask.sum() > 0 else labels
                 model.fit(fit_X, fit_y)
+            elif model_type == "xgboost":
+                model = XGBClassifier(n_estimators=n_estimators, max_depth=max_depth,
+                                      random_state=random_seed, verbosity=0, nthread=4)
+                model.fit(X_scaled[mask], labels[mask], sample_weight=costs[mask])
             else:
                 model = SVC(kernel="rbf", random_state=random_seed)
                 model.fit(X_scaled[mask], labels[mask], sample_weight=costs[mask])
@@ -257,4 +161,5 @@ def train_pwc_selector(
         model_matrix=model_matrix,
         scaler=scaler,
         fallback_idx=fallback_idx,
+        par2_scores=par2.mean(axis=0),
     )

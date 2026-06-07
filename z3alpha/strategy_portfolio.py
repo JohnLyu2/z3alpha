@@ -1,4 +1,4 @@
-from z3alpha.utils import par_n_reward
+from z3alpha.utils import par_n_reward, par_n, solved_num
 
 
 # no incentive for early termination if not solved for now
@@ -52,6 +52,7 @@ def create_greedy_linear_strategy_portfolio(max_selected, result_database, timeo
         if best_strat is None:
             break
         selected_strat.append(best_strat)
-        best_res, beat_num = virtual_add_strategy(best_res, result_database[best_strat])
-        log_str += f"Select {i}'th strategy: {best_strat}\nimprove on {beat_num} instances,  new par10: {best_value:.5f}\n"
+        best_res, _ = virtual_add_strategy(best_res, result_database[best_strat])
+        par2 = par_n(best_res, 2, timeout) / len(best_res)
+        log_str += f"Select {i}'th strategy: {best_strat}\nsolved: {solved_num(best_res)},  par2: {par2:.1f}s\n"
     return selected_strat, log_str
