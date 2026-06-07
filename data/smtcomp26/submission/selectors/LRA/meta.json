@@ -1,0 +1,31 @@
+{
+  "logic": "LRA",
+  "shortlist": [
+    "R8_qelight_qe2_smtseed99_mbqi8",
+    "L3_degreeshift_aggr_lia",
+    "M2_purify_aggrsimp_propvals_lra",
+    "H23_qe2_smt_seed17",
+    "M3_fm_ctxsimp_lia2card_lra",
+    "baseline"
+  ],
+  "strategy_cli": {
+    "R8_qelight_qe2_smtseed99_mbqi8": [
+      "tactic.default_tactic=(then qe-light qe2 (using-params smt :random_seed 99 :mbqi.max_cexs 8))"
+    ],
+    "L3_degreeshift_aggr_lia": [
+      "tactic.default_tactic=(then degree-shift (using-params simplify :elim_and true :blast_distinct true :local_ctx true :pull_cheap_ite true :som true :flat true :push_ite_arith true :hoist_ite true :arith_lhs true) elim-uncnstr solve-eqs elim-uncnstr lia)"
+    ],
+    "M2_purify_aggrsimp_propvals_lra": [
+      "tactic.default_tactic=(then purify-arith (using-params simplify :elim_and true :blast_distinct true :local_ctx true :pull_cheap_ite true :som true :flat true :push_ite_arith true :hoist_ite true :arith_lhs true) propagate-values lra)"
+    ],
+    "H23_qe2_smt_seed17": [
+      "tactic.default_tactic=(then qe2 (using-params smt :random_seed 17))"
+    ],
+    "M3_fm_ctxsimp_lia2card_lra": [
+      "tactic.default_tactic=(then fm ctx-simplify lia2card lra)"
+    ],
+    "baseline": []
+  },
+  "scheduler": false,
+  "presolver_seconds": 0.0
+}

@@ -1,0 +1,19 @@
+{
+  "logic": "QF_ANIA",
+  "shortlist": [
+    "H6_solver2_seed42",
+    "H5_preproc"
+  ],
+  "strategy_cli": {
+    "H6_solver2_seed42": [
+      "smt.arith.solver=2",
+      "smt.random_seed=42"
+    ],
+    "H5_preproc": [
+      "tactic.default_tactic=(then simplify propagate-values solve-eqs elim-uncnstr smt)"
+    ]
+  },
+  "scheduler": true,
+  "presolver_seconds": 0.0,
+  "scheduler_timeout": 960.0
+}

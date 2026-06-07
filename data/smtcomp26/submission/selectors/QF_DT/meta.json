@@ -1,0 +1,29 @@
+{
+  "logic": "QF_DT",
+  "shortlist": [
+    "h4_case_split_6",
+    "h3_case_split_3",
+    "default",
+    "p1_simplify_smt"
+  ],
+  "strategy_cli": {
+    "h4_case_split_6": [
+      "smt.auto_config=false",
+      "smt.case_split=6"
+    ],
+    "h3_case_split_3": [
+      "smt.auto_config=false",
+      "smt.case_split=3"
+    ],
+    "default": [],
+    "p1_simplify_smt": [
+      "tactic.default_tactic=(then simplify smt)",
+      "smt.auto_config=false",
+      "smt.case_split=3",
+      "smt.dt_lazy_splits=2",
+      "smt.theory_case_split=true"
+    ]
+  },
+  "scheduler": false,
+  "presolver_seconds": 0.0
+}

@@ -1,0 +1,18 @@
+{
+  "logic": "NRA",
+  "shortlist": [
+    "H17_lia2pb16_factor_nra",
+    "H13_degree_shift_smt500"
+  ],
+  "strategy_cli": {
+    "H17_lia2pb16_factor_nra": [
+      "tactic.default_tactic=(then (using-params lia2pb :lia2pb_max_bits 16) factor elim-uncnstr fix-dl-var elim-uncnstr fix-dl-var nra)"
+    ],
+    "H13_degree_shift_smt500": [
+      "tactic.default_tactic=(then degree-shift (using-params smt :random_seed 500))"
+    ]
+  },
+  "scheduler": true,
+  "presolver_seconds": 0.0,
+  "scheduler_timeout": 960.0
+}

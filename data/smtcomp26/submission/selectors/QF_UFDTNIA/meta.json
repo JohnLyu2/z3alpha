@@ -1,0 +1,26 @@
+{
+  "logic": "QF_UFDTNIA",
+  "shortlist": [
+    "H11_horneroff",
+    "H15_propvals_seed100",
+    "H14_lia2card_seed100",
+    "H3_seed42"
+  ],
+  "strategy_cli": {
+    "H11_horneroff": [
+      "smt.arith.nl.horner=false"
+    ],
+    "H15_propvals_seed100": [
+      "tactic.default_tactic=(then (using-params propagate-values :push_ite_bv true) (using-params smt :random_seed 100))"
+    ],
+    "H14_lia2card_seed100": [
+      "tactic.default_tactic=(then lia2card (using-params simplify :flat false :hi_div0 false) card2bv solve-eqs lia2card (using-params smt :random_seed 100))"
+    ],
+    "H3_seed42": [
+      "smt.random_seed=42"
+    ]
+  },
+  "scheduler": true,
+  "presolver_seconds": 0.0,
+  "scheduler_timeout": 960.0
+}
