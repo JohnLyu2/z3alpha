@@ -1,0 +1,31 @@
+{
+  "timestamp": "20260530_021900",
+  "label": "H24_inline_noreorder_shuffle7",
+  "group": "QF_NRA_hard5s_t600",
+  "environment": {
+    "machine_name": "snork",
+    "z3_path": ".venv/bin/z3",
+    "z3_version": "4.16.0",
+    "batch_size": 45,
+    "smtlib_root": "/home/z52lu/smtlib25"
+  },
+  "run_config": {
+    "mode": "eval_list_file",
+    "source": "experiments/smtcomp25/bench_lists/curated/QF_NRA_hard5s.txt",
+    "timeout": 600,
+    "strategy": null,
+    "z3_extra_params": [
+      "nlsat.inline_vars=true",
+      "nlsat.reorder=false",
+      "nlsat.shuffle_vars=true",
+      "nlsat.seed=7"
+    ],
+    "instances_total": 909
+  },
+  "results": {
+    "solved": 581,
+    "par2_avg": 475.8891,
+    "par10_avg": 2207.9023,
+    "detail_csv": "experiments/smtcomp25/results/QF_NRA_hard5s_t600/H24_inline_noreorder_shuffle7/instance_results.csv"
+  }
+}

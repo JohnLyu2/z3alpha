@@ -1,0 +1,26 @@
+{
+  "timestamp": "20260530_162204",
+  "label": "H21_lia2card_smt_seed100",
+  "group": "QF_NIA_hard5s_t600",
+  "environment": {
+    "machine_name": "snork",
+    "z3_path": ".venv/bin/z3",
+    "z3_version": "4.16.0",
+    "batch_size": 45,
+    "smtlib_root": "/home/z52lu/smtlib25"
+  },
+  "run_config": {
+    "mode": "eval_list_file",
+    "source": "experiments/smtcomp25/bench_lists/curated/QF_NIA_hard5s.txt",
+    "timeout": 600,
+    "strategy": "(then lia2card (using-params simplify :flat false :hi_div0 false) card2bv solve-eqs lia2card (using-params smt :random_seed 100))",
+    "z3_extra_params": [],
+    "instances_total": 6130
+  },
+  "results": {
+    "solved": 3124,
+    "par2_avg": 617.8438,
+    "par10_avg": 2971.6448,
+    "detail_csv": "experiments/smtcomp25/results/QF_NIA_hard5s_t600/H21_lia2card_smt_seed100/instance_results.csv"
+  }
+}
