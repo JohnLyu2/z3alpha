@@ -1,0 +1,26 @@
+{
+  "timestamp": "20260605_111609",
+  "label": "default",
+  "group": "NIA_t600",
+  "environment": {
+    "machine_name": "snork",
+    "z3_path": ".venv/bin/z3",
+    "z3_version": "4.16.0",
+    "batch_size": 45,
+    "smtlib_root": "/home/z52lu/smtlib25"
+  },
+  "run_config": {
+    "mode": "eval_list_file",
+    "source": "experiments/smtcomp25/bench_lists/NIA.txt",
+    "timeout": 600,
+    "strategy": null,
+    "z3_extra_params": [],
+    "instances_total": 254
+  },
+  "results": {
+    "solved": 224,
+    "par2_avg": 144.5857,
+    "par10_avg": 711.5149,
+    "detail_csv": "experiments/smtcomp25/results/NIA_t600/default/instance_results.csv"
+  }
+}

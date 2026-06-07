@@ -1,0 +1,26 @@
+{
+  "timestamp": "20260604_195338",
+  "label": "M2_purify_aggrsimp_propvals_lra",
+  "group": "LRA_t600",
+  "environment": {
+    "machine_name": "snork",
+    "z3_path": ".venv/bin/z3",
+    "z3_version": "4.16.0",
+    "batch_size": 45,
+    "smtlib_root": "/home/z52lu/smtlib25"
+  },
+  "run_config": {
+    "mode": "eval_list_file",
+    "source": "experiments/smtcomp25/bench_lists/LRA.txt",
+    "timeout": 600,
+    "strategy": "(then purify-arith (using-params simplify :elim_and true :blast_distinct true :local_ctx true :pull_cheap_ite true :som true :flat true :push_ite_arith true :hoist_ite true :arith_lhs true) propagate-values lra)",
+    "z3_extra_params": [],
+    "instances_total": 1013
+  },
+  "results": {
+    "solved": 378,
+    "par2_avg": 754.281,
+    "par10_avg": 3763.1655,
+    "detail_csv": "experiments/smtcomp25/results/LRA_t600/M2_purify_aggrsimp_propvals_lra/instance_results.csv"
+  }
+}

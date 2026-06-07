@@ -1,0 +1,26 @@
+{
+  "timestamp": "20260605_112624",
+  "label": "H18_fixdlvar_smt400",
+  "group": "NIA_t600",
+  "environment": {
+    "machine_name": "snork",
+    "z3_path": ".venv/bin/z3",
+    "z3_version": "4.16.0",
+    "batch_size": 45,
+    "smtlib_root": "/home/z52lu/smtlib25"
+  },
+  "run_config": {
+    "mode": "eval_list_file",
+    "source": "experiments/smtcomp25/bench_lists/NIA.txt",
+    "timeout": 600,
+    "strategy": "(then fix-dl-var (using-params smt :random_seed 400))",
+    "z3_extra_params": [],
+    "instances_total": 254
+  },
+  "results": {
+    "solved": 101,
+    "par2_avg": 723.9365,
+    "par10_avg": 3615.2751,
+    "detail_csv": "experiments/smtcomp25/results/NIA_t600/H18_fixdlvar_smt400/instance_results.csv"
+  }
+}

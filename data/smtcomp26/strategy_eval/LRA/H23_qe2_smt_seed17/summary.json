@@ -1,0 +1,26 @@
+{
+  "timestamp": "20260604_224923",
+  "label": "H23_qe2_smt_seed17",
+  "group": "LRA_t600",
+  "environment": {
+    "machine_name": "snork",
+    "z3_path": ".venv/bin/z3",
+    "z3_version": "4.16.0",
+    "batch_size": 45,
+    "smtlib_root": "/home/z52lu/smtlib25"
+  },
+  "run_config": {
+    "mode": "eval_list_file",
+    "source": "experiments/smtcomp25/bench_lists/LRA.txt",
+    "timeout": 600,
+    "strategy": "(then qe2 (using-params smt :random_seed 17))",
+    "z3_extra_params": [],
+    "instances_total": 1013
+  },
+  "results": {
+    "solved": 901,
+    "par2_avg": 148.8037,
+    "par10_avg": 679.5046,
+    "detail_csv": "experiments/smtcomp25/results/LRA_t600/H23_qe2_smt_seed17/instance_results.csv"
+  }
+}

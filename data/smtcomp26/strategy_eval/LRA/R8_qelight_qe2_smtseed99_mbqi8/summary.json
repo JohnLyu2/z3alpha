@@ -1,0 +1,26 @@
+{
+  "timestamp": "20260604_191843",
+  "label": "R8_qelight_qe2_smtseed99_mbqi8",
+  "group": "LRA_t600",
+  "environment": {
+    "machine_name": "snork",
+    "z3_path": ".venv/bin/z3",
+    "z3_version": "4.16.0",
+    "batch_size": 45,
+    "smtlib_root": "/home/z52lu/smtlib25"
+  },
+  "run_config": {
+    "mode": "eval_list_file",
+    "source": "experiments/smtcomp25/bench_lists/LRA.txt",
+    "timeout": 600,
+    "strategy": "(then qe-light qe2 (using-params smt :random_seed 99 :mbqi.max_cexs 8))",
+    "z3_extra_params": [],
+    "instances_total": 1013
+  },
+  "results": {
+    "solved": 905,
+    "par2_avg": 145.1682,
+    "par10_avg": 656.9155,
+    "detail_csv": "experiments/smtcomp25/results/LRA_t600/R8_qelight_qe2_smtseed99_mbqi8/instance_results.csv"
+  }
+}
