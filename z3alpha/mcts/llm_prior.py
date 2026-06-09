@@ -14,7 +14,11 @@ from typing import Literal
 from openai import OpenAI
 from pydantic import BaseModel, ConfigDict, Field
 
+from z3alpha.mcts.llm_prior_context import RunContextVersion
+
 log = logging.getLogger(__name__)
+
+_LEGACY_CACHE_VERSION = (-1, -1)
 
 PriorSource = Literal["api_call", "cache_hit", "api_call_failed"]
 
@@ -78,7 +82,7 @@ class LLMPriorScorer:
 
     def __init__(self, cfg: LLMPriorConfig) -> None:
         self._cfg = cfg
-        self._memory: dict[str, tuple[str, dict[str, float]]] = {}
+        self._memory: dict[tuple, tuple[str, dict[str, float]]] = {}
         self._api_key_env = cfg.api_key_env or _default_api_key_env(cfg.base_url)
         self._api_key = os.environ.get(self._api_key_env, "")
         if cfg.enabled and not self._api_key:
@@ -135,6 +139,8 @@ class LLMPriorScorer:
             "scores",
             "priors",
             "ranked_priors",
+            "run_context",
+            "run_context_version",
             "api_key_env",
             "error",
         ):
@@ -376,18 +382,77 @@ class LLMPriorScorer:
             priors[name] = val / denom
         return "thresholded_softmax", priors, None
 
+    def _cache_key(
+        self,
+        partial_strategy: str,
+        run_context_version: RunContextVersion | None,
+    ) -> tuple:
+        if run_context_version is None:
+            return (partial_strategy, *_LEGACY_CACHE_VERSION)
+        return (
+            partial_strategy,
+            run_context_version.num_strategies,
+            run_context_version.best_n_solved,
+        )
+
+    def _run_context_log_fields(
+        self,
+        run_context: str | None,
+        run_context_version: RunContextVersion | None,
+    ) -> dict:
+        if run_context_version is None:
+            return {}
+        return {
+            "run_context": run_context,
+            "run_context_version": {
+                "num_strategies": run_context_version.num_strategies,
+                "best_n_solved": run_context_version.best_n_solved,
+            },
+        }
+
+    def _build_user_content(
+        self,
+        logic: str,
+        partial_strategy: str,
+        candidate_actions: list[str],
+        run_context: str | None,
+    ) -> str:
+        n_candidates = len(candidate_actions)
+        parts = [f"Logic: {logic}", ""]
+        if run_context is not None:
+            parts.extend([run_context, ""])
+        parts.extend(
+            [
+                "Current partial Z3 strategy (SMT-LIB tactic script):",
+                partial_strategy,
+                "",
+                f"Candidate Z3 tactic names for the next step ({n_candidates} tactics). "
+                "Include each name exactly once in `scores` with a 0-10 confidence value "
+                '(names are JSON strings, e.g. "smt", "ctx-simplify"):',
+                json.dumps(candidate_actions),
+            ]
+        )
+        return "\n".join(parts)
+
     def score(
         self,
         logic: str,
         partial_strategy: str,
         candidate_actions: list[str],
         sim_id: int | None = None,
+        *,
+        run_context: str | None = None,
+        run_context_version: RunContextVersion | None = None,
     ) -> dict[str, float]:
         """Return prior per candidate name; uniform on failure/uncertainty."""
         if not candidate_actions:
             return {}
-        if partial_strategy in self._memory:
-            cached_mode, cached_priors = self._memory[partial_strategy]
+        cache_key = self._cache_key(partial_strategy, run_context_version)
+        context_fields = self._run_context_log_fields(
+            run_context, run_context_version
+        )
+        if cache_key in self._memory:
+            cached_mode, cached_priors = self._memory[cache_key]
             if all(a in cached_priors for a in candidate_actions):
                 subset = {a: cached_priors[a] for a in candidate_actions}
                 self.last_prior_source = "cache_hit"
@@ -403,6 +468,7 @@ class LLMPriorScorer:
                         "candidate_actions": candidate_actions,
                         "priors": subset,
                         "ranked_priors": self._ranked_priors(subset),
+                        **context_fields,
                     }
                 )
                 self._log_prior_event(
@@ -413,19 +479,8 @@ class LLMPriorScorer:
                 )
                 return subset
 
-        n_candidates = len(candidate_actions)
-        user_content = "\n".join(
-            [
-                f"Logic: {logic}",
-                "",
-                "Current partial Z3 strategy (SMT-LIB tactic script):",
-                partial_strategy,
-                "",
-                f"Candidate Z3 tactic names for the next step ({n_candidates} tactics). "
-                "Include each name exactly once in `scores` with a 0-10 confidence value "
-                "(names are JSON strings, e.g. \"smt\", \"ctx-simplify\"):",
-                json.dumps(candidate_actions),
-            ]
+        user_content = self._build_user_content(
+            logic, partial_strategy, candidate_actions, run_context
         )
         parsed = self._chat_completions_parse_scores(user_content, sim_id=sim_id)
         if parsed is None:
@@ -443,6 +498,7 @@ class LLMPriorScorer:
                     "candidate_actions": candidate_actions,
                     "priors": u,
                     "ranked_priors": self._ranked_priors(u),
+                    **context_fields,
                 }
             )
             self._log_prior_event(
@@ -462,7 +518,7 @@ class LLMPriorScorer:
             scores[a] = by_name.get(a, 0)
 
         mapping_mode, priors, reason = self._thresholded_softmax(scores)
-        self._memory[partial_strategy] = (mapping_mode, priors)
+        self._memory[cache_key] = (mapping_mode, priors)
         self.last_prior_source = "api_call"
         self.last_mapping_mode = mapping_mode
         ranked = self._ranked_priors(priors)
@@ -479,6 +535,7 @@ class LLMPriorScorer:
                 "scores": scores,
                 "priors": priors,
                 "ranked_priors": ranked,
+                **context_fields,
             }
         )
         self._log_prior_event(
