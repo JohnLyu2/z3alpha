@@ -13,6 +13,7 @@ The results below are based on a timeout of 10min.
 | → | QF_NRA | 5 | 909 | 565 | 693 | +128 (+22.7%) |
 | → | QF_NIA | 6 | 6,130 | 2,917 | 4,092 | +1,175 (+40.3%) |
 | QF_BitVectors | QF_BV | 7 | 4,525 | 2,982 | 3,568 | +586 (+19.7%) |
+| QF_LinearIntegerArith | QF_LIA | 6 | 1,239 | 782 | 1,003 | +221 (+28.3%) |
 | QF_Equality_NonLinearArith | QF_ANIA | 2 | 155 | 92 | 108 | +16 (+17.4%) |
 | QF_Equality_NonLinearArith | QF_UFDTNIA | 4 | 80 | 59 | 66 | +7 (+11.9%) |
 | QF_Equality_NonLinearArith | QF_UFNIA | 6 | 339 | 193 | 226 | +33 (+17.1%) |

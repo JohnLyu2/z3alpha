@@ -1,0 +1,28 @@
+{
+  "timestamp": "20260607_062509",
+  "label": "H9_prop_eqs_off",
+  "group": "QF_LIA_hard5s_t600",
+  "environment": {
+    "machine_name": "snork",
+    "z3_path": ".venv/bin/z3",
+    "z3_version": "4.16.0",
+    "batch_size": 45,
+    "smtlib_root": "/home/z52lu/smtlib25"
+  },
+  "run_config": {
+    "mode": "eval_list_file",
+    "source": "experiments/smtcomp25/bench_lists/curated/QF_LIA_hard5s.txt",
+    "timeout": 600,
+    "strategy": null,
+    "z3_extra_params": [
+      "smt.arith.propagate_eqs=false"
+    ],
+    "instances_total": 1239
+  },
+  "results": {
+    "solved": 795,
+    "par2_avg": 503.0496,
+    "par10_avg": 2223.1465,
+    "detail_csv": "experiments/smtcomp25/results/QF_LIA_hard5s_t600/H9_prop_eqs_off/instance_results.csv"
+  }
+}
