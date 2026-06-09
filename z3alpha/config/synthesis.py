@@ -16,6 +16,7 @@ DEFAULT_LLM_MODEL = "openrouter/free"
 DEFAULT_LLM_BASE_URL = "https://openrouter.ai/api/v1"
 DEFAULT_LLM_TIMEOUT = 30.0
 DEFAULT_LLM_TEMPERATURE = 0.0
+DEFAULT_LLM_PRIOR_EPSILON = 0.15
 
 
 @dataclass(frozen=True)
@@ -106,6 +107,11 @@ def resolve_mcts_config(args: MctsCliArgs, experiment: ExperimentConfig) -> Mcts
             llm_timeout=float(os.environ.get("Z3ALPHA_LLM_TIMEOUT", DEFAULT_LLM_TIMEOUT)),
             temperature=float(
                 os.environ.get("Z3ALPHA_LLM_TEMPERATURE", DEFAULT_LLM_TEMPERATURE)
+            ),
+            prior_epsilon=float(
+                os.environ.get(
+                    "Z3ALPHA_LLM_PRIOR_EPSILON", DEFAULT_LLM_PRIOR_EPSILON
+                )
             ),
         )
     return MctsConfig(

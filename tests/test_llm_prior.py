@@ -93,6 +93,7 @@ def test_resolve_mcts_config_llm_prior_flags():
     assert cfg.llm_prior.api_key_env == "OPENAI_API_KEY"
     assert cfg.llm_prior.llm_timeout == 42.0
     assert cfg.llm_prior.temperature == pytest.approx(0.1)
+    assert cfg.llm_prior.prior_epsilon == pytest.approx(0.15)
 
 
 def test_resolve_mcts_config_llm_prior_defaults_to_openrouter():
@@ -140,7 +141,9 @@ def test_llm_prior_scorer_uses_openrouter_env(monkeypatch):
 
 def test_llm_prior_scorer_thresholded_softmax_and_cache(monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
-    cfg = LLMPriorConfig(enabled=True, model="m", softmax_temperature=2.0)
+    cfg = LLMPriorConfig(
+        enabled=True, model="m", softmax_temperature=2.0, prior_epsilon=0.0
+    )
     scorer = LLMPriorScorer(cfg)
     calls = {"n": 0}
 
@@ -165,6 +168,30 @@ def test_llm_prior_scorer_thresholded_softmax_and_cache(monkeypatch):
     assert scorer.last_prior_source == "cache_hit"
     assert out2 == out1
     assert calls["n"] == 1
+
+
+def test_llm_prior_scorer_epsilon_mix(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    cfg = LLMPriorConfig(enabled=True, prior_epsilon=0.15)
+    scorer = LLMPriorScorer(cfg)
+
+    def fake_parse(self, user_content: str, sim_id=None):
+        return TacticPriorScores(
+            scores=[
+                TacticScoreItem(tactic_name="winner", value=8),
+                TacticScoreItem(tactic_name="mid", value=5),
+                TacticScoreItem(tactic_name="rejected", value=1),
+            ]
+        )
+
+    monkeypatch.setattr(LLMPriorScorer, "_chat_completions_parse_scores", fake_parse)
+    out = scorer.score(
+        "QF_NIA", "(then simplify)", ["winner", "mid", "rejected"], sim_id=0
+    )
+    assert out["rejected"] == pytest.approx(0.15 / 3)
+    assert sum(out.values()) == pytest.approx(1.0)
+    assert out["winner"] > out["rejected"]
+    assert scorer.last_mapping_mode == "thresholded_softmax_eps0.15"
 
 
 def test_llm_prior_scorer_counts_api_calls(monkeypatch):
@@ -408,7 +435,9 @@ def test_user_prompt_includes_run_context(monkeypatch):
 def test_llm_prior_scorer_writes_qa_log(monkeypatch, tmp_path):
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
     qa_log = tmp_path / "llm_prior_qa.log"
-    cfg = LLMPriorConfig(enabled=True, qa_log_path=str(qa_log))
+    cfg = LLMPriorConfig(
+        enabled=True, qa_log_path=str(qa_log), prior_epsilon=0.0
+    )
 
     parsed = TacticPriorScores(
         scores=[
