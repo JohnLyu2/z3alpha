@@ -15,6 +15,7 @@ from z3alpha.mcts.llm_prior import (
     TacticPriorScores,
     TacticScoreItem,
 )
+from z3alpha.mcts.llm_prior_context import RunContextVersion
 
 
 def _install_mock_chat_client(monkeypatch, *, parsed: TacticPriorScores | None, error: Exception | None = None):
@@ -255,7 +256,7 @@ def test_llm_prior_scorer_empty_scores_uniform(monkeypatch):
     scorer = LLMPriorScorer(cfg)
     out = scorer.score("L", "x", ["a", "b"])
     assert out == {"a": 1.0, "b": 1.0}
-    assert "x" not in scorer._memory
+    assert not any(key[0] == "x" for key in scorer._memory)
 
 
 def test_llm_prior_scorer_rejects_none_choices(monkeypatch):
@@ -293,6 +294,115 @@ def test_llm_prior_scorer_api_fallback_not_cached(monkeypatch):
     scorer.score("L", "partial-z", ["a", "b"])
     scorer.score("L", "partial-z", ["a", "b"])
     assert scorer.api_call_count == 2
+
+
+def test_versioned_cache_hits_same_version(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    cfg = LLMPriorConfig(enabled=True)
+    scorer = LLMPriorScorer(cfg)
+    calls = {"n": 0}
+
+    def fake_parse(self, user_content: str, sim_id=None):
+        calls["n"] += 1
+        return TacticPriorScores(
+            scores=[
+                TacticScoreItem(tactic_name="a", value=8),
+                TacticScoreItem(tactic_name="b", value=2),
+            ]
+        )
+
+    monkeypatch.setattr(LLMPriorScorer, "_chat_completions_parse_scores", fake_parse)
+    version = RunContextVersion(num_strategies=3, best_n_solved=120)
+    ctx = "Results from this run so far (factual; sim 5, 3 strategies evaluated, best 120/150):"
+    scorer.score(
+        "QF_NIA",
+        "partial",
+        ["a", "b"],
+        sim_id=5,
+        run_context=ctx,
+        run_context_version=version,
+    )
+    scorer.score(
+        "QF_NIA",
+        "partial",
+        ["a", "b"],
+        sim_id=6,
+        run_context=ctx,
+        run_context_version=version,
+    )
+    assert calls["n"] == 1
+    assert scorer.last_prior_source == "cache_hit"
+
+
+def test_versioned_cache_recalls_on_new_best(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    cfg = LLMPriorConfig(enabled=True)
+    scorer = LLMPriorScorer(cfg)
+    calls = {"n": 0}
+
+    def fake_parse(self, user_content: str, sim_id=None):
+        calls["n"] += 1
+        return TacticPriorScores(
+            scores=[
+                TacticScoreItem(tactic_name="a", value=8),
+                TacticScoreItem(tactic_name="b", value=2),
+            ]
+        )
+
+    monkeypatch.setattr(LLMPriorScorer, "_chat_completions_parse_scores", fake_parse)
+    scorer.score(
+        "QF_NIA",
+        "partial",
+        ["a", "b"],
+        run_context="ctx-a",
+        run_context_version=RunContextVersion(2, 120),
+    )
+    scorer.score(
+        "QF_NIA",
+        "partial",
+        ["a", "b"],
+        run_context="ctx-b",
+        run_context_version=RunContextVersion(3, 140),
+    )
+    assert calls["n"] == 2
+
+
+def test_user_prompt_includes_run_context(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    cfg = LLMPriorConfig(enabled=True)
+    scorer = LLMPriorScorer(cfg)
+    captured: list[str] = []
+
+    def fake_parse(self, user_content: str, sim_id=None):
+        captured.append(user_content)
+        return TacticPriorScores(
+            scores=[
+                TacticScoreItem(tactic_name="smt", value=5),
+                TacticScoreItem(tactic_name="qfnia", value=5),
+            ]
+        )
+
+    monkeypatch.setattr(LLMPriorScorer, "_chat_completions_parse_scores", fake_parse)
+    run_context = (
+        "Results from this run so far (factual; sim 2, 1 strategies evaluated, best 1/1):\n"
+        "  n_solved=1  par10_avg=1.00  smt\n"
+        "\n"
+        "Use these results when scoring: prefer extending the best-performing strategies; "
+        "avoid next steps that continue patterns matching the worst outcomes."
+    )
+    scorer.score(
+        "QF_NIA",
+        "<LinearStrategy>(QF_NIA)",
+        ["smt", "qfnia"],
+        run_context=run_context,
+        run_context_version=RunContextVersion(1, 1),
+    )
+    assert len(captured) == 1
+    prompt = captured[0]
+    assert "Results from this run so far (factual" in prompt
+    assert "best-performing strategies" in prompt
+    assert "<LinearStrategy>(QF_NIA)" in prompt
+    assert '"smt"' in prompt
 
 
 def test_llm_prior_scorer_writes_qa_log(monkeypatch, tmp_path):
