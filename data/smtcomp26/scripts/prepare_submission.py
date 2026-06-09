@@ -53,6 +53,7 @@ SELECTOR_PINS: dict[str, str] = {
     "QF_UFNRA": "20260606_115612",
     "QF_BV": "20260609_100826",
     "QF_LIA": "20260609_104033",
+    "QF_IDL": "20260609_131401",
 }
 
 # ── z3alpha2 deployment settings (merged into submission meta.json on copy) ────
@@ -70,6 +71,7 @@ INFERENCE_DEFAULTS: dict[str, dict] = {
     "QF_UFNRA": {"presolver_seconds": 0.0, "scheduler_timeout": 960.0},
     "QF_BV": {"presolver_seconds": 8.0, "scheduler_timeout": 960.0},
     "QF_LIA": {"presolver_seconds": 8.0, "scheduler_timeout": 960.0},
+    "QF_IDL": {"presolver_seconds": 8.0, "scheduler_timeout": 960.0},
 }
 
 # ── Fixed-tactic logics (meta.json only, no selector.joblib) ───────────────────
