@@ -11,9 +11,6 @@ Selector routing and runtime options live in selectors/<group>/meta.json
 Logics with fixed_strategy in meta.json run that Z3 tactic directly (no
 presolver, no trained selector). Example: LIA → (then qe_rec smt).
 
-Canonical source for this file: data/smtcomp26/scripts/z3alpha2.py
-Copied into data/smtcomp26/submission/ by prepare_submission.py.
-
 Usage (as called by SMT-COMP infrastructure):
     ./z3alpha2.py <benchmark.smt2>
 """

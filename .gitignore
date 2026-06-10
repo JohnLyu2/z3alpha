@@ -26,6 +26,7 @@ data/smtcomp26/features/
 data/smtcomp26/selection_runs/
 data/smtcomp26/submission/selectors/**/*.joblib
 data/smtcomp26/z3alpha2_smtcomp26.tar.gz
+data/smtcomp26/z3-4.16.0.tar.gz
 
 # Build / dist
 *.egg-info/
