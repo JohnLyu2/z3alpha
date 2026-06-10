@@ -1,0 +1,203 @@
+[
+  {
+    "name": "lia_fixed_strategy",
+    "smtlib_rel": "non-incremental/LIA/20190429-UltimateAutomizerSvcomp2019/jain_7_true-unreach-call_true-no-overflow_false-termination.i_10.smt2",
+    "logic": "LIA",
+    "verdict": "unsat",
+    "must_contain": [
+      "logic=LIA",
+      "fixed_strategy="
+    ],
+    "must_not_contain": [
+      "presolver solved",
+      "ranked="
+    ]
+  },
+  {
+    "name": "lra_selector_no_presolver",
+    "smtlib_rel": "non-incremental/LRA/2010-Monniaux-QE/mjollnir1/formula_014.smt2",
+    "logic": "LRA",
+    "verdict": "sat",
+    "must_contain": [
+      "logic=LRA",
+      "ranked=",
+      "scheduler=False"
+    ],
+    "must_not_contain": [
+      "presolver solved",
+      "fixed_strategy="
+    ]
+  },
+  {
+    "name": "qf_nia_presolver_or_scheduler",
+    "smtlib_rel": "non-incremental/QF_NIA/20170427-VeryMax/CInteger/Stroeder_15__4NestedWith3Variables_true-termination.c__p20259_terminationG_0.smt2",
+    "logic": "QF_NIA",
+    "must_contain": [],
+    "one_of": [
+      [
+        "presolver solved"
+      ],
+      [
+        "logic=QF_NIA",
+        "ranked=",
+        "scheduler=True"
+      ]
+    ],
+    "must_not_contain": [
+      "fixed_strategy="
+    ]
+  },
+  {
+    "name": "qf_nra_selector_scheduler",
+    "smtlib_rel": "non-incremental/QF_NRA/20161105-Sturm-MBO/mbo_E11E26.smt2",
+    "logic": "QF_NRA",
+    "must_contain": [
+      "logic=QF_NRA",
+      "ranked=",
+      "scheduler=True"
+    ],
+    "must_not_contain": [
+      "presolver solved",
+      "fixed_strategy="
+    ]
+  },
+  {
+    "name": "qf_bv_presolver_or_selector",
+    "smtlib_rel": "non-incremental/QF_BV/20210219-Sydr/master/cjpeg/predicate_1185.smt2",
+    "logic": "QF_BV",
+    "must_contain": [],
+    "one_of": [
+      [
+        "presolver solved"
+      ],
+      [
+        "logic=QF_BV",
+        "scheduler=False",
+        "ranked="
+      ]
+    ],
+    "must_not_contain": [
+      "fixed_strategy="
+    ]
+  },
+  {
+    "name": "qf_lia_presolver_or_scheduler",
+    "smtlib_rel": "non-incremental/QF_LIA/20180326-Bromberger/more_slacked/CAV_2009_benchmarks/coef-size/smt/size-80/c80_problem__003.smt2.slack.smt2",
+    "logic": "QF_LIA",
+    "must_contain": [],
+    "one_of": [
+      [
+        "presolver solved"
+      ],
+      [
+        "logic=QF_LIA",
+        "ranked=",
+        "scheduler=True"
+      ]
+    ],
+    "must_not_contain": [
+      "fixed_strategy="
+    ]
+  },
+  {
+    "name": "qf_idl_selector_scheduler",
+    "smtlib_rel": "non-incremental/QF_IDL/20210312-Bouvier/vlsat3_c00.smt2",
+    "logic": "QF_IDL",
+    "must_contain": [
+      "logic=QF_IDL",
+      "ranked=",
+      "scheduler=True"
+    ],
+    "must_not_contain": [
+      "presolver solved",
+      "fixed_strategy="
+    ]
+  },
+  {
+    "name": "qf_dt_selector_no_presolver",
+    "smtlib_rel": "non-incremental/QF_DT/20172804-Barrett/barrett-jsat/tests/v1/v1l30098.cvc.smt2",
+    "logic": "QF_DT",
+    "must_contain": [
+      "logic=QF_DT",
+      "ranked=",
+      "scheduler=False"
+    ],
+    "must_not_contain": [
+      "presolver solved",
+      "fixed_strategy="
+    ]
+  },
+  {
+    "name": "qf_ufdt_selector_scheduler",
+    "smtlib_rel": "non-incremental/QF_UFDT/20210312-Bouvier/vlsat3_e01.smt2",
+    "logic": "QF_UFDT",
+    "must_contain": [
+      "logic=QF_UFDT",
+      "ranked=",
+      "scheduler=True"
+    ],
+    "must_not_contain": [
+      "presolver solved",
+      "fixed_strategy="
+    ]
+  },
+  {
+    "name": "nia_selector_scheduler",
+    "smtlib_rel": "non-incremental/NIA/20190429-UltimateAutomizerSvcomp2019/Problem10_label59_true-unreach-call.c_10.smt2",
+    "logic": "NIA",
+    "verdict": "unsat",
+    "must_contain": [
+      "logic=NIA",
+      "ranked=",
+      "scheduler=True"
+    ],
+    "must_not_contain": [
+      "presolver solved",
+      "fixed_strategy="
+    ]
+  },
+  {
+    "name": "nra_selector_scheduler",
+    "smtlib_rel": "non-incremental/NRA/20220222-strassen-matrix-multiplication/strassen-trivial.smt2",
+    "logic": "NRA",
+    "verdict": "sat",
+    "must_contain": [
+      "logic=NRA",
+      "ranked=",
+      "scheduler=True"
+    ],
+    "must_not_contain": [
+      "presolver solved",
+      "fixed_strategy="
+    ]
+  },
+  {
+    "name": "qf_ania_selector_scheduler",
+    "smtlib_rel": "non-incremental/QF_ANIA/20190429-UltimateAutomizerSvcomp2019/avg20_true-unreach-call.i_2.smt2",
+    "logic": "QF_ANIA",
+    "verdict": "sat",
+    "must_contain": [
+      "logic=QF_ANIA",
+      "ranked=",
+      "scheduler=True"
+    ],
+    "must_not_contain": [
+      "presolver solved",
+      "fixed_strategy="
+    ]
+  },
+  {
+    "name": "unmapped_logic_default_z3",
+    "smtlib_rel": "unmapped/QF_UF.smt2",
+    "logic": "QF_UF",
+    "verdict": "sat",
+    "must_contain": [
+      "using plain Z3"
+    ],
+    "must_not_contain": [
+      "ranked=",
+      "fixed_strategy=",
+      "presolver solved"
+    ]
+  }
+]
