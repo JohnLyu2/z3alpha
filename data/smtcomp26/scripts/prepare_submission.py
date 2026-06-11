@@ -83,7 +83,7 @@ FIXED_LOGIC_CONFIGS: dict[str, dict] = {
 }
 
 # ── Inference library files to bundle ─────────────────────────────────────────
-INFER_SOURCE  = REPO_ROOT / "z3alpha/smt_select_infer.py"
+INFER_SOURCE  = SCRIPTS_DIR / "smtcomp_smt_select_infer.py"
 SMTLIB_SOURCE = REPO_ROOT / "z3alpha/smtlib_features.py"
 
 # ── Python packages to vendor for competition machine (Python 3.12, x86-64) ──
