@@ -1,10 +1,5 @@
 """
-SMT-COMP 2026 inference module: PWC selector with scrambler-robust features.
-
-Extends smt_select_infer.py by merging each antisymmetric comparison operator
-pair (e.g. sym_< and sym_>) into a single summed feature so that the
-scrambler's operator flipping does not perturb the feature vector seen at
-competition time.
+PWC selector inference: feature extraction and pairwise strategy ranking.
 
 Bundled into the SMT-COMP submission as lib/smt_select.py by prepare_submission.py.
 Training uses this module via build_selection_schedule.py.
@@ -41,9 +36,8 @@ _STRUCTURAL_NAMES = [
     "maxTermDepth",
 ]
 
-# Antisymmetric operator pairs that the scrambler randomly flips.
+# Comparison operator pairs merged into a single summed feature.
 # Each entry is (keep_sym, drop_sym, merged_name) using SMTLIB_SYMBOLS names.
-# The two counts are summed into the keep slot; the drop slot is removed.
 _ANTISYM_PAIRS: list[tuple[str, str, str]] = [
     ("<",       ">",       "<>"),
     ("<=",      ">=",      "<=>"),
@@ -81,10 +75,11 @@ _keep_mask = np.array([i not in _drop_indices for i in range(len(_raw_names))], 
 
 
 def bench_feature_vector(path: str | Path) -> Optional[np.ndarray]:
-    """Extract a scrambler-robust feature vector from an SMT-LIB 2 benchmark.
+    """Extract a flat feature vector from an SMT-LIB 2 benchmark.
 
-    Antisymmetric comparison operator pairs are summed so that the scrambler's
-    operator flipping does not change the feature vector.
+    For incremental benchmarks (multiple check-sat calls), structural counts
+    are summed and max_term_depth is taken as the maximum across all queries.
+    Returns None if extraction fails.
     """
     try:
         entries = extract_features(path)
