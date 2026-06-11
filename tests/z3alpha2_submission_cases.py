@@ -59,33 +59,49 @@ def run_case(
     python: str | None = None,
     timeout: int = 120,
 ) -> tuple[int, str, str]:
-    """Run z3alpha2 --debug on a case; return (rc, stdout, stderr)."""
+    """Run z3alpha2 --debug on a case; return (rc, stdout, stderr).
+
+    Cases with require_verdict=false may use a per-case timeout (case["timeout"])
+    and tolerate a kill: on TimeoutExpired rc is returned as -1 and whatever
+    stderr was captured before the kill is returned.
+    """
     bench = benchmark_path(case)
     if bench is None:
         raise FileNotFoundError(case["smtlib_rel"])
-    proc = subprocess.run(
-        [python or sys.executable, str(z3alpha2), "--debug", str(bench)],
-        cwd=submission_dir,
-        capture_output=True,
-        text=True,
-        timeout=timeout,
-    )
-    return proc.returncode, proc.stdout, proc.stderr
+    effective_timeout = case.get("timeout", timeout)
+    try:
+        proc = subprocess.run(
+            [python or sys.executable, str(z3alpha2), "--debug", str(bench)],
+            cwd=submission_dir,
+            capture_output=True,
+            text=True,
+            timeout=effective_timeout,
+        )
+        return proc.returncode, proc.stdout, proc.stderr
+    except subprocess.TimeoutExpired as exc:
+        stderr = (exc.stderr or b"").decode("utf-8", errors="replace") if isinstance(exc.stderr, bytes) else (exc.stderr or "")
+        return -1, "", stderr
 
 
 def check_case(case: dict[str, Any], stderr: str, stdout: str, rc: int) -> list[str]:
-    """Return list of failure messages (empty if ok)."""
+    """Return list of failure messages (empty if ok).
+
+    Cases with require_verdict=false skip the sat/unsat verdict check and
+    tolerate rc=-1 (process killed at timeout boundary).
+    """
     errors: list[str] = []
-    if rc != 0:
+    require_verdict = case.get("require_verdict", True)
+
+    if require_verdict and rc != 0:
         errors.append(f"exit code {rc}")
 
     verdict = stdout.strip().split("\n")[0] if stdout.strip() else ""
-    if verdict not in ("sat", "unsat"):
-        errors.append(f"verdict {verdict!r} not sat/unsat")
-
-    expected = case.get("verdict")
-    if expected and verdict != expected:
-        errors.append(f"verdict {verdict!r} != {expected!r}")
+    if require_verdict:
+        if verdict not in ("sat", "unsat"):
+            errors.append(f"verdict {verdict!r} not sat/unsat")
+        expected = case.get("verdict")
+        if expected and verdict != expected:
+            errors.append(f"verdict {verdict!r} != {expected!r}")
 
     for needle in case.get("must_contain", []):
         if needle not in stderr:

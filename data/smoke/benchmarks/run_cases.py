@@ -41,16 +41,18 @@ def _resolve(smtlib_rel: str, bench_dir: Path) -> Path | None:
 
 def _check(case: dict, stderr: str, stdout: str, rc: int) -> list[str]:
     errors: list[str] = []
-    if rc != 0:
+    require_verdict = case.get("require_verdict", True)
+
+    if require_verdict and rc != 0:
         errors.append(f"exit code {rc}")
 
     verdict = stdout.strip().split("\n")[0] if stdout.strip() else ""
-    if verdict not in ("sat", "unsat"):
-        errors.append(f"verdict {verdict!r} not sat/unsat")
-
-    expected = case.get("verdict")
-    if expected and verdict != expected:
-        errors.append(f"verdict {verdict!r} != {expected!r}")
+    if require_verdict:
+        if verdict not in ("sat", "unsat"):
+            errors.append(f"verdict {verdict!r} not sat/unsat")
+        expected = case.get("verdict")
+        if expected and verdict != expected:
+            errors.append(f"verdict {verdict!r} != {expected!r}")
 
     for needle in case.get("must_contain", []):
         if needle not in stderr:
@@ -65,6 +67,23 @@ def _check(case: dict, stderr: str, stdout: str, rc: int) -> list[str]:
         errors.append(f"stderr matched none of one_of groups: {one_of!r}")
 
     return errors
+
+
+def _run_case(z3alpha2: Path, submission: Path, case: dict, bench: Path, path: Path) -> tuple[int, str, str]:
+    effective_timeout = case.get("timeout", 120)
+    try:
+        proc = subprocess.run(
+            [sys.executable, str(z3alpha2), "--debug", str(path)],
+            cwd=submission,
+            capture_output=True,
+            text=True,
+            timeout=effective_timeout,
+        )
+        return proc.returncode, proc.stdout, proc.stderr
+    except subprocess.TimeoutExpired as exc:
+        stderr_bytes = exc.stderr or b""
+        stderr = stderr_bytes.decode("utf-8", errors="replace") if isinstance(stderr_bytes, bytes) else (stderr_bytes or "")
+        return -1, "", stderr
 
 
 def main() -> int:
@@ -87,20 +106,14 @@ def main() -> int:
             skipped += 1
             continue
 
-        proc = subprocess.run(
-            [sys.executable, str(z3alpha2), "--debug", str(path)],
-            cwd=submission,
-            capture_output=True,
-            text=True,
-            timeout=120,
-        )
-        errors = _check(case, proc.stderr, proc.stdout, proc.returncode)
+        rc, stdout, stderr = _run_case(z3alpha2, submission, case, bench, path)
+        errors = _check(case, stderr, stdout, rc)
         if errors:
             failed += 1
             print(f"FAIL {case['name']} ({case['logic']})")
             for err in errors:
                 print(f"  - {err}")
-            print(proc.stderr)
+            print(stderr)
         else:
             print(f"OK {case['name']} ({case['logic']})")
 
