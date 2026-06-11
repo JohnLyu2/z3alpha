@@ -1,7 +1,5 @@
 {
   "logic": "QF_NRA",
-  "presolver_seconds": 8.0,
-  "scheduler_timeout": 960.0,
   "shortlist": [
     "H30_preproc_qfnra",
     "H31_elimuncnstr_smt500",
@@ -29,5 +27,7 @@
       "tactic.default_tactic=(then solve-eqs solve-eqs elim-uncnstr propagate-values (using-params smt :random_seed 200))"
     ]
   },
-  "scheduler": true
+  "scheduler": true,
+  "presolver_seconds": 8.0,
+  "scheduler_timeout": 960.0
 }

@@ -1,8 +1,13 @@
 """
-PWC selector inference: feature extraction and pairwise strategy ranking.
+SMT-COMP 2026 inference module: PWC selector with scrambler-robust features.
 
-Bundled into the SMT-COMP submission as lib/smt_select.py (see prepare_submission.py).
-Training lives in smt_select.py.
+Extends smt_select_infer.py by merging each antisymmetric comparison operator
+pair (e.g. sym_< and sym_>) into a single summed feature so that the
+scrambler's operator flipping does not perturb the feature vector seen at
+competition time.
+
+Bundled into the SMT-COMP submission as lib/smt_select.py by prepare_submission.py.
+Training uses this module via build_selection_schedule.py.
 """
 
 from __future__ import annotations
@@ -36,15 +41,50 @@ _STRUCTURAL_NAMES = [
     "maxTermDepth",
 ]
 
-FEATURE_NAMES: list[str] = _STRUCTURAL_NAMES + [f"sym_{s}" for s in SMTLIB_SYMBOLS]
+# Antisymmetric operator pairs that the scrambler randomly flips.
+# Each entry is (keep_sym, drop_sym, merged_name) using SMTLIB_SYMBOLS names.
+# The two counts are summed into the keep slot; the drop slot is removed.
+_ANTISYM_PAIRS: list[tuple[str, str, str]] = [
+    ("<",       ">",       "<>"),
+    ("<=",      ">=",      "<=>"),
+    ("bvult",   "bvugt",   "bvult_bvugt"),
+    ("bvule",   "bvuge",   "bvule_bvuge"),
+    ("bvslt",   "bvsgt",   "bvslt_bvsgt"),
+    ("bvsle",   "bvsge",   "bvsle_bvsge"),
+    ("fp.lt",   "fp.gt",   "fp.lt_fp.gt"),
+    ("fp.leq",  "fp.geq",  "fp.leq_fp.geq"),
+]
+
+# Build index-level merge map from SMTLIB_SYMBOLS once at import time.
+# _sym_offset: number of structural features before the symbol block.
+_sym_offset = len(_STRUCTURAL_NAMES)
+_keep_indices: list[int] = []
+_drop_indices: set[int] = set()
+_keep_to_merged: dict[int, str] = {}
+
+for _keep_sym, _drop_sym, _merged in _ANTISYM_PAIRS:
+    _ki = _sym_offset + SMTLIB_SYMBOLS.index(_keep_sym)
+    _di = _sym_offset + SMTLIB_SYMBOLS.index(_drop_sym)
+    _keep_indices.append(_ki)
+    _drop_indices.add(_di)
+    _keep_to_merged[_ki] = f"sym_{_merged}"
+
+_raw_names: list[str] = _STRUCTURAL_NAMES + [f"sym_{s}" for s in SMTLIB_SYMBOLS]
+FEATURE_NAMES: list[str] = [
+    _keep_to_merged.get(i, name)
+    for i, name in enumerate(_raw_names)
+    if i not in _drop_indices
+]
+
+# Boolean mask for dropping the second element of each pair from a raw vector.
+_keep_mask = np.array([i not in _drop_indices for i in range(len(_raw_names))], dtype=bool)
 
 
 def bench_feature_vector(path: str | Path) -> Optional[np.ndarray]:
-    """Extract a flat feature vector from an SMT-LIB 2 benchmark.
+    """Extract a scrambler-robust feature vector from an SMT-LIB 2 benchmark.
 
-    For incremental benchmarks (multiple check-sat calls), structural counts
-    are summed and max_term_depth is taken as the maximum across all queries.
-    Returns None if extraction fails.
+    Antisymmetric comparison operator pairs are summed so that the scrambler's
+    operator flipping does not change the feature vector.
     """
     try:
         entries = extract_features(path)
@@ -73,7 +113,11 @@ def bench_feature_vector(path: str | Path) -> Optional[np.ndarray]:
         for i, v in enumerate(q["symbolFrequency"]):
             freq[i] += v
     vec.extend(freq)
-    return np.array(vec, dtype=float)
+
+    raw = np.array(vec, dtype=float)
+    for ki, di in zip(_keep_indices, sorted(_drop_indices)):
+        raw[ki] += raw[di]
+    return raw[_keep_mask]
 
 
 @dataclass

@@ -40,20 +40,20 @@ ENTRYPOINT_SOURCE = SCRIPTS_DIR / "z3alpha2.py"
 # ── Pin which training run to copy into submission/selectors/<group>/ ───────────
 # Edit when promoting a new run. Logic routing is read from meta.json at runtime.
 SELECTOR_PINS: dict[str, str] = {
-    "QF_NRA": "20260602_103053",
-    "LRA": "20260606_095841",
-    "NIA": "20260606_100800",
-    "NRA": "20260606_101800",
-    "QF_DT": "20260606_103208",
-    "QF_UFDT": "20260606_103552",
-    "QF_NIA": "20260606_110320",
-    "QF_ANIA": "20260606_113829",
-    "QF_UFDTNIA": "20260606_114414",
-    "QF_UFNIA": "20260606_115151",
-    "QF_UFNRA": "20260606_115612",
-    "QF_BV": "20260609_100826",
-    "QF_LIA": "20260609_104033",
-    "QF_IDL": "20260609_131401",
+    "LRA": "20260610_221438",
+    "NIA": "20260610_221707",
+    "NRA": "20260610_221712",
+    "QF_ANIA": "20260610_221715",
+    "QF_BV": "20260610_221723",
+    "QF_DT": "20260610_223452",
+    "QF_IDL": "20260610_223519",
+    "QF_LIA": "20260610_223658",
+    "QF_NIA": "20260610_224049",
+    "QF_NRA": "20260610_225445",
+    "QF_UFDT": "20260610_225634",
+    "QF_UFDTNIA": "20260610_221016",
+    "QF_UFNIA": "20260610_225654",
+    "QF_UFNRA": "20260610_225756",
 }
 
 # ── z3alpha2 deployment settings (merged into submission meta.json on copy) ────

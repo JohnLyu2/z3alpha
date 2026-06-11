@@ -26,6 +26,6 @@
     ],
     "baseline": []
   },
-  "scheduler": false,
+  "scheduler": true,
   "presolver_seconds": 0.0
 }
