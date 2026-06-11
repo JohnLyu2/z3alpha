@@ -1,7 +1,7 @@
 {
-  "machine_name": "john-lu",
-  "z3_path": "z3",
+  "machine_name": "snork",
+  "z3_path": "/home/z52lu/z3alpha/.venv/bin/z3",
   "z3_version": "4.16.0",
-  "smtlib_root": "/home/john-lu/Desktop/smt_data/smtlib25",
-  "workers": 8
+  "smtlib_root": "/home/z52lu/smtlib25",
+  "workers": 40
 }
