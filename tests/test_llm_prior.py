@@ -94,7 +94,7 @@ def test_resolve_mcts_config_llm_prior_flags():
     assert cfg.llm_prior.api_key_env == "OPENAI_API_KEY"
     assert cfg.llm_prior.llm_timeout == 42.0
     assert cfg.llm_prior.temperature == pytest.approx(0.1)
-    assert cfg.llm_prior.prior_epsilon == pytest.approx(0.15)
+    assert cfg.llm_prior.prior_affine_floor == pytest.approx(0.25)
 
 
 def test_resolve_mcts_config_llm_prior_defaults_to_openrouter():
@@ -143,7 +143,7 @@ def test_llm_prior_scorer_uses_openrouter_env(monkeypatch):
 def test_llm_prior_scorer_thresholded_softmax_and_cache(monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
     cfg = LLMPriorConfig(
-        enabled=True, model="m", softmax_temperature=2.0, prior_epsilon=0.0
+        enabled=True, model="m", softmax_temperature=2.0, prior_affine_floor=0.0
     )
     scorer = LLMPriorScorer(cfg)
     calls = {"n": 0}
@@ -171,9 +171,9 @@ def test_llm_prior_scorer_thresholded_softmax_and_cache(monkeypatch):
     assert calls["n"] == 1
 
 
-def test_llm_prior_scorer_epsilon_mix(monkeypatch):
+def test_llm_prior_scorer_affine_floor(monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
-    cfg = LLMPriorConfig(enabled=True, prior_epsilon=0.15)
+    cfg = LLMPriorConfig(enabled=True, prior_affine_floor=0.25)
     scorer = LLMPriorScorer(cfg)
 
     def fake_parse(self, user_content: str, sim_id=None):
@@ -189,10 +189,9 @@ def test_llm_prior_scorer_epsilon_mix(monkeypatch):
     out = scorer.score(
         "QF_NIA", "(then simplify)", ["winner", "mid", "rejected"], sim_id=0
     )
-    assert out["rejected"] == pytest.approx(0.15 / 3)
-    assert sum(out.values()) == pytest.approx(1.0)
+    assert out["rejected"] == pytest.approx(0.25)
     assert out["winner"] > out["rejected"]
-    assert scorer.last_mapping_mode == "thresholded_softmax_eps0.15"
+    assert scorer.last_mapping_mode == "thresholded_softmax_affine0.25"
 
 
 def test_llm_prior_scorer_counts_api_calls(monkeypatch):
@@ -435,7 +434,7 @@ def test_llm_prior_scorer_writes_qa_log(monkeypatch, tmp_path):
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
     qa_log = tmp_path / "llm_prior_qa.log"
     cfg = LLMPriorConfig(
-        enabled=True, qa_log_path=str(qa_log), prior_epsilon=0.0
+        enabled=True, qa_log_path=str(qa_log), prior_affine_floor=0.0
     )
 
     parsed = TacticPriorScores(

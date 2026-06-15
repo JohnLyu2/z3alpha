@@ -127,6 +127,8 @@ def format_run_context(
 
 _LEGACY_CACHE_VERSION = (-1, -1)
 
+DEFAULT_PRIOR_AFFINE_FLOOR = 0.25
+
 PriorSource = Literal["api_call", "cache_hit", "api_call_failed"]
 
 _INSTRUCTIONS = (
@@ -181,7 +183,7 @@ class LLMPriorConfig:
     softmax_temperature: float = 2.0
     uncertainty_spread_threshold: int = 1
     reject_score_below_or_equal: int = 1
-    prior_epsilon: float = 0.15
+    prior_affine_floor: float = DEFAULT_PRIOR_AFFINE_FLOOR
     qa_log_path: str | None = None
 
 
@@ -195,9 +197,9 @@ class LLMPriorScorer:
     """Scores candidate tactics via OpenAI-compatible Chat Completions API."""
 
     def __init__(self, cfg: LLMPriorConfig) -> None:
-        if not 0.0 <= cfg.prior_epsilon <= 1.0:
+        if not 0.0 <= cfg.prior_affine_floor < 1.0:
             raise ValueError(
-                f"prior_epsilon must be in [0.0, 1.0], got {cfg.prior_epsilon}"
+                f"prior_affine_floor must be in [0.0, 1.0), got {cfg.prior_affine_floor}"
             )
         self._cfg = cfg
         self._memory: dict[tuple, tuple[str, dict[str, float]]] = {}
@@ -500,22 +502,18 @@ class LLMPriorScorer:
             priors[name] = val / denom
         return "thresholded_softmax", priors, None
 
-    def _epsilon_mix(
+    def _affine_floor(
         self, priors: dict[str, float], candidate_actions: list[str]
     ) -> dict[str, float]:
-        eps = self._cfg.prior_epsilon
-        if eps <= 0.0:
+        b = self._cfg.prior_affine_floor
+        if b <= 0.0:
             return priors
-        n = len(candidate_actions)
-        if n == 0:
-            return priors
-        uniform = eps / n
         return {
-            a: (1.0 - eps) * priors.get(a, 0.0) + uniform for a in candidate_actions
+            a: (1.0 - b) * priors.get(a, 0.0) + b for a in candidate_actions
         }
 
-    def _prior_epsilon_log_fields(self) -> dict[str, float]:
-        return {"prior_epsilon": self._cfg.prior_epsilon}
+    def _prior_affine_log_fields(self) -> dict[str, float]:
+        return {"prior_affine_floor": self._cfg.prior_affine_floor}
 
     def _cache_key(
         self,
@@ -526,13 +524,13 @@ class LLMPriorScorer:
             return (
                 partial_strategy,
                 *_LEGACY_CACHE_VERSION,
-                self._cfg.prior_epsilon,
+                self._cfg.prior_affine_floor,
             )
         return (
             partial_strategy,
             run_context_version.num_strategies,
             run_context_version.best_n_solved,
-            self._cfg.prior_epsilon,
+            self._cfg.prior_affine_floor,
         )
 
     def _run_context_log_fields(
@@ -608,7 +606,7 @@ class LLMPriorScorer:
                         "candidate_actions": candidate_actions,
                         "priors": subset,
                         "ranked_priors": self._ranked_priors(subset),
-                        **self._prior_epsilon_log_fields(),
+                        **self._prior_affine_log_fields(),
                         **context_fields,
                     }
                 )
@@ -639,7 +637,7 @@ class LLMPriorScorer:
                     "candidate_actions": candidate_actions,
                     "priors": u,
                     "ranked_priors": self._ranked_priors(u),
-                    **self._prior_epsilon_log_fields(),
+                    **self._prior_affine_log_fields(),
                     **context_fields,
                 }
             )
@@ -660,9 +658,9 @@ class LLMPriorScorer:
             scores[a] = by_name.get(a, 0)
 
         mapping_mode, priors, reason = self._thresholded_softmax(scores)
-        if mapping_mode == "thresholded_softmax" and self._cfg.prior_epsilon > 0.0:
-            priors = self._epsilon_mix(priors, candidate_actions)
-            mapping_mode = f"{mapping_mode}_eps{self._cfg.prior_epsilon:g}"
+        if mapping_mode == "thresholded_softmax" and self._cfg.prior_affine_floor > 0.0:
+            priors = self._affine_floor(priors, candidate_actions)
+            mapping_mode = f"{mapping_mode}_affine{self._cfg.prior_affine_floor:g}"
         self._memory[cache_key] = (mapping_mode, priors)
         self.last_prior_source = "api_call"
         self.last_mapping_mode = mapping_mode
@@ -680,7 +678,7 @@ class LLMPriorScorer:
                 "scores": scores,
                 "priors": priors,
                 "ranked_priors": ranked,
-                **self._prior_epsilon_log_fields(),
+                **self._prior_affine_log_fields(),
                 **context_fields,
             }
         )
