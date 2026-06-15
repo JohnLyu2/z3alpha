@@ -20,6 +20,7 @@ RUN_METRICS_COLUMNS: tuple[str, ...] = (
     "k_union",
     "wall_time_s",
     "llm_calls",
+    "notes",
 )
 
 COVERAGE_CURVE_COLUMNS: tuple[str, ...] = (
@@ -143,7 +144,7 @@ def append_run_metrics_row(csv_path: Path, row: dict[str, Any]) -> None:
         writer = csv.DictWriter(f, fieldnames=RUN_METRICS_COLUMNS)
         if write_header:
             writer.writeheader()
-        writer.writerow({col: row[col] for col in RUN_METRICS_COLUMNS})
+        writer.writerow({col: row.get(col, "") for col in RUN_METRICS_COLUMNS})
 
 
 def init_coverage_curve_csv(csv_path: Path) -> None:

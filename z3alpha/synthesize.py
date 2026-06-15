@@ -118,6 +118,7 @@ def parallel_synthesize(
     run: SynthesisRun,
     log_folder: Path,
     metrics_csv: Path,
+    notes: str = "",
 ):
     start_time = time.time()
 
@@ -151,6 +152,7 @@ def parallel_synthesize(
             "k_union": metrics["k_union"],
             "wall_time_s": int(wall_time_s),
             "llm_calls": llm_calls,
+            "notes": notes,
         },
     )
     log.info("Appended run metrics to %s", metrics_csv)
@@ -201,6 +203,12 @@ def main():
             "and Z3ALPHA_LLM_TEMPERATURE."
         ),
     )
+    parser.add_argument(
+        "--notes",
+        type=str,
+        default="",
+        help="Free-text note stored in experiments/run_metrics.csv (with --parallel)",
+    )
     args = parser.parse_args()
     load_dotenv()
     with open(args.json_config, encoding="utf-8") as f:
@@ -225,7 +233,7 @@ def main():
     metrics_csv = parent_dir.parent / "run_metrics.csv"
 
     if args.parallel:
-        parallel_synthesize(run, log_folder, metrics_csv)
+        parallel_synthesize(run, log_folder, metrics_csv, notes=args.notes)
     else:
         branched_synthesize(run, log_folder)
 

@@ -60,6 +60,12 @@ def main() -> None:
         action="store_true",
         help="Append a row to the metrics ledger CSV",
     )
+    parser.add_argument(
+        "--notes",
+        type=str,
+        default="",
+        help="Free-text note stored in the metrics ledger (with --append)",
+    )
     args = parser.parse_args()
 
     per_bench = args.run_dir / "linear_strategy_per_benchmark.csv"
@@ -92,6 +98,7 @@ def main() -> None:
                 "k_union": metrics["k_union"],
                 "wall_time_s": int(args.wall_time),
                 "llm_calls": llm_calls,
+                "notes": args.notes,
             },
         )
         print(f"Appended row to {args.metrics_csv}")

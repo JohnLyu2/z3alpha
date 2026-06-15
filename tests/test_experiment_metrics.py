@@ -126,9 +126,10 @@ class TestAppendRunMetricsRow(unittest.TestCase):
                 "k_union": 2,
                 "wall_time_s": 100,
                 "llm_calls": 0,
+                "notes": "smoke test",
             }
             append_run_metrics_row(path, row)
-            append_run_metrics_row(path, {**row, "run_name": "out-test-2"})
+            append_run_metrics_row(path, {**row, "run_name": "out-test-2", "notes": ""})
 
             with open(path, newline="", encoding="utf-8") as f:
                 lines = list(csv.reader(f))
