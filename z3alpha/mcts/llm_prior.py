@@ -14,7 +14,10 @@ from typing import Literal
 from openai import OpenAI
 from pydantic import BaseModel, ConfigDict, Field
 
+from z3alpha.tactics.catalog import SOLVER_TACTICS
 from z3alpha.utils import par_n, solved_num
+
+_SOLVER_TACTIC_NAMES = frozenset(SOLVER_TACTICS)
 
 log = logging.getLogger(__name__)
 
@@ -34,6 +37,19 @@ class RunContextVersion:
 def root_partial_strategy(logic: str) -> str:
     """Root partial string; must match ``LinearStrategy.__str__``."""
     return f"<LinearStrategy>({logic})"
+
+
+def is_root_partial_strategy(partial_strategy: str, logic: str) -> bool:
+    return partial_strategy == root_partial_strategy(logic)
+
+
+def partition_solver_preprocess(
+    candidate_actions: list[str],
+) -> tuple[list[str], list[str]]:
+    """Split tactic names into solver vs preprocessing (order preserved)."""
+    solvers = [a for a in candidate_actions if a in _SOLVER_TACTIC_NAMES]
+    preprocess = [a for a in candidate_actions if a not in _SOLVER_TACTIC_NAMES]
+    return solvers, preprocess
 
 
 @dataclass(frozen=True)
@@ -512,6 +528,37 @@ class LLMPriorScorer:
             a: (1.0 - b) * priors.get(a, 0.0) + b for a in candidate_actions
         }
 
+    def _fixed_root_solver_prior(self) -> float:
+        return self._cfg.prior_affine_floor
+
+    def _merge_root_solver_priors(
+        self,
+        preprocess_priors: dict[str, float],
+        solver_names: list[str],
+        candidate_actions: list[str],
+    ) -> dict[str, float]:
+        fixed = self._fixed_root_solver_prior()
+        merged = dict(preprocess_priors)
+        for name in solver_names:
+            merged[name] = fixed
+        return {name: merged[name] for name in candidate_actions}
+
+    def _root_preprocess_only_fields(
+        self,
+        *,
+        root_preprocess_only: bool,
+        llm_candidate_actions: list[str],
+        solver_names: list[str],
+    ) -> dict:
+        if not root_preprocess_only:
+            return {}
+        return {
+            "root_preprocess_only": True,
+            "llm_candidate_actions": llm_candidate_actions,
+            "solver_names_fixed_prior": solver_names,
+            "root_solver_prior": self._fixed_root_solver_prior(),
+        }
+
     def _prior_affine_log_fields(self) -> dict[str, float]:
         return {"prior_affine_floor": self._cfg.prior_affine_floor}
 
@@ -585,6 +632,22 @@ class LLMPriorScorer:
         """Return prior per candidate name; uniform on failure/uncertainty."""
         if not candidate_actions:
             return {}
+        solver_names, preprocess_names = partition_solver_preprocess(
+            candidate_actions
+        )
+        root_preprocess_only = (
+            is_root_partial_strategy(partial_strategy, logic)
+            and bool(solver_names)
+            and bool(preprocess_names)
+        )
+        llm_candidates = (
+            preprocess_names if root_preprocess_only else candidate_actions
+        )
+        root_fields = self._root_preprocess_only_fields(
+            root_preprocess_only=root_preprocess_only,
+            llm_candidate_actions=llm_candidates,
+            solver_names=solver_names,
+        )
         cache_key = self._cache_key(partial_strategy, run_context_version)
         context_fields = self._run_context_log_fields(
             run_context, run_context_version
@@ -607,6 +670,7 @@ class LLMPriorScorer:
                         "priors": subset,
                         "ranked_priors": self._ranked_priors(subset),
                         **self._prior_affine_log_fields(),
+                        **root_fields,
                         **context_fields,
                     }
                 )
@@ -619,48 +683,67 @@ class LLMPriorScorer:
                 return subset
 
         user_content = self._build_user_content(
-            logic, partial_strategy, candidate_actions, run_context
+            logic, partial_strategy, llm_candidates, run_context
         )
         parsed = self._chat_completions_parse_scores(user_content, sim_id=sim_id)
         if parsed is None:
-            u = self._uniform(candidate_actions)
+            u = self._uniform(llm_candidates)
+            if root_preprocess_only:
+                priors = self._merge_root_solver_priors(
+                    u, solver_names, candidate_actions
+                )
+                mapping_mode = "uniform_api_fallback_root_preprocess_only"
+            else:
+                priors = u
+                mapping_mode = "uniform_api_fallback"
             self.last_prior_source = "api_call_failed"
-            self.last_mapping_mode = "uniform_api_fallback"
+            self.last_mapping_mode = mapping_mode
             self._append_qa_log(
                 {
                     "kind": "llm_prior_uniform_fallback",
                     "sim_id": sim_id,
                     "prior_source": "api_call_failed",
-                    "mapping_mode": "uniform_api_fallback",
+                    "mapping_mode": mapping_mode,
                     "logic": logic,
                     "partial_strategy": partial_strategy,
                     "candidate_actions": candidate_actions,
-                    "priors": u,
-                    "ranked_priors": self._ranked_priors(u),
+                    "priors": priors,
+                    "ranked_priors": self._ranked_priors(priors),
                     **self._prior_affine_log_fields(),
+                    **root_fields,
                     **context_fields,
                 }
             )
             self._log_prior_event(
                 sim_id,
                 "api_call_failed",
-                mapping_mode="uniform_api_fallback",
-                detail=self._format_ranked_priors(u),
+                mapping_mode=mapping_mode,
+                detail=self._format_ranked_priors(priors),
             )
-            return u
+            return priors
 
         by_name: dict[str, int] = {}
         for item in parsed.scores:
             by_name[str(item.tactic_name)] = item.value
 
         scores: dict[str, int] = {}
-        for a in candidate_actions:
+        for a in llm_candidates:
             scores[a] = by_name.get(a, 0)
 
         mapping_mode, priors, reason = self._thresholded_softmax(scores)
         if mapping_mode == "thresholded_softmax" and self._cfg.prior_affine_floor > 0.0:
-            priors = self._affine_floor(priors, candidate_actions)
+            priors = self._affine_floor(priors, llm_candidates)
             mapping_mode = f"{mapping_mode}_affine{self._cfg.prior_affine_floor:g}"
+        if root_preprocess_only:
+            priors = self._merge_root_solver_priors(
+                priors, solver_names, candidate_actions
+            )
+            mapping_mode = f"{mapping_mode}_root_preprocess_only"
+        elif mapping_mode.startswith("uniform"):
+            priors = {
+                name: priors.get(name, 1.0)
+                for name in candidate_actions
+            }
         self._memory[cache_key] = (mapping_mode, priors)
         self.last_prior_source = "api_call"
         self.last_mapping_mode = mapping_mode
@@ -679,6 +762,7 @@ class LLMPriorScorer:
                 "priors": priors,
                 "ranked_priors": ranked,
                 **self._prior_affine_log_fields(),
+                **root_fields,
                 **context_fields,
             }
         )

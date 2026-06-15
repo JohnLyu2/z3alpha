@@ -194,6 +194,67 @@ def test_llm_prior_scorer_affine_floor(monkeypatch):
     assert scorer.last_mapping_mode == "thresholded_softmax_affine0.25"
 
 
+def test_llm_prior_scorer_root_preprocess_only(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    cfg = LLMPriorConfig(enabled=True, prior_affine_floor=0.25)
+    scorer = LLMPriorScorer(cfg)
+    captured: list[str] = []
+
+    def fake_parse(self, user_content: str, sim_id=None):
+        captured.append(user_content)
+        return TacticPriorScores(
+            scores=[
+                TacticScoreItem(tactic_name="simplify", value=8),
+                TacticScoreItem(tactic_name="card2bv", value=5),
+            ]
+        )
+
+    monkeypatch.setattr(LLMPriorScorer, "_chat_completions_parse_scores", fake_parse)
+    root = "<LinearStrategy>(QF_NIA)"
+    out = scorer.score(
+        "QF_NIA",
+        root,
+        ["smt", "qfnia", "simplify", "card2bv"],
+        sim_id=0,
+    )
+    assert len(captured) == 1
+    candidates_json = captured[0].rsplit("\n", 1)[-1]
+    assert candidates_json == '["simplify", "card2bv"]'
+    assert out["smt"] == pytest.approx(0.25)
+    assert out["qfnia"] == pytest.approx(0.25)
+    assert out["simplify"] > out["card2bv"]
+    assert out["simplify"] > out["smt"]
+    assert scorer.last_mapping_mode == "thresholded_softmax_affine0.25_root_preprocess_only"
+
+
+def test_llm_prior_scorer_non_root_still_scores_solvers(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    cfg = LLMPriorConfig(enabled=True, prior_affine_floor=0.25)
+    scorer = LLMPriorScorer(cfg)
+    captured: list[str] = []
+
+    def fake_parse(self, user_content: str, sim_id=None):
+        captured.append(user_content)
+        return TacticPriorScores(
+            scores=[
+                TacticScoreItem(tactic_name="smt", value=2),
+                TacticScoreItem(tactic_name="qfnia", value=8),
+            ]
+        )
+
+    monkeypatch.setattr(LLMPriorScorer, "_chat_completions_parse_scores", fake_parse)
+    out = scorer.score(
+        "QF_NIA",
+        "(then simplify)",
+        ["smt", "qfnia"],
+        sim_id=0,
+    )
+    assert '"smt"' in captured[0]
+    assert '"qfnia"' in captured[0]
+    assert out["qfnia"] > out["smt"]
+    assert "root_preprocess_only" not in scorer.last_mapping_mode
+
+
 def test_llm_prior_scorer_counts_api_calls(monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
     cfg = LLMPriorConfig(enabled=True)
