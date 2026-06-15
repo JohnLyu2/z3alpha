@@ -6,13 +6,13 @@ import unittest
 
 import z3alpha.config  # noqa: F401 — ensure package init order before mcts submodules
 
-from z3alpha.mcts.llm_prior_context import (
+from z3alpha.mcts.llm_prior import (
     RunContextVersion,
+    StrategyContextRow,
     build_strategy_context_rows,
     compute_run_context_version,
     format_run_context,
     select_strategies_for_context,
-    StrategyContextRow,
 )
 
 
@@ -83,7 +83,7 @@ class TestFormatRunContext(unittest.TestCase):
         self.assertEqual(version, RunContextVersion(0, 0))
         self.assertIn("(no strategies evaluated yet)", text)
         self.assertIn("sim 0", text)
-        self.assertIn("best-performing strategies", text)
+        self.assertNotIn("measured evidence only", text)
 
     def test_includes_all_rows_up_to_20(self) -> None:
         db = {f"s{i}": _res([True] * i + [False] * (10 - i)) for i in range(8)}

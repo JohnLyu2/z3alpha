@@ -12,10 +12,11 @@ from z3alpha.mcts.linear import LinearStrategySearchRun
 from z3alpha.mcts.llm_prior import (
     LLMPriorConfig,
     LLMPriorScorer,
+    RunContextVersion,
     TacticPriorScores,
     TacticScoreItem,
+    _INSTRUCTIONS,
 )
-from z3alpha.mcts.llm_prior_context import RunContextVersion
 
 
 def _install_mock_chat_client(monkeypatch, *, parsed: TacticPriorScores | None, error: Exception | None = None):
@@ -412,10 +413,7 @@ def test_user_prompt_includes_run_context(monkeypatch):
     monkeypatch.setattr(LLMPriorScorer, "_chat_completions_parse_scores", fake_parse)
     run_context = (
         "Results from this run so far (factual; sim 2, 1 strategies evaluated, best 1/1):\n"
-        "  n_solved=1  par10_avg=1.00  smt\n"
-        "\n"
-        "Use these results when scoring: prefer extending the best-performing strategies; "
-        "avoid next steps that continue patterns matching the worst outcomes."
+        "  n_solved=1  par10_avg=1.00  smt"
     )
     scorer.score(
         "QF_NIA",
@@ -427,7 +425,8 @@ def test_user_prompt_includes_run_context(monkeypatch):
     assert len(captured) == 1
     prompt = captured[0]
     assert "Results from this run so far (factual" in prompt
-    assert "best-performing strategies" in prompt
+    assert "measured evidence only" not in prompt
+    assert "measured evidence only" in _INSTRUCTIONS
     assert "<LinearStrategy>(QF_NIA)" in prompt
     assert '"smt"' in prompt
 

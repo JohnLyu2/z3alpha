@@ -12,7 +12,7 @@ import z3alpha.config  # noqa: F401
 from z3alpha.config import MctsConfig
 from z3alpha.mcts.linear import LinearStrategySearchRun
 from z3alpha.mcts.llm_prior import LLMPriorConfig, LLMPriorScorer
-from z3alpha.mcts.llm_prior_context import RunContextVersion, root_partial_strategy
+from z3alpha.mcts.llm_prior import RunContextVersion, root_partial_strategy
 from z3alpha.mcts.node import MCTSNode
 
 
