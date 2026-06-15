@@ -14,8 +14,8 @@ from z3alpha.experiment_metrics import (
     filter_res_database_by_max_sim,
     init_coverage_curve_csv,
 )
-from z3alpha.mcts.llm_prior import LLMPriorScorer
-from z3alpha.mcts.llm_prior_context import (
+from z3alpha.mcts.llm_prior import (
+    LLMPriorScorer,
     RunContextVersion,
     compute_run_context_version,
     format_run_context,
