@@ -35,7 +35,8 @@ SCRIPTS_DIR     = Path(__file__).resolve().parent
 SUBMISSION_DIR  = REPO_ROOT / "data/smtcomp26/submission"
 SELECTION_RUNS  = REPO_ROOT / "data/smtcomp26/selection_runs"
 
-ENTRYPOINT_SOURCE = SCRIPTS_DIR / "z3alpha2.py"
+ENTRYPOINT_SOURCE       = SCRIPTS_DIR / "z3alpha2.py"
+ENTRYPOINT_DEBUG_SOURCE = SCRIPTS_DIR / "z3alpha2_debug.py"
 
 # ── Pin which training run to copy into submission/selectors/<group>/ ───────────
 # Edit when promoting a new run. Logic routing is read from meta.json at runtime.
@@ -111,6 +112,13 @@ def copy_entrypoint():
     shutil.copy2(ENTRYPOINT_SOURCE, dst)
     dst.chmod(dst.stat().st_mode | 0o111)
     print(f"  copied {ENTRYPOINT_SOURCE.relative_to(REPO_ROOT)} → submission/z3alpha2.py")
+
+    if not ENTRYPOINT_DEBUG_SOURCE.is_file():
+        sys.exit(f"Debug entry point not found: {ENTRYPOINT_DEBUG_SOURCE}")
+    dst_debug = SUBMISSION_DIR / "z3alpha2_debug.py"
+    shutil.copy2(ENTRYPOINT_DEBUG_SOURCE, dst_debug)
+    dst_debug.chmod(dst_debug.stat().st_mode | 0o111)
+    print(f"  copied {ENTRYPOINT_DEBUG_SOURCE.relative_to(REPO_ROOT)} → submission/z3alpha2_debug.py")
 
 
 def copy_lib():
