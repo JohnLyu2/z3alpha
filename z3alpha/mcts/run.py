@@ -114,8 +114,15 @@ class BaseMCTSRun:
         return None
 
     def _seed_expanded_children(self, node: MCTSNode, value: float) -> None:
-        """Optional post-rollout seeding for freshly expanded children."""
-        return
+        """Seed freshly expanded, never-visited children with the parent's
+        just-computed rollout value instead of leaving them at the
+        ``MCTSNode`` default of 0.0. Without this, PUCT treats unvisited
+        children as worst-case (reward is normalized to [0, 1]), so the
+        explore term has to do all the work to ever revisit them.
+        """
+        for child in node.children.values():
+            if child.visit_count == 0:
+                child.value_est = float(value)
 
     def _trace_format_action(self, action: Any) -> str:
         """Pretty-print ``action`` for MCTS trace logs (linear SMT tactic ids vs stage-2 values)."""
