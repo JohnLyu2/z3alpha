@@ -30,6 +30,7 @@ _STRUCTURAL_NAMES = [
     "defineSortCount",
     "declareDatatypeCount",
     "maxTermDepth",
+    "normalizedSize",
 ]
 
 FEATURE_NAMES: list[str] = _STRUCTURAL_NAMES + [f"sym_{s}" for s in SMTLIB_SYMBOLS]
@@ -39,8 +40,8 @@ def bench_feature_vector(path: str | Path) -> Optional[np.ndarray]:
     """Extract a flat feature vector from an SMT-LIB 2 benchmark.
 
     For incremental benchmarks (multiple check-sat calls), structural counts
-    are summed and max_term_depth is taken as the maximum across all queries.
-    Returns None if extraction fails.
+    and normalized size are summed and max_term_depth is taken as the maximum
+    across all queries. Returns None if extraction fails.
     """
     try:
         entries = extract_features(path)
@@ -63,6 +64,7 @@ def bench_feature_vector(path: str | Path) -> Optional[np.ndarray]:
         sum(q["defineSortCount"]       for q in queries),
         sum(q["declareDatatypeCount"]  for q in queries),
         max(q["maxTermDepth"]          for q in queries),
+        sum(q["normalizedSize"]        for q in queries),
     ]
     freq = [0] * len(queries[0]["symbolFrequency"])
     for q in queries:
