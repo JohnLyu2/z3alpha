@@ -2,15 +2,27 @@
   "smt": {
     "solver": true,
     "params": {
-      "random_seed": [0, 100, 200, 300, 400, 500]
+      "random_seed": {
+        "default": 0,
+        "values": [0, 100, 200, 300, 400, 500]
+      }
     }
   },
   "qfnra-nlsat": {
     "solver": true,
     "params": {
-      "inline_vars": ["true", "false"],
-      "factor": ["true", "false"],
-      "seed": [0, 100, 200, 300, 400, 500]
+      "inline_vars": {
+        "default": "false",
+        "values": ["true", "false"]
+      },
+      "factor": {
+        "default": "true",
+        "values": ["true", "false"]
+      },
+      "seed": {
+        "default": 0,
+        "values": [0, 100, 200, 300, 400, 500]
+      }
     }
   },
   "qfnra": {
@@ -18,25 +30,58 @@
   },
   "nla2bv": {
     "params": {
-      "nla2bv_max_bv_size": [4, 8, 16, 32, 64, 128]
+      "nla2bv_max_bv_size": {
+        "default": "inf",
+        "values": [4, 8, 16, 32, 64, 128]
+      }
     }
   },
   "simplify": {
     "params": {
-      "elim_and": ["true", "false"],
-      "blast_distinct": ["true", "false"],
-      "local_ctx": ["true", "false"],
-      "pull_cheap_ite": ["true", "false"],
-      "som": ["true", "false"],
-      "flat": ["true", "false"],
-      "hi_div0": ["true", "false"],
-      "hoist_mul": ["true", "false"],
-      "push_ite_bv": ["true", "false"]
+      "elim_and": {
+        "default": "false",
+        "values": ["true", "false"]
+      },
+      "blast_distinct": {
+        "default": "false",
+        "values": ["true", "false"]
+      },
+      "local_ctx": {
+        "default": "false",
+        "values": ["true", "false"]
+      },
+      "pull_cheap_ite": {
+        "default": "false",
+        "values": ["true", "false"]
+      },
+      "som": {
+        "default": "false",
+        "values": ["true", "false"]
+      },
+      "flat": {
+        "default": "true",
+        "values": ["true", "false"]
+      },
+      "hi_div0": {
+        "default": "true",
+        "values": ["true", "false"]
+      },
+      "hoist_mul": {
+        "default": "false",
+        "values": ["true", "false"]
+      },
+      "push_ite_bv": {
+        "default": "false",
+        "values": ["true", "false"]
+      }
     }
   },
   "propagate-values": {
     "params": {
-      "push_ite_bv": ["true", "false"]
+      "push_ite_bv": {
+        "default": "false",
+        "values": ["true", "false"]
+      }
     }
   },
   "ctx-simplify": {},

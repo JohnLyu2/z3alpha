@@ -50,7 +50,9 @@ class TestLoadLogicConfig:
     def test_qf_nia_params_keyed_by_id(self) -> None:
         cfg = load_logic_config("QF_NIA")
         smt_id = NAME_TO_ID["smt"]
-        assert cfg["params"][smt_id] == {"random_seed": [0, 100, 200, 300, 400, 500]}
+        assert cfg["params"][smt_id] == {
+            "random_seed": {"default": 0, "values": [0, 100, 200, 300, 400, 500]}
+        }
         # tactics with no params entry (e.g. "qfnia") are absent from the dict
         assert NAME_TO_ID["qfnia"] not in cfg["params"]
 
@@ -78,12 +80,17 @@ class TestLoadLogicConfig:
             _write_config(
                 tmp,
                 "FOO",
-                {"smt": {"solver": True, "params": {"random_seed": [1, 2]}}},
+                {
+                    "smt": {
+                        "solver": True,
+                        "params": {"random_seed": {"default": 0, "values": [1, 2]}},
+                    }
+                },
             )
             cfg = load_logic_config("FOO", config_dir=tmp)
         smt_id = NAME_TO_ID["smt"]
         assert cfg["solver_tactics"] == [smt_id]
-        assert cfg["params"][smt_id] == {"random_seed": [1, 2]}
+        assert cfg["params"][smt_id] == {"random_seed": {"default": 0, "values": [1, 2]}}
 
     def test_override_dir_takes_precedence_over_builtin(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -105,7 +112,7 @@ class TestLogicConfigStrategyTreeEndToEnd:
         grid = cfg["params"].get(action)
         if not grid:
             return None
-        return {name: values[0] for name, values in grid.items()}
+        return {name: spec["default"] for name, spec in grid.items()}
 
     def test_strategy_string_includes_params_from_config(self) -> None:
         cfg = load_logic_config("QF_NIA")
@@ -120,7 +127,7 @@ class TestLogicConfigStrategyTreeEndToEnd:
         strat_str = str(tree)
         assert "simplify" in strat_str
         assert "smt" in strat_str
-        assert ":random_seed 0" in strat_str  # first value in the config's grid
+        assert ":random_seed 0" in strat_str  # the config's declared z3 default
 
     @pytest.mark.skipif(_Z3_PATH is None, reason="z3 binary not found on PATH")
     def test_synthesized_strategy_solves_real_benchmark(self) -> None:

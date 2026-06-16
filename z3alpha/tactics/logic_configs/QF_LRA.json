@@ -2,7 +2,10 @@
   "smt": {
     "solver": true,
     "params": {
-      "random_seed": [0, 100, 200, 300, 400, 500]
+      "random_seed": {
+        "default": 0,
+        "values": [0, 100, 200, 300, 400, 500]
+      }
     }
   },
   "qflra": {
@@ -10,12 +13,30 @@
   },
   "simplify": {
     "params": {
-      "elim_and": ["true", "false"],
-      "blast_distinct": ["true", "false"],
-      "local_ctx": ["true", "false"],
-      "pull_cheap_ite": ["true", "false"],
-      "som": ["true", "false"],
-      "flat": ["true", "false"]
+      "elim_and": {
+        "default": "false",
+        "values": ["true", "false"]
+      },
+      "blast_distinct": {
+        "default": "false",
+        "values": ["true", "false"]
+      },
+      "local_ctx": {
+        "default": "false",
+        "values": ["true", "false"]
+      },
+      "pull_cheap_ite": {
+        "default": "false",
+        "values": ["true", "false"]
+      },
+      "som": {
+        "default": "false",
+        "values": ["true", "false"]
+      },
+      "flat": {
+        "default": "true",
+        "values": ["true", "false"]
+      }
     }
   },
   "propagate-values": {},

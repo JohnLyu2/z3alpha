@@ -12,7 +12,8 @@ _LOGIC_CONFIGS_DIR = Path(__file__).resolve().parent / "logic_configs"
 
 
 def _parse(path: Path) -> dict[str, Any]:
-    """Parse a logic config JSON: ``{tactic_name: {"solver": bool, "params": {...}}}``.
+    """Parse a logic config JSON: ``{tactic_name: {"solver": bool, "params": {...}}}``,
+    where each param entry is ``{"default": ..., "values": [...]}``.
 
     Both ``solver`` (default ``False``) and ``params`` (default ``{}``) are optional.
     """
@@ -20,7 +21,7 @@ def _parse(path: Path) -> dict[str, Any]:
         raw = json.load(f)
     solver_tactics: list[int] = []
     preprocess_tactics: list[int] = []
-    params: dict[int, dict[str, list]] = {}
+    params: dict[int, dict[str, dict[str, Any]]] = {}
     for name, entry in raw.items():
         tactic_id = NAME_TO_ID[name]
         if entry.get("solver", False):
