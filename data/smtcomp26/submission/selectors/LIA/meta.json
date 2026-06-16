@@ -1,6 +1,0 @@
-{
-  "logic": "LIA",
-  "fixed_strategy": [
-    "tactic.default_tactic=(then qe_rec smt)"
-  ]
-}

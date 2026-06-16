@@ -1,2 +1,0 @@
-non-incremental/QF_NIRA/LCTES/miniflight.nosummaries.smt2
-non-incremental/QF_NIRA/LCTES/miniflight.smt2
