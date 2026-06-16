@@ -1,23 +1,16 @@
 {
-  "solver_tactics": ["smt", "qfbv"],
-  "preprocess_tactics": [
-    "bit-blast",
-    "simplify",
-    "propagate-values",
-    "ctx-simplify",
-    "elim-uncnstr",
-    "solve-eqs",
-    "purify-arith",
-    "max-bv-sharing",
-    "aig",
-    "reduce-bv-size",
-    "ackermannize_bv"
-  ],
-  "params": {
-    "smt": {
+  "smt": {
+    "solver": true,
+    "params": {
       "random_seed": [0, 100, 200, 300, 400, 500]
-    },
-    "simplify": {
+    }
+  },
+  "qfbv": {
+    "solver": true
+  },
+  "bit-blast": {},
+  "simplify": {
+    "params": {
       "elim_and": ["true", "false"],
       "blast_distinct": ["true", "false"],
       "local_ctx": ["true", "false"],
@@ -26,9 +19,19 @@
       "flat": ["true", "false"],
       "push_ite_bv": ["true", "false"],
       "hoist_mul": ["true", "false"]
-    },
-    "propagate-values": {
+    }
+  },
+  "propagate-values": {
+    "params": {
       "push_ite_bv": ["true", "false"]
     }
-  }
+  },
+  "ctx-simplify": {},
+  "elim-uncnstr": {},
+  "solve-eqs": {},
+  "purify-arith": {},
+  "max-bv-sharing": {},
+  "aig": {},
+  "reduce-bv-size": {},
+  "ackermannize_bv": {}
 }

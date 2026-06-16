@@ -1,21 +1,20 @@
 {
-  "solver_tactics": ["smt"],
-  "preprocess_tactics": [
-    "simplify",
-    "propagate-values",
-    "ctx-simplify",
-    "elim-uncnstr",
-    "solve-eqs"
-  ],
-  "params": {
-    "smt": {
+  "smt": {
+    "solver": true,
+    "params": {
       "random_seed": [0, 100, 200, 300, 400, 500]
-    },
-    "simplify": {
+    }
+  },
+  "simplify": {
+    "params": {
       "elim_and": ["true", "false"],
       "blast_distinct": ["true", "false"],
       "local_ctx": ["true", "false"],
       "pull_cheap_ite": ["true", "false"]
     }
-  }
+  },
+  "propagate-values": {},
+  "ctx-simplify": {},
+  "elim-uncnstr": {},
+  "solve-eqs": {}
 }
