@@ -1,7 +1,8 @@
 """
 PWC (pairwise comparison) based algorithm selector for Z3 tactic strategies.
 
-Training API. Inference (feature extraction, ranking) is in smt_select_infer.py.
+Training API. Inference (feature extraction, ranking) is in
+:mod:`z3alpha.smt_select.infer`.
 
 Approach adapted from SMT-Select (syntactic/PWC variant):
   https://github.com/JohnLyu2/smt-select
@@ -19,7 +20,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
 from xgboost import XGBClassifier
 
-from z3alpha.smt_select_infer import (
+from z3alpha.smt_select.infer import (
     FEATURE_NAMES,
     PairwiseSelector,
     bench_feature_vector,

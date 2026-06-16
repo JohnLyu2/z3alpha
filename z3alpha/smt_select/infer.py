@@ -1,8 +1,7 @@
 """
 PWC selector inference: feature extraction and pairwise strategy ranking.
 
-Bundled into the SMT-COMP submission as lib/smt_select.py (see prepare_submission.py).
-Training lives in smt_select.py.
+Training lives in :mod:`z3alpha.smt_select.train`.
 """
 
 from __future__ import annotations
@@ -16,10 +15,7 @@ import joblib
 import numpy as np
 from sklearn.preprocessing import StandardScaler
 
-try:
-    from z3alpha.smtlib_features import extract_features, SMTLIB_SYMBOLS
-except ImportError:
-    from smtlib_features import extract_features, SMTLIB_SYMBOLS  # type: ignore[no-redef]
+from z3alpha.smt_select.features import extract_features, SMTLIB_SYMBOLS
 
 log = logging.getLogger(__name__)
 
