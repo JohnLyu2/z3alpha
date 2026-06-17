@@ -172,6 +172,87 @@ def test_resolve_mcts_config_param_search_defaults():
 
 
 # ---------------------------------------------------------------------------
+# params_for default-omission behaviour
+# ---------------------------------------------------------------------------
+
+def _make_run_with_selector(tmp_path, logic_config, mcts=None):
+    """Return a LinearStrategySearchRun with param_selector enabled, env initialised."""
+    if mcts is None:
+        mcts = MctsConfig(
+            sim_num=1, timeout=1, c_uct=0.5, random_seed=0,
+            param_selector=ParamSelectionConfig(enabled=True, c_ucb=DEFAULT_PARAM_C_UCB),
+        )
+    log_dir = tmp_path / "run"
+    log_dir.mkdir(exist_ok=True)
+    with patch("z3alpha.environment.SolverEvaluator"):
+        run = LinearStrategySearchRun(
+            mcts, ["dummy.smt2"], "QF_NIA", "z3", "par10", log_dir,
+            batch_size=1, logic_config=logic_config,
+        )
+        run.env = run._create_env()
+        run.num_sim = 0
+    return run
+
+
+def test_params_for_omits_default_value(tmp_path):
+    """When the MAB selects the default value, that param is absent from the result."""
+    logic_config = {
+        "solver_tactics": [10],
+        "preprocess_tactics": [],
+        "params": {10: {"random_seed": {"default": 0, "values": [0, 100]}}},
+    }
+    run = _make_run_with_selector(tmp_path, logic_config)
+    with patch.object(run._param_selector, "select", return_value={"random_seed": 0}):
+        result = run.params_for(10)
+    assert result is None
+
+
+def test_params_for_returns_none_when_all_selected_are_defaults(tmp_path):
+    """When every selected param matches its default, params_for returns None (no using-params)."""
+    logic_config = {
+        "solver_tactics": [10],
+        "preprocess_tactics": [],
+        "params": {10: {
+            "random_seed": {"default": 0, "values": [0, 100]},
+            "factor": {"default": "true", "values": ["true", "false"]},
+        }},
+    }
+    run = _make_run_with_selector(tmp_path, logic_config)
+    with patch.object(run._param_selector, "select", return_value={"random_seed": 0, "factor": "true"}):
+        result = run.params_for(10)
+    assert result is None
+
+
+def test_params_for_keeps_non_default_value(tmp_path):
+    """A param value that differs from its default is included in the result."""
+    logic_config = {
+        "solver_tactics": [10],
+        "preprocess_tactics": [],
+        "params": {10: {"random_seed": {"default": 0, "values": [0, 100]}}},
+    }
+    run = _make_run_with_selector(tmp_path, logic_config)
+    with patch.object(run._param_selector, "select", return_value={"random_seed": 100}):
+        result = run.params_for(10)
+    assert result == {"random_seed": 100}
+
+
+def test_params_for_partial_default_omission(tmp_path):
+    """Only non-default params survive; default ones are stripped."""
+    logic_config = {
+        "solver_tactics": [10],
+        "preprocess_tactics": [],
+        "params": {10: {
+            "random_seed": {"default": 0, "values": [0, 100]},
+            "factor": {"default": "true", "values": ["true", "false"]},
+        }},
+    }
+    run = _make_run_with_selector(tmp_path, logic_config)
+    with patch.object(run._param_selector, "select", return_value={"random_seed": 100, "factor": "true"}):
+        result = run.params_for(10)
+    assert result == {"random_seed": 100}
+
+
+# ---------------------------------------------------------------------------
 # Regression: params_for returns None when param_selector is disabled
 # ---------------------------------------------------------------------------
 
@@ -246,11 +327,11 @@ def test_param_selector_produces_using_params_in_strategy(tmp_path):
         )
         run.start()
 
-    best = run.get_best_strat()
-    assert best is not None, "No strategy produced"
-    # Strategy should contain a using-params wrapper with random_seed
-    assert ":random_seed" in best, f"Expected :random_seed in strategy, got: {best}"
-    m = re.search(r":random_seed\s+(\d+)", best)
-    assert m is not None, f"Could not extract random_seed value from: {best}"
-    seed_val = int(m.group(1))
-    assert seed_val in [0, 100, 200], f"Unexpected seed value: {seed_val}"
+    assert run.get_best_strat() is not None, "No strategy produced"
+    # Each arm is tried at least once; non-default seeds (100, 200) must appear in the database
+    strats_with_params = [s for s in run.res_database if ":random_seed" in s]
+    assert strats_with_params, "Expected at least one strategy with non-default random_seed"
+    for s in strats_with_params:
+        m = re.search(r":random_seed\s+(\d+)", s)
+        assert m is not None
+        assert int(m.group(1)) in [100, 200], f"Unexpected seed value in: {s}"

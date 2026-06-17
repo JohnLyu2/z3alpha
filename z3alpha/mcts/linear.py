@@ -71,13 +71,15 @@ class LinearStrategySearchRun(BaseMCTSRun):
         grid = (self.logic_config or {}).get("params", {}).get(action)
         if not grid:
             return None
-        return self._param_selector.select(
+        selected = self._param_selector.select(
             self.logic,
             str(self.env),
             tactic_name_for_action(action),
             grid,
             sim_id=self.num_sim,
         )
+        non_default = {p: v for p, v in selected.items() if v != grid[p]["default"]}
+        return non_default if non_default else None
 
     def _backup_params(self, value: float) -> None:
         if self._param_selector is not None:
