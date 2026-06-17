@@ -16,6 +16,7 @@ from z3alpha.config.synthesis import (
     resolve_mcts_config,
 )
 from z3alpha.mcts.llm_prior import LLMPriorConfig
+from z3alpha.mcts.param_selection import ParamSelectionConfig
 
 __all__ = [
     "DEFAULT_C_UCT",
@@ -23,6 +24,7 @@ __all__ = [
     "DEFAULT_RANDOM_SEED",
     "ExperimentConfig",
     "LLMPriorConfig",
+    "ParamSelectionConfig",
     "MctsCliArgs",
     "MctsConfig",
     "SynthesisRun",

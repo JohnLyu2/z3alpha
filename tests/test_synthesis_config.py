@@ -45,6 +45,8 @@ def test_parse_experiment_config_unknown_key_raises():
 
 
 def test_resolve_mcts_config_defaults():
+    from z3alpha.mcts.param_selection import DEFAULT_PARAM_C_UCB, ParamSelectionConfig
+
     class A:
         c_uct = None
         random_seed = None
@@ -58,6 +60,7 @@ def test_resolve_mcts_config_defaults():
         random_seed=DEFAULT_RANDOM_SEED,
         is_mean=DEFAULT_IS_MEAN,
         llm_prior=None,
+        param_selector=ParamSelectionConfig(enabled=True, c_ucb=DEFAULT_PARAM_C_UCB),
     )
     assert cfg.is_mean is False
 

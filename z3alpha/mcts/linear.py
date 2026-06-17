@@ -9,6 +9,7 @@ from typing import Any
 
 from z3alpha.environment import LinearStrategyGame
 from z3alpha.mcts.llm_prior import LLMPriorScorer
+from z3alpha.mcts.param_selection import MabParamSelector, ParamSelector
 from z3alpha.mcts.run import BaseMCTSRun, MctsConfig
 from z3alpha.tactics.catalog import tactic_name_for_action
 from z3alpha.utils import par_n, solved_num
@@ -59,6 +60,28 @@ class LinearStrategySearchRun(BaseMCTSRun):
         if lp is not None and lp.enabled:
             llm_log_path = str(self.log_folder / "llm_prior_qa.log")
             self._scorer = LLMPriorScorer(replace(lp, qa_log_path=llm_log_path))
+        self._param_selector: ParamSelector | None = None
+        ps = self.config.param_selector
+        if ps is not None and ps.enabled:
+            self._param_selector = MabParamSelector(c_ucb=ps.c_ucb, is_mean=self.is_mean)
+
+    def params_for(self, action):
+        if self._param_selector is None:
+            return None
+        grid = (self.logic_config or {}).get("params", {}).get(action)
+        if not grid:
+            return None
+        return self._param_selector.select(
+            self.logic,
+            str(self.env),
+            tactic_name_for_action(action),
+            grid,
+            sim_id=self.num_sim,
+        )
+
+    def _backup_params(self, value: float) -> None:
+        if self._param_selector is not None:
+            self._param_selector.backup_episode(value)
 
     def _priors_for(self, actions: list) -> dict[Any, float] | None:
         if self._scorer is None:

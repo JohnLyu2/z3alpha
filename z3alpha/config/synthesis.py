@@ -6,6 +6,7 @@ from dataclasses import MISSING, dataclass, fields
 from typing import Any, Protocol, runtime_checkable
 
 from z3alpha.mcts.llm_prior import LLMPriorConfig
+from z3alpha.mcts.param_selection import DEFAULT_PARAM_C_UCB, ParamSelectionConfig
 from z3alpha.mcts.run import DEFAULT_IS_MEAN, MctsConfig
 
 # CLI / code defaults (experiment JSON does not set these; use --c-uct, --random-seed)
@@ -104,6 +105,7 @@ def resolve_mcts_config(args: MctsCliArgs, experiment: ExperimentConfig) -> Mcts
                 else float(args.llm_temperature)
             ),
         )
+    param_selector = ParamSelectionConfig()
     return MctsConfig(
         sim_num=experiment.mcts_sims,
         timeout=experiment.timeout,
@@ -111,4 +113,5 @@ def resolve_mcts_config(args: MctsCliArgs, experiment: ExperimentConfig) -> Mcts
         random_seed=DEFAULT_RANDOM_SEED if args.random_seed is None else args.random_seed,
         is_mean=DEFAULT_IS_MEAN,
         llm_prior=llm_prior,
+        param_selector=param_selector,
     )
