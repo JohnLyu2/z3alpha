@@ -25,3 +25,5 @@ The full per-run MCTS configuration is `z3alpha.config.MctsConfig` (sim count, t
 Defaults live in `z3alpha/config/synthesis.py` (`DEFAULT_C_UCT`, `DEFAULT_RANDOM_SEED`) and `z3alpha/mcts/run.py` (`DEFAULT_IS_MEAN = False`, i.e. max-based value backup). Override `c_uct` / random seed per run on the CLI:
 
 `python -m z3alpha.synthesize CONFIG.json --c-uct 0.6 --random-seed 42`
+
+UCB1 MAB search over tactic parameter values is always on during stage-1 (see `z3alpha/mcts/param_selection.py`).

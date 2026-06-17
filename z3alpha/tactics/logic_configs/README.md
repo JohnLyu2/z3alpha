@@ -41,10 +41,8 @@ tactics). Each entry is:
 A tactic with no params at all (e.g. `"ctx-simplify": {}`) is just applied
 by name, with no `using-params` wrapper.
 
-Note: as of this writing, nothing in the MCTS search actually samples from
-`"params"` yet — `BaseMCTSRun.params_for` is an unwired placeholder that
-always returns `None` ([run.py](../../mcts/run.py)). The grids here are
-preserved by the parser but not yet consumed.
+The `"params"` grids are consumed by the UCB1 MAB parameter search during
+stage-1 MCTS (see [`z3alpha/mcts/param_selection.py`](../../mcts/param_selection.py)).
 
 ## Keeping this in sync with z3
 

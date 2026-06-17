@@ -38,7 +38,7 @@ The command for this toy example is as follows:
 python -m z3alpha.synthesize data/smoke/configs/synthesis.json
 ```
 
-The configuration file lists experiment fields only (see `z3alpha.config.ExperimentConfig` for the allowed schema; unknown keys are rejected). All MCTS knobs (sim count, timeout, PUCT exploration constant, random seed, mean-vs-max value backup) live in `z3alpha.config.MctsConfig`. Defaults come from constants in two places: `DEFAULT_C_UCT` and `DEFAULT_RANDOM_SEED` are in `z3alpha/config/synthesis.py`, while `DEFAULT_IS_MEAN = False` is in `z3alpha/mcts/run.py`. The PUCT constant and seed can be overridden via `--c-uct` and `--random-seed` on the CLI; `is_mean` is a code-level toggle (set to `True` in `MctsConfig` to use running-mean value backups instead of running-max). A smoke-test configuration is provided at `data/smoke/configs/synthesis.json`.
+The configuration file specifies the experiment (see `z3alpha.config.ExperimentConfig` for the full schema; unknown keys are rejected). Key fields include `batch_size` (number of benchmarks evaluated in parallel per simulation), `mcts_sims`, `timeout`, and `train_dir`. A smoke-test configuration is provided at `data/smoke/configs/synthesis.json`.
 
 After this command finishes, outputs are saved under `experiments/synthesis/` in a directory named `out-<starting time:%Y-%m-%d_%H-%M-%S>`. Typical files:
 
