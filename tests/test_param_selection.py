@@ -1,4 +1,4 @@
-"""Tests for z3alpha.mcts.param_selection: MabParamSelector and config wiring."""
+"""Tests for z3alpha.mcts.param_selection: MabParamSelector and LinearStrategySearchRun.params_for."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 import pytest
 
-from z3alpha.config import MctsConfig, parse_experiment_config, resolve_mcts_config
+from z3alpha.config import MctsConfig
 from z3alpha.mcts.linear import LinearStrategySearchRun
 from z3alpha.mcts.param_selection import (
     DEFAULT_PARAM_C_UCB,
@@ -44,7 +44,6 @@ def test_arms_seeded_from_values_not_unioned_with_default():
         chosen = sel.select("L", "t", "tac", grid)
         sel.backup_episode(1.0)
         seen.add(chosen["p"])
-    # 99 (the default, not in 'values') must never appear
     assert 99 not in seen
     assert seen <= {1, 2, 3}
 
@@ -83,8 +82,7 @@ def test_independent_keys_do_not_share_state():
     for _ in range(20):
         c = sel.select("L", "strategy_A", "tac", grid)
         sel.backup_episode(1.0 if c["p"] == "x" else 0.0)
-    visits_b_before = sel._visits.get(("strategy_B", "tac"), 0)
-    assert visits_b_before == 0
+    assert sel._visits.get(("strategy_B", "tac"), 0) == 0
     sel.select("L", "strategy_B", "tac", grid)
     sel.backup_episode(0.5)
     assert sel._visits[("strategy_A", "tac")] == 20
@@ -146,37 +144,11 @@ def test_param_selector_protocol_check():
 
 
 # ---------------------------------------------------------------------------
-# Config wiring tests
+# LinearStrategySearchRun.params_for
 # ---------------------------------------------------------------------------
 
-_MINIMAL_EXP = {
-    "logic": "QF_NIA",
-    "train_dir": "data/smoke/benchmarks",
-    "timeout": 1,
-    "mcts_sims": 3,
-    "branched_sims": 1,
-    "ln_strat_num": 1,
-}
-
-
-def test_resolve_mcts_config_param_search_defaults():
-    class Args:
-        c_uct = None
-        random_seed = None
-
-    experiment = parse_experiment_config(_MINIMAL_EXP)
-    cfg = resolve_mcts_config(Args(), experiment)
-    assert cfg.param_selector is not None
-    assert cfg.param_selector.enabled is True
-    assert cfg.param_selector.c_ucb == pytest.approx(DEFAULT_PARAM_C_UCB)
-
-
-# ---------------------------------------------------------------------------
-# params_for default-omission behaviour
-# ---------------------------------------------------------------------------
-
-def _make_run_with_selector(tmp_path, logic_config, mcts=None):
-    """Return a LinearStrategySearchRun with param_selector enabled, env initialised."""
+def _make_linear_run(tmp_path, logic_config, mcts=None):
+    """Return a LinearStrategySearchRun with env initialised, ready to call params_for."""
     if mcts is None:
         mcts = MctsConfig(
             sim_num=1, timeout=1, c_uct=0.5, random_seed=0,
@@ -194,95 +166,64 @@ def _make_run_with_selector(tmp_path, logic_config, mcts=None):
     return run
 
 
+_SINGLE_PARAM_CONFIG = {
+    "solver_tactics": [10],
+    "preprocess_tactics": [],
+    "params": {10: {"random_seed": {"default": 0, "values": [0, 100]}}},
+}
+
+_TWO_PARAM_CONFIG = {
+    "solver_tactics": [10],
+    "preprocess_tactics": [],
+    "params": {10: {
+        "random_seed": {"default": 0, "values": [0, 100]},
+        "factor": {"default": "true", "values": ["true", "false"]},
+    }},
+}
+
+
+def test_params_for_returns_none_when_selector_disabled(tmp_path):
+    mcts = MctsConfig(sim_num=1, timeout=1, c_uct=0.5, random_seed=0)
+    run = _make_linear_run(tmp_path, _SINGLE_PARAM_CONFIG, mcts=mcts)
+    assert run.params_for(10) is None
+    assert run.params_for(99) is None
+
+
+def test_params_for_returns_none_when_no_param_grid(tmp_path):
+    run = _make_linear_run(tmp_path, _SINGLE_PARAM_CONFIG)
+    assert run.params_for(99) is None  # action not in grid
+
+
 def test_params_for_omits_default_value(tmp_path):
     """When the MAB selects the default value, that param is absent from the result."""
-    logic_config = {
-        "solver_tactics": [10],
-        "preprocess_tactics": [],
-        "params": {10: {"random_seed": {"default": 0, "values": [0, 100]}}},
-    }
-    run = _make_run_with_selector(tmp_path, logic_config)
+    run = _make_linear_run(tmp_path, _SINGLE_PARAM_CONFIG)
     with patch.object(run._param_selector, "select", return_value={"random_seed": 0}):
-        result = run.params_for(10)
-    assert result is None
+        assert run.params_for(10) is None
 
 
 def test_params_for_returns_none_when_all_selected_are_defaults(tmp_path):
     """When every selected param matches its default, params_for returns None (no using-params)."""
-    logic_config = {
-        "solver_tactics": [10],
-        "preprocess_tactics": [],
-        "params": {10: {
-            "random_seed": {"default": 0, "values": [0, 100]},
-            "factor": {"default": "true", "values": ["true", "false"]},
-        }},
-    }
-    run = _make_run_with_selector(tmp_path, logic_config)
+    run = _make_linear_run(tmp_path, _TWO_PARAM_CONFIG)
     with patch.object(run._param_selector, "select", return_value={"random_seed": 0, "factor": "true"}):
-        result = run.params_for(10)
-    assert result is None
+        assert run.params_for(10) is None
 
 
 def test_params_for_keeps_non_default_value(tmp_path):
     """A param value that differs from its default is included in the result."""
-    logic_config = {
-        "solver_tactics": [10],
-        "preprocess_tactics": [],
-        "params": {10: {"random_seed": {"default": 0, "values": [0, 100]}}},
-    }
-    run = _make_run_with_selector(tmp_path, logic_config)
+    run = _make_linear_run(tmp_path, _SINGLE_PARAM_CONFIG)
     with patch.object(run._param_selector, "select", return_value={"random_seed": 100}):
-        result = run.params_for(10)
-    assert result == {"random_seed": 100}
+        assert run.params_for(10) == {"random_seed": 100}
 
 
 def test_params_for_partial_default_omission(tmp_path):
     """Only non-default params survive; default ones are stripped."""
-    logic_config = {
-        "solver_tactics": [10],
-        "preprocess_tactics": [],
-        "params": {10: {
-            "random_seed": {"default": 0, "values": [0, 100]},
-            "factor": {"default": "true", "values": ["true", "false"]},
-        }},
-    }
-    run = _make_run_with_selector(tmp_path, logic_config)
+    run = _make_linear_run(tmp_path, _TWO_PARAM_CONFIG)
     with patch.object(run._param_selector, "select", return_value={"random_seed": 100, "factor": "true"}):
-        result = run.params_for(10)
-    assert result == {"random_seed": 100}
+        assert run.params_for(10) == {"random_seed": 100}
 
 
 # ---------------------------------------------------------------------------
-# Regression: params_for returns None when param_selector is disabled
-# ---------------------------------------------------------------------------
-
-def test_params_for_none_when_selector_disabled(tmp_path):
-    mcts = MctsConfig(sim_num=1, timeout=1, c_uct=0.5, random_seed=0)
-    logic_config = {
-        "solver_tactics": [10],
-        "preprocess_tactics": [],
-        "params": {10: {"random_seed": {"default": 0, "values": [0, 100]}}},
-    }
-    log_dir = tmp_path / "run"
-    log_dir.mkdir()
-    with patch("z3alpha.environment.SolverEvaluator"):
-        run = LinearStrategySearchRun(
-            mcts,
-            ["dummy.smt2"],
-            "QF_NIA",
-            "z3",
-            "par10",
-            log_dir,
-            batch_size=1,
-            logic_config=logic_config,
-        )
-        run.env = run._create_env()
-        assert run.params_for(10) is None
-        assert run.params_for(99) is None
-
-
-# ---------------------------------------------------------------------------
-# End-to-end: param_selector enabled -> using-params in top strategy string
+# End-to-end: param_selector enabled -> strategy database contains non-default params
 # ---------------------------------------------------------------------------
 
 class FixedParamLinearRun(LinearStrategySearchRun):
@@ -296,7 +237,6 @@ def test_param_selector_produces_using_params_in_strategy(tmp_path):
     root = Path(__file__).resolve().parents[1]
     benches = sorted((root / "data/smoke/benchmarks").rglob("*.smt2"))
     assert benches, "smoke benchmarks missing"
-    bench_lst = [str(benches[0])]
 
     logic_config = {
         "solver_tactics": [10],
@@ -304,31 +244,21 @@ def test_param_selector_produces_using_params_in_strategy(tmp_path):
         "params": {10: {"random_seed": {"default": 0, "values": [0, 100, 200]}}},
     }
     mcts = MctsConfig(
-        sim_num=5,
-        timeout=1,
-        c_uct=0.5,
-        random_seed=0,
+        sim_num=5, timeout=1, c_uct=0.5, random_seed=0,
         param_selector=ParamSelectionConfig(enabled=True, c_ucb=DEFAULT_PARAM_C_UCB),
     )
-
     log_dir = tmp_path / "run"
     log_dir.mkdir()
     with patch("z3alpha.environment.SolverEvaluator") as mock_ev:
         mock_ev.return_value.evaluate.return_value = [(True, 0.01, "sat")]
         run = FixedParamLinearRun(
-            mcts,
-            bench_lst,
-            "QF_NIA",
-            "z3",
-            "par10",
-            log_dir,
-            batch_size=1,
-            logic_config=logic_config,
+            mcts, [str(benches[0])], "QF_NIA", "z3", "par10", log_dir,
+            batch_size=1, logic_config=logic_config,
         )
         run.start()
 
     assert run.get_best_strat() is not None, "No strategy produced"
-    # Each arm is tried at least once; non-default seeds (100, 200) must appear in the database
+    # UCB1 explores all arms; non-default seeds (100, 200) must appear in the database
     strats_with_params = [s for s in run.res_database if ":random_seed" in s]
     assert strats_with_params, "Expected at least one strategy with non-default random_seed"
     for s in strats_with_params:

@@ -8,6 +8,7 @@ from z3alpha.config import (
     parse_experiment_config,
     resolve_mcts_config,
 )
+from z3alpha.mcts.param_selection import DEFAULT_PARAM_C_UCB, ParamSelectionConfig
 
 
 def _minimal_experiment():
@@ -62,6 +63,18 @@ def test_resolve_mcts_config_defaults():
         param_selector=ParamSelectionConfig(enabled=True, c_ucb=DEFAULT_PARAM_C_UCB),
     )
     assert cfg.is_mean is False
+
+
+def test_resolve_mcts_config_param_search_defaults():
+    class A:
+        c_uct = None
+        random_seed = None
+
+    experiment = parse_experiment_config(_minimal_experiment())
+    cfg = resolve_mcts_config(A(), experiment)
+    assert cfg.param_selector is not None
+    assert cfg.param_selector.enabled is True
+    assert cfg.param_selector.c_ucb == pytest.approx(DEFAULT_PARAM_C_UCB)
 
 
 def test_resolve_mcts_config_cli_overrides():
