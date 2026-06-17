@@ -9,6 +9,7 @@ For every tactic name and param declared in the logic config JSONs, checks:
   - the declared "default" matches the default z3 itself reports. The
     Python API's param_descrs() doesn't expose default values, so this is
     parsed from `z3 -tactics:<name>` CLI output instead.
+  - the declared "default" is present in the "values" candidate list.
 
 Usage:
     python scripts/validate_logic_configs.py [--z3-path PATH] [--fix]
@@ -134,6 +135,12 @@ def validate(z3_path: str, fix: bool) -> int:
                         print(f"FIXED: {msg}")
                     else:
                         errors.append(msg)
+
+                values = spec.get("values", [])
+                if values and spec["default"] not in values:
+                    errors.append(
+                        f"{ploc}: default {spec['default']!r} not in candidate values {values}"
+                    )
 
         if changed:
             path.write_text(_compact_dump(raw) + "\n")
