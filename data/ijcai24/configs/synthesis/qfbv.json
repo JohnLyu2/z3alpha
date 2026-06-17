@@ -1,6 +1,5 @@
 {
   "logic": "QF_BV",
-  "batch_size": 50,
   "train_dir": "data/ijcai24/benchmarks/QF_BV",
   "timeout": 10,
   "mcts_sims": 800,

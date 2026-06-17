@@ -167,6 +167,11 @@ def main():
     )
     parser.add_argument("--batch-size", type=int, help="Override batch size.")
     parser.add_argument(
+        "--smtlib-root",
+        type=str,
+        help="Root of the SMT-LIB benchmark tree; relative paths in --eval-list-file are resolved against <smtlib-root>/non-incremental/.",
+    )
+    parser.add_argument(
         "--timeout",
         type=int,
         required=True,
@@ -209,7 +214,7 @@ def main():
     batch_size = (
         args.batch_size if args.batch_size is not None else config.get("workers", config.get("batch_size", 4))
     )
-    smtlib_root = str(pathlib.Path(config["smtlib_root"]) / "non-incremental") if config.get("smtlib_root") else None
+    smtlib_root = str(pathlib.Path(args.smtlib_root) / "non-incremental") if args.smtlib_root else None
     z3_extra_params = [p.strip() for p in args.z3_param if p and p.strip()]
     timeout = args.timeout
     if args.res_dir is None:
@@ -266,7 +271,6 @@ def main():
             "z3_path": z3_path,
             "z3_version": z3_version,
             "batch_size": batch_size,
-            "smtlib_root": smtlib_root,
         },
         "run_config": {
             "mode": "eval_dir" if args.eval_dir is not None else "eval_list_file",

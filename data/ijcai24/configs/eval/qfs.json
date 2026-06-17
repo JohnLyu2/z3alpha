@@ -9,7 +9,6 @@
     "z3": null
   },
   "timeout": 10,
-  "batch_size": 30,
   "res_dir": "experiments/evaluation/qfs",
   "eval_dir": "data/ijcai24/benchmarks/QF_S/test"
 }

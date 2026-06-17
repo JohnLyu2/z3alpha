@@ -14,6 +14,7 @@ from z3alpha.config import (
     resolve_mcts_config,
     setup_logging,
 )
+from z3alpha.config.env import check_z3_version, load_env_config
 from z3alpha.mcts import LinearStrategySearchRun
 from z3alpha.smt_select import train_pwc_selector
 from z3alpha.stage2.search_runtime import run_branched_synthesis
@@ -37,12 +38,14 @@ def _log_elapsed(start_time, label):
     return elapsed
 
 
-def synthesize_linear_strategies(run: SynthesisRun, log_folder: Path):
+def synthesize_linear_strategies(run: SynthesisRun, log_folder: Path, env=None):
+    if env is None:
+        env = load_env_config()
     experiment = run.experiment
     start_time = time.time()
     logic = experiment.logic
-    z3path = experiment.z3path if experiment.z3path else "z3"
-    batch_size = experiment.batch_size
+    z3path = experiment.z3path if experiment.z3path else (env.z3_path or "z3")
+    batch_size = env.workers
     num_ln_strat = experiment.ln_strat_num
     value_type = experiment.value_type
     random.seed(run.mcts.random_seed)
@@ -84,10 +87,12 @@ def synthesize_linear_strategies(run: SynthesisRun, log_folder: Path):
     return s1_bench_lst, shortlist
 
 
-def ml_synthesize(run: SynthesisRun, log_folder: Path):
+def ml_synthesize(run: SynthesisRun, log_folder: Path, env=None):
+    if env is None:
+        env = load_env_config()
     start_time = time.time()
 
-    bench_lst, shortlist = synthesize_linear_strategies(run, log_folder)
+    bench_lst, shortlist = synthesize_linear_strategies(run, log_folder, env=env)
 
     selector = train_pwc_selector(
         shortlist=shortlist,
@@ -103,10 +108,12 @@ def ml_synthesize(run: SynthesisRun, log_folder: Path):
     _log_elapsed(start_time, "Total synthesis time")
 
 
-def branched_synthesize(run: SynthesisRun, log_folder: Path):
+def branched_synthesize(run: SynthesisRun, log_folder: Path, env=None):
+    if env is None:
+        env = load_env_config()
     start_time = time.time()
 
-    bench_lst, shortlist = synthesize_linear_strategies(run, log_folder)
+    bench_lst, shortlist = synthesize_linear_strategies(run, log_folder, env=env)
 
     run_branched_synthesis(run, shortlist, bench_lst, log_folder)
 
@@ -166,6 +173,9 @@ def main():
         help="Sampling temperature for --llm-prior (default: 0)",
     )
     args = parser.parse_args()
+    env = load_env_config()
+    check_z3_version(env)
+
     with open(args.json_config, encoding="utf-8") as f:
         user = json.load(f)
     experiment = parse_experiment_config(user)
@@ -186,9 +196,9 @@ def main():
     log_folder.mkdir(parents=True)
 
     if args.stage2:
-        branched_synthesize(run, log_folder)
+        branched_synthesize(run, log_folder, env=env)
     else:
-        ml_synthesize(run, log_folder)
+        ml_synthesize(run, log_folder, env=env)
 
 
 if __name__ == "__main__":

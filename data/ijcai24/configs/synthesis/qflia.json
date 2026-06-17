@@ -1,6 +1,5 @@
 {
   "logic": "QF_LIA",
-  "batch_size": 50,
   "train_dir": "data/ijcai24/benchmarks/QF_LIA",
   "timeout": 10,
   "mcts_sims": 800,

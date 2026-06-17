@@ -9,7 +9,6 @@
     "z3alpha": "data/ijcai24/results/QF_NIA/full_logic/sample_strategies/strategy_z3alpha.txt"
   },
   "timeout": 10,
-  "batch_size": 60,
   "res_dir": "experiments/evaluation/QF_NIA",
   "eval_dir": "data/ijcai24/benchmarks/QF_NIA/test"
 }

@@ -38,7 +38,15 @@ The command for this toy example is as follows:
 python -m z3alpha.synthesize data/smoke/configs/synthesis.json
 ```
 
-The configuration file specifies the experiment (see `z3alpha.config.ExperimentConfig` for the full schema; unknown keys are rejected). Key fields include `batch_size` (number of benchmarks evaluated in parallel per simulation), `mcts_sims`, `timeout`, and `train_dir`. A smoke-test configuration is provided at `data/smoke/configs/synthesis.json`.
+The configuration file specifies the experiment (see `z3alpha.config.ExperimentConfig` for the full schema). Key fields: `train_dir` (benchmark directory), `mcts_sims`, `timeout`. A smoke-test configuration is provided at `data/smoke/configs/synthesis.json`.
+
+Machine-local settings live in `env_config.json` at the repo root. Supported fields:
+- `workers` — parallel benchmark evaluations per simulation (default: 4)
+- `z3_path` — path to the Z3 binary (default: `z3` on `PATH`)
+- `z3_version` — expected version string; if set, the binary is verified at startup and synthesis aborts on mismatch
+- `machine_name` — informational label for result logs
+
+All fields are optional. If the file is missing or a field is omitted, the default is used.
 
 After this command finishes, outputs are saved under `experiments/synthesis/` in a directory named `out-<starting time:%Y-%m-%d_%H-%M-%S>`. Typical files:
 

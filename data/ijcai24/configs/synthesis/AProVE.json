@@ -1,6 +1,5 @@
 {
   "logic": "QF_NIA",
-  "batch_size": 50,
   "train_dir": "data/ijcai24/benchmarks/fastsmt_benchmarks/qf_nia/AProVE",
   "timeout": 10,
   "mcts_sims": 800,

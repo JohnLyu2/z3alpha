@@ -19,7 +19,6 @@ class ExperimentConfig:
     """One experiment file; see :func:`parse_experiment_config` for the JSON schema."""
 
     logic: str
-    batch_size: int
     train_dir: str
     timeout: int
     mcts_sims: int
@@ -60,7 +59,6 @@ def parse_experiment_config(raw: dict[str, Any]) -> ExperimentConfig:
 
     return ExperimentConfig(
         logic=raw["logic"],
-        batch_size=raw["batch_size"],
         train_dir=raw["train_dir"],
         timeout=raw["timeout"],
         mcts_sims=raw["mcts_sims"],

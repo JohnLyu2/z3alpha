@@ -151,7 +151,6 @@ def test_param_selector_protocol_check():
 
 _MINIMAL_EXP = {
     "logic": "QF_NIA",
-    "batch_size": 1,
     "train_dir": "data/smoke/benchmarks",
     "timeout": 1,
     "mcts_sims": 3,

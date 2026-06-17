@@ -13,7 +13,6 @@ from z3alpha.config import (
 def _minimal_experiment():
     return {
         "logic": "QF_NIA",
-        "batch_size": 2,
         "train_dir": "data/smoke/benchmarks",
         "timeout": 1,
         "mcts_sims": 15,

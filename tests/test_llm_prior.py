@@ -30,7 +30,6 @@ def test_resolve_mcts_config_llm_prior_flags():
     experiment = parse_experiment_config(
         {
             "logic": "QF_NIA",
-            "batch_size": 1,
             "train_dir": "data/smoke/benchmarks",
             "timeout": 1,
             "mcts_sims": 3,

@@ -9,7 +9,6 @@
     "fastsmt": "data/ijcai24/results/QF_BV/full_logic/sample_strategies/strategy_fastsmt.txt"
   },
   "timeout": 10,
-  "batch_size": 50,
   "res_dir": "experiments/evaluation/QF_BV",
   "eval_dir": "data/ijcai24/benchmarks/QF_BV/test"
 }
