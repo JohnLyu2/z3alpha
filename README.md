@@ -29,33 +29,27 @@ pip3 install -e .
 
 ## A Synthesis Example
 
-Here, we provide an example of synthesizing a tailored Z3 strategy for a toy benchmark set `data/smoke/benchmarks/`. 
-
-
-The command for this toy example is as follows:
+A smoke-test configuration for QF\_NIA is provided at `data/smoke/configs/synthesis.json`, with benchmarks in `data/smoke/benchmarks/QF_NIA/`. Run it with:
 
 ```bash
 python -m z3alpha.synthesize data/smoke/configs/synthesis.json
 ```
 
-The configuration file specifies the experiment (see `z3alpha.config.ExperimentConfig` for the full schema). Key fields: `train_dir` (benchmark directory), `mcts_sims`, `timeout`. A smoke-test configuration is provided at `data/smoke/configs/synthesis.json`.
+This runs Z3alpha on 10 QF_NIA benchmarks with 10 stage-1 MCTS simulations, 50 stage-2 simulations, and a 2-second per-benchmark timeout.
 
-Machine-local settings live in `env_config.json` at the repo root. Supported fields:
+**Machine-local settings** (`env_config.json` at the repo root):
 - `workers` — parallel benchmark evaluations per simulation (default: 4)
 - `z3_path` — path to the Z3 binary (default: `z3` on `PATH`)
-- `z3_version` — expected version string; if set, the binary is verified at startup and synthesis aborts on mismatch
+- `z3_version` — if set, the binary version is verified at startup
 - `machine_name` — informational label for result logs
 
-All fields are optional. If the file is missing or a field is omitted, the default is used.
+All fields are optional; missing fields use defaults.
 
-After this command finishes, outputs are saved under `experiments/synthesis/` in a directory named `out-<starting time:%Y-%m-%d_%H-%M-%S>`. Typical files:
-
-- `linear_strategy_mcts.log` / `stage2_mcts_trace.log` — MCTS search traces (linear vs. branched/conditional search)  
-- `linear_strategy_summary.csv` — columns `id` (MCTS simulation when first evaluated), `strategy`, then `n_solved`, `par2_avg`, `par10_avg` (mean penalized time per benchmark); the branched pass still uses in-memory timings for the shortlist  
-- `linear_strategy_per_benchmark.csv` — long-format log (`strat`, `benchmark`, `status`, `time_s`, `solved`): solver outcome per instance (`sat` / `unsat` / `unknown` / `timeout` / `error`, …)  
-
-- `linear_selected_strategies.csv` — shortlist passed to the branched/conditional MCTS pass  
-- `synthesized_strategy.txt` — final synthesized tactic string (branched mode; parallel mode uses the same name in the run folder)
+**Output files** (in `experiments/synthesis/out-<timestamp>/`):
+- `linear_strategy_summary.csv` — per-strategy: simulation id, strategy string, `n_solved`, `par2_avg`, `par10_avg`
+- `linear_strategy_per_benchmark.csv` — per-instance outcomes (`sat`/`unsat`/`timeout`/`error`, solve time)
+- `linear_selected_strategies.csv` — shortlist of strategies passed to stage 2
+- `selector.pkl` — trained PWC selector (default mode); or `synthesized_strategy.txt` (with `--stage2`)
 
 ## IJCAI-24 Reproduction
 

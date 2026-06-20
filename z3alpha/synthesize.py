@@ -139,9 +139,9 @@ def main():
         help="Override random seed (default: z3alpha.config.synthesis.DEFAULT_RANDOM_SEED)",
     )
     parser.add_argument(
-        "--stage2",
+        "--ml-selector",
         action="store_true",
-        help="Use MCTS branched strategy search (Stage 2) instead of the default PWC ML selector",
+        help="Use PWC ML selector instead of the default stage-2 branched MCTS",
     )
     parser.add_argument(
         "--llm-prior",
@@ -195,10 +195,10 @@ def main():
     assert not log_folder.exists()
     log_folder.mkdir(parents=True)
 
-    if args.stage2:
-        branched_synthesize(run, log_folder, env=env)
-    else:
+    if args.ml_selector:
         ml_synthesize(run, log_folder, env=env)
+    else:
+        branched_synthesize(run, log_folder, env=env)
 
 
 if __name__ == "__main__":
