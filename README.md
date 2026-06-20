@@ -36,6 +36,31 @@ This runs Z3alpha on 10 QF_NIA benchmarks with 10 stage-1 MCTS simulations, 50 s
 - `linear_selected_strategies.csv` — shortlist of strategies passed to stage 2
 - `synthesized_strategy.txt` — synthesized strategy string
 
+## Tactic and Parameter Configuration
+
+The tactic action space and the asscociated parameter search grids are defined in `z3alpha/tactics/logic_configs/`, one JSON file per SMT-LIB logic (e.g. `QF_NIA.json`). Each top-level key is a Z3 tactic name:
+
+```json
+"simplify": {
+  "solver": false,
+  "params": {
+    "elim_and": { "default": "false", "values": ["true", "false"] },
+    "hoist_mul": { "default": "false", "values": ["true", "false"] }
+  }
+},
+"smt": { "solver": true }
+```
+
+- Tactics with `"solver": true` terminate a strategy (leaf nodes); others are preprocessing steps.
+- `"params"` defines the parameter search grid: `"default"` is Z3's own default for that parameter (omitted from the synthesized strategy string if selected); `"values"` is the candidate set to explore.
+
+To add a new logic or extend an existing one, create or edit the corresponding file and run the validator to check tactic names, parameter names, and defaults against your Z3 binary:
+
+```bash
+python scripts/validate_logic_configs.py        # check
+python scripts/validate_logic_configs.py --fix  # auto-correct defaults
+```
+
 ## IJCAI-24 Reproduction
 
 ### Benchmarks
