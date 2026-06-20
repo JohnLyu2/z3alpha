@@ -30,5 +30,5 @@ for f in QF_LRA/*; do
     fi
 done
 
-python "$BENCHMARKS_DIR/../../../scripts/dataset_create.py" --split_size "250 500" \
+python "$BENCHMARKS_DIR/../../../scripts/dataset_create.py" --train_size 750 \
     --benchmark_dir  ./QF_LRA/all/ --dataset_dir ./QF_LRA/

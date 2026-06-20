@@ -32,5 +32,5 @@ for f in LassoRanker/*; do
 done
 
 # run the dataset creation script
-python "$BENCHMARKS_DIR/../../../scripts/dataset_create.py" --split_size "250 250" \
+python "$BENCHMARKS_DIR/../../../scripts/dataset_create.py" --train_size 500 \
     --benchmark_dir ./LassoRanker/all/ --dataset_dir ./LassoRanker/

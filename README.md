@@ -49,7 +49,7 @@ All fields are optional; missing fields use defaults.
 - `linear_strategy_summary.csv` — per-strategy: simulation id, strategy string, `n_solved`, `par2_avg`, `par10_avg`
 - `linear_strategy_per_benchmark.csv` — per-instance outcomes (`sat`/`unsat`/`timeout`/`error`, solve time)
 - `linear_selected_strategies.csv` — shortlist of strategies passed to stage 2
-- `selector.pkl` — trained PWC selector (default mode); or `synthesized_strategy.txt` (with `--stage2`)
+- `synthesized_strategy.txt` — synthesized strategy string
 
 ## IJCAI-24 Reproduction
 
