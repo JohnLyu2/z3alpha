@@ -4,49 +4,37 @@ Our tool is built on top of the [Z3 SMT solver](https://github.com/Z3Prover/z3).
 
 ## Setup
 
-We recommend using a Python virtual environment:
-
 ```bash
 python -m venv venv
 source venv/bin/activate  # Unix/macOS
-```
-
-Install Z3alpha and its dependencies:
-
-1. **Z3 Solver**
-
-Z3alpha depends both on the Z3 binary and the Z3 Python bindings. The easiest way to install both is to run:
-
-```bash
 pip install z3-solver
-```
-
-2. **Install Z3alpha**
-
-```bash
 pip3 install -e .
 ```
 
+Z3alpha requires a Z3 binary and runs benchmarks in parallel workers. Before running any synthesis or evaluation, specify machine-specific settings in `env_config.json` at the repo root — these control which Z3 binary is used and how many parallel workers are launched:
+
+- `z3_path` — path to the Z3 binary (default: `z3` on `PATH`)
+- `z3_version` — if set, the binary version is verified at startup
+- `workers` — parallel benchmark evaluations per simulation (default: 4)
+- `machine_name` — informational label for result logs
+
+All fields are optional; missing fields use defaults.
+
 ## A Synthesis Example
 
-Here, we provide an example of synthesizing a tailored Z3 strategy for a toy benchmark set `data/sample/benchmarks/`. 
-
-
-The command for this toy example is as follows:
+A smoke-test configuration for QF\_NIA is provided at `data/smoke/configs/synthesis.json`, with benchmarks in `data/smoke/benchmarks/QF_NIA/`. Run it with:
 
 ```bash
-python -m z3alpha.synthesize data/sample/configs/synthesis.json
+python -m z3alpha.synthesize data/smoke/configs/synthesis.json
 ```
 
-The configuration file specifies settings such as the number of MCTS simulations, training datasets, and timeouts. A sample configuration is provided at `data/sample/configs/synthesis.json`.
+This runs Z3alpha on 10 QF_NIA benchmarks with 10 stage-1 MCTS simulations, 50 stage-2 simulations, and a 2-second per-benchmark timeout.
 
-After this command finishes, outputs are saved under `experiments/synthesis/` in a directory named `out-<starting time:%Y-%m-%d_%H-%M-%S>`. Typical files:
-
-- `stage1_mcts_trace.log` / `stage2_mcts_trace.log` — MCTS search traces  
-- `stage1_strategy_results.csv` — every stage-1 strategy evaluated, with per-benchmark times  
-- `stage1_selected_strategies.csv` — shortlist passed to stage 2  
-- `stage2_strategy_cache.csv` — cached per-benchmark results for that shortlist (feeds stage-2 MCTS)  
-- `synthesized_strategy.txt` — final synthesized tactic string (branched mode; parallel mode uses the same name in the run folder)
+**Output files** (in `experiments/synthesis/out-<timestamp>/`):
+- `linear_strategy_summary.csv` — per-strategy: simulation id, strategy string, `n_solved`, `par2_avg`, `par10_avg`
+- `linear_strategy_per_benchmark.csv` — per-instance outcomes (`sat`/`unsat`/`timeout`/`error`, solve time)
+- `linear_selected_strategies.csv` — shortlist of strategies passed to stage 2
+- `synthesized_strategy.txt` — synthesized strategy string
 
 ## IJCAI-24 Reproduction
 
@@ -60,7 +48,8 @@ The scripts in `data/ijcai24/benchmarks/download_scripts/` will download all ben
 
 ### Z3alpha Strategy Synthesis
 
-We provide sample configuration JSON files for the experiments in `data/ijcai24/configs/synthesis/`. When under the repository root, run the following command with the corresponding configuration file. 
+We provide configuration JSON files for the experiments in `data/ijcai24/configs/synthesis/`. When under the repository root, run the following command with the corresponding configuration file. 
+
 For example, to synthesize a strategy for *leipzig*, run:
 
 ```bash
@@ -79,10 +68,6 @@ python scripts/eval_solvers.py data/ijcai24/configs/eval/leipzig.json
 
 The evaluation outcomes are saved in the directory specified by the `res_dir` entry in the configuration JSON file.
 
-
-### Results
-
-All experimental result data are included in `data/ijcai24/`. For each experiment, there is a subfolder (e.g., `data/ijcai24/results/QF_BV/core/`) containing all competing solvers' evaluation statistics and sample strategies synthesized by Z3alpha and FastSMT.
 
 
 

@@ -1,12 +1,98 @@
+"""Branched (conditional) MCTS: context from benchmarks + shortlist, game env, and high-level run."""
+
+from __future__ import annotations
+
+import logging
 import random
-from typing import Callable
+import time
+from dataclasses import replace
+from pathlib import Path
+from typing import Any, Callable
+
+from z3 import Goal, Probe, parse_smt2_file
 
 from z3alpha.evaluator import SolverEvaluator
-from z3alpha.mcts import BaseMCTSRun
-from z3alpha.stage2.strategy_tree import Stage2Context
-from z3alpha.stage2.utils import reward_dispatcher
-from z3alpha.strategy_tree import StrategyTree
+from z3alpha.mcts import BaseMCTSRun, MctsConfig
+from z3alpha.stage2.strategy_tree import (
+    PERCENTILES,
+    BranchedStrategyTree,
+    Stage2Context,
+)
+from z3alpha.stage2.utils import encode_linear_strategies
+from z3alpha.config import SynthesisRun
+from z3alpha.utils import calculate_percentile, reward_dispatcher
 
+log = logging.getLogger(__name__)
+
+
+def _no_params(action: Any) -> dict | None:
+    return None
+
+
+# --- Shortlist + benchmarks → :class:`Stage2Context` (probes, caches)
+
+def create_probe_stats(bench_lst):
+    num_consts_lst = []
+    num_exprs_lst = []
+    size_lst = []
+    probe_records = []
+    for smt_path in bench_lst:
+        instance_dict = {}
+        formula = parse_smt2_file(smt_path)
+        const_probe = Probe("num-consts")
+        expr_probe = Probe("num-exprs")
+        size_probe = Probe("size")
+        goal = Goal()
+        goal.add(formula)
+        num_consts = const_probe(goal)
+        num_consts_lst.append(num_consts)
+        instance_dict["num-consts"] = num_consts
+        num_exprs = expr_probe(goal)
+        num_exprs_lst.append(num_exprs)
+        instance_dict["num-exprs"] = num_exprs
+        size = size_probe(goal)
+        size_lst.append(size)
+        instance_dict["size"] = size
+        probe_records.append(instance_dict)
+    probe_stats = {}
+    probe_stats["num-consts"] = {
+        percentile: calculate_percentile(num_consts_lst, percentile)
+        for percentile in PERCENTILES
+    }
+    probe_stats["num-exprs"] = {
+        percentile: calculate_percentile(num_exprs_lst, percentile)
+        for percentile in PERCENTILES
+    }
+    probe_stats["size"] = {
+        percentile: calculate_percentile(size_lst, percentile)
+        for percentile in PERCENTILES
+    }
+    return probe_stats, probe_records
+
+
+def build_stage2_context(results, bench_list, num_strategies):
+    results = results[:num_strategies]
+    result_by_strategy = {strat: res_lst for strat, res_lst in results}
+    selected_strategies = list(result_by_strategy.keys())
+    action_lists, solver_actions, preprocess_actions, strategy_to_actions = (
+        encode_linear_strategies(selected_strategies)
+    )
+    result_cache = {
+        strategy_to_actions[strategy]: result_by_strategy[strategy]
+        for strategy in strategy_to_actions
+    }
+    probe_stats, probe_records = create_probe_stats(bench_list)
+    return Stage2Context(
+        seed_action_sequences=action_lists,
+        solver_actions=solver_actions,
+        preprocess_actions=preprocess_actions,
+        result_cache=result_cache,
+        probe_stats=probe_stats,
+        probe_records=probe_records,
+    )
+
+
+# --- Cached evaluation of terminal strategies (shortlist sim)
 
 def solve_with_cache(
     bench_id: int,
@@ -58,14 +144,18 @@ class Stage2StrategyGame:
         training_lst,
         logic,
         timeout,
-        sconfig,
+        stage2_context: Stage2Context,
         batch_size,
         z3path,
+        params_for: Callable[[Any], dict | None] = _no_params,
     ):
-        self.stage = 2
         self.benchmarks = training_lst
-        self.strat_ast = StrategyTree(2, logic, timeout, sconfig)
-        self.stage2_context: Stage2Context = sconfig["stage2_context"]
+        self.strat_ast = BranchedStrategyTree(
+            logic,
+            timeout,
+            context=stage2_context,
+        )
+        self.stage2_context: Stage2Context = stage2_context
         self.probe_records = self.stage2_context.probe_records
         self.simulator = SolverEvaluator(
             z3path,
@@ -74,6 +164,7 @@ class Stage2StrategyGame:
             batch_size,
         )
         self.timeout = timeout
+        self._params_for = params_for
 
     def __str__(self) -> str:
         return str(self.strat_ast)
@@ -84,15 +175,15 @@ class Stage2StrategyGame:
     def legal_actions(self, rollout=False):
         return self.strat_ast.legal_actions(rollout)
 
-    def step(self, action, params):
-        self.strat_ast.apply_rule(action, params)
+    def step(self, action):
+        self.strat_ast.apply_rule(action, self._params_for(action))
 
     def rollout(self):
         assert not self.is_terminal()
         while not self.is_terminal():
             actions = self.legal_actions(rollout=True)
             action = random.choice(actions)
-            self.step(action, None)
+            self.step(action)
 
     def _get_linear_strategies(self, bench_id):
         probe_record = self.probe_records[bench_id]
@@ -109,9 +200,7 @@ class Stage2StrategyGame:
     def get_value(self, database: dict, reward_type: str) -> float:
         assert self.is_terminal()
         res_lst = self.get_s2_res_list(database)
-        reward_fn_by_type: dict[str, Callable[[list], float]] = reward_dispatcher(
-            self.timeout
-        )
+        reward_fn_by_type = reward_dispatcher(self.timeout)
         if reward_type not in reward_fn_by_type:
             raise Exception(f"Unknown value type {reward_type}")
         return reward_fn_by_type[reward_type](res_lst)
@@ -120,16 +209,81 @@ class Stage2StrategyGame:
 class Stage2MCTSRun(BaseMCTSRun):
     stage = 2
 
-    def _init_stage_state(self, log_folder, bench_lst):
-        self.c_ucb = None
-        self.res_database = self.config["stage2_context"].result_cache
+    def __init__(
+        self,
+        config: MctsConfig,
+        stage2_context: Stage2Context,
+        bench_lst,
+        logic,
+        z3path,
+        value_type,
+        log_folder,
+        batch_size: int = 1,
+    ) -> None:
+        self._stage2_context = stage2_context
+        super().__init__(
+            config,
+            bench_lst,
+            logic,
+            z3path,
+            value_type,
+            log_folder,
+            batch_size=batch_size,
+        )
+
+    def _init_stage_state(self) -> None:
+        self.res_database = self._stage2_context.result_cache
 
     def _create_env(self):
         return Stage2StrategyGame(
             self.training_list,
             self.logic,
             self.timeout,
-            self.config,
+            self._stage2_context,
             self.batch_size,
             z3path=self.z3path,
+            params_for=self.params_for,
         )
+
+
+def run_branched_synthesis(
+    run: SynthesisRun,
+    shortlist: list[tuple[str, list]],
+    bench_lst: list[str],
+    log_folder: Path,
+) -> str:
+    """Run MCTS over conditional strategies; write ``synthesized_strategy.txt`` under ``log_folder``."""
+    experiment = run.experiment
+    num_strat = experiment.max_ln_strategies
+    context = build_stage2_context(shortlist, bench_lst, num_strat)
+    log.info(f"preprocess dict: {context.preprocess_actions}")
+    log.info(f"solver dict: {context.solver_actions}")
+    log.info(f"converted selected strategies: {context.seed_action_sequences}")
+
+    logic = experiment.logic
+    z3path = experiment.z3path or "z3"
+
+    branched_start = time.time()
+    log.info("Branched MCTS search starts")
+
+    branched_config = replace(run.mcts, sim_num=experiment.branched_sims)
+    mcts_run = Stage2MCTSRun(
+        branched_config,
+        context,
+        bench_lst,
+        logic,
+        z3path,
+        experiment.value_type,
+        log_folder,
+    )
+    mcts_run.start()
+    best_strategy = mcts_run.get_best_strat()
+
+    strat_path = Path(log_folder) / "synthesized_strategy.txt"
+    with open(strat_path, "w") as f:
+        f.write(best_strategy)
+    log.info(f"Best final strategy saved to: {strat_path}")
+
+    elapsed = time.time() - branched_start
+    log.info(f"Branched MCTS time: {elapsed:.0f}")
+    return best_strategy

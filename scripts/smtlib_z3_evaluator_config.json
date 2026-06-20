@@ -1,0 +1,8 @@
+{
+  "machine_name": "John_ubuntu",
+  "z3_path": "z3",
+  "z3_version": "4.16.0",
+  "batch_size": 4,
+  "smtlib_root": "/home/john-lu/Desktop/smt_data/smtlib25/non-incremental",
+  "res_dir": "experiments/evaluation/smtlib_z3"
+}

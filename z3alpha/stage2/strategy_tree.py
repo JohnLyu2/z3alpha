@@ -1,9 +1,28 @@
 import copy
 from dataclasses import dataclass
+from enum import IntEnum
 from typing import Any
 
-from z3alpha.ast_nodes import ASTNode, TacticNode
+from z3alpha.ast_nodes import ASTNode, Root, TacticNode
 from z3alpha.stage2.utils import next_actions_from_prefix
+
+# try-for in SMT-LIB2 uses milliseconds; internal timeouts are in seconds
+TRY_FOR_MS_PER_SEC = 1000
+
+
+class ProbeAction(IntEnum):
+    """Which probe metric to branch on at a :class:`ProbeNode`."""
+
+    NUM_CONSTS = 50
+    NUM_EXPRS = 51
+    SIZE = 52
+
+
+PROBE_ACTION_TO_METRIC: dict[ProbeAction, str] = {
+    ProbeAction.NUM_CONSTS: "num-consts",
+    ProbeAction.NUM_EXPRS: "num-exprs",
+    ProbeAction.SIZE: "size",
+}
 
 
 @dataclass(frozen=True)
@@ -32,10 +51,6 @@ Action = Stage2Action
 MAX_IF_DEPTH = 3
 TIMEOUTS = ["v2", "v8", "v32", "v128", "v512"]  # in seconds
 PERCENTILES = ["90p", "70p", "50p"]
-ACTION_IF_RULE = 3
-ACTION_PROBE_NUM_CONSTS = 50
-ACTION_PROBE_NUM_EXPRS = 51
-ACTION_PROBE_SIZE = 52
 
 
 class OrElseNode(ASTNode):
@@ -45,7 +60,7 @@ class OrElseNode(ASTNode):
 
     def __str__(self):
         return (
-            f"(or-else (try-for {self.children[0]} {self.timeout * 1000}) "
+            f"(or-else (try-for {self.children[0]} {self.timeout * TRY_FOR_MS_PER_SEC}) "
             f"{self.children[1]})"
         )
 
@@ -105,11 +120,7 @@ class ProbeNode(ASTNode):
         self.timeout = timeout
         self.stage2_context = stage2_context
         self.probe_stats = stage2_context.probe_stats
-        self.action_dict = {
-            ACTION_PROBE_NUM_CONSTS: "num-consts",
-            ACTION_PROBE_NUM_EXPRS: "num-exprs",
-            ACTION_PROBE_SIZE: "size",
-        }
+        self._probe_metrics = PROBE_ACTION_TO_METRIC
 
     def __str__(self):
         return "<ProbeNode>"
@@ -117,13 +128,14 @@ class ProbeNode(ASTNode):
     def is_terminal(self):
         return False
 
-    def legal_actions(self, rollout: bool = False) -> list[int]:
-        return list(self.action_dict.keys())
+    def legal_actions(self, rollout: bool = False) -> list[ProbeAction]:
+        return list(ProbeAction)
 
     def apply_rule(self, action: int, params: Any) -> None:
         assert self.is_leaf()
-        assert action in self.legal_actions()
-        probe_name = self.action_dict[action]
+        pa = action if isinstance(action, ProbeAction) else ProbeAction(action)
+        assert pa in self.legal_actions()
+        probe_name = self._probe_metrics[pa]
         pred_node = PredicateNode(probe_name, self.probe_stats)
         self.parent.replace_child(pred_node, self.pos)
         left_strat = Stage2StrategyNode(self.timeout, self.stage2_context, self.if_depth)
@@ -152,7 +164,7 @@ class Stage2StrategyNode(ASTNode):
         cur_node = self.parent
         while cur_node:
             if cur_node.is_tactic():
-                reverse_path.append(cur_node.stage2_action_id)
+                reverse_path.append(cur_node.action_id)
             cur_node = cur_node.parent
         return list(reversed(reverse_path))
 
@@ -214,3 +226,49 @@ class Stage2StrategyNode(ASTNode):
             self.apply_then_rule(int(action.value))
         else:
             raise Exception("unexpected action")
+
+
+class BranchedStrategyTree:
+    """MCTS search tree for conditional (if / probe) strategies."""
+
+    def __init__(self, logic, timeout, *, context: Stage2Context):
+        self.logic = logic
+        self.timeout = timeout
+        self.root = Root()
+        self.root.add_children(
+            [Stage2StrategyNode(timeout, context, if_depth=0)]
+        )
+
+    def __str__(self):
+        return str(self.root)
+
+    def find_first_nonterminal(self):
+        nonterm_stack = [self.root]
+        while nonterm_stack:
+            node_to_search = nonterm_stack.pop()
+            if not node_to_search.is_terminal():
+                return node_to_search
+            for child_node in reversed(node_to_search.children):
+                nonterm_stack.append(child_node)
+        return None
+
+    def current_decision_node(self):
+        return self.find_first_nonterminal()
+
+    def is_terminal(self):
+        return not bool(self.current_decision_node())
+
+    def legal_actions(self, rollout: bool = False) -> list:
+        node = self.current_decision_node()
+        if node is None:
+            return []
+        return node.legal_actions(rollout)
+
+    def apply_rule(self, action, params: Any) -> None:
+        node = self.current_decision_node()
+        assert node is not None
+        node.apply_rule(action, params)
+
+    def get_linear_strategies(self, probe_record):
+        assert self.is_terminal()
+        return self.root.get_ln_strats(self.timeout, probe_record)

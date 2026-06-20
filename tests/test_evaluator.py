@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 from z3alpha.evaluator import SolverRunner
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
-SAMPLE_SMT = str(_PROJECT_ROOT / "data" / "sample" / "benchmarks" / "0.smt2")
+SAMPLE_SMT = str(_PROJECT_ROOT / "data" / "smoke" / "benchmarks" / "0.smt2")
 
 
 def _execute_with_mock(runner: SolverRunner, communicate_return: tuple[bytes, bytes]) -> tuple:
@@ -81,4 +81,38 @@ class TestSolverRunnerExecute(unittest.TestCase):
         self.assertEqual(
             cmd,
             ["/usr/bin/z3", "tactic.default_tactic=(then simplify smt)", SAMPLE_SMT],
+        )
+
+    def test_build_cmd_with_extra_params(self) -> None:
+        runner = SolverRunner(
+            "/usr/bin/z3",
+            SAMPLE_SMT,
+            timeout=10,
+            run_id=0,
+            z3_extra_params=["smt.random_seed=1", "-v:10"],
+        )
+        cmd = runner._build_cmd()
+        self.assertEqual(
+            cmd,
+            ["/usr/bin/z3", "smt.random_seed=1", "-v:10", SAMPLE_SMT],
+        )
+
+    def test_build_cmd_with_strategy_and_extra_params(self) -> None:
+        runner = SolverRunner(
+            "/usr/bin/z3",
+            SAMPLE_SMT,
+            timeout=10,
+            run_id=0,
+            z3_strategy="(then simplify smt)",
+            z3_extra_params=["smt.arith.solver=6"],
+        )
+        cmd = runner._build_cmd()
+        self.assertEqual(
+            cmd,
+            [
+                "/usr/bin/z3",
+                "smt.arith.solver=6",
+                "tactic.default_tactic=(then simplify smt)",
+                SAMPLE_SMT,
+            ],
         )

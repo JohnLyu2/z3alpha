@@ -1,0 +1,8 @@
+{
+  "logic": "QF_NIA",
+  "train_dir": "data/smoke/benchmarks/QF_NIA",
+  "timeout": 2,
+  "mcts_sims": 10,
+  "branched_sims": 50,
+  "max_ln_strategies": 3
+}

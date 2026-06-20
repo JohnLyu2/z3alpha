@@ -1,0 +1,46 @@
+{
+  "smt": {
+    "solver": true,
+    "params": {
+      "random_seed": {
+        "default": 0,
+        "values": [0, 100, 200, 300, 400, 500]
+      }
+    }
+  },
+  "qflra": {
+    "solver": true
+  },
+  "simplify": {
+    "params": {
+      "elim_and": {
+        "default": "false",
+        "values": ["true", "false"]
+      },
+      "blast_distinct": {
+        "default": "false",
+        "values": ["true", "false"]
+      },
+      "local_ctx": {
+        "default": "false",
+        "values": ["true", "false"]
+      },
+      "pull_cheap_ite": {
+        "default": "false",
+        "values": ["true", "false"]
+      },
+      "som": {
+        "default": "false",
+        "values": ["true", "false"]
+      },
+      "flat": {
+        "default": "true",
+        "values": ["true", "false"]
+      }
+    }
+  },
+  "propagate-values": {},
+  "ctx-simplify": {},
+  "elim-uncnstr": {},
+  "solve-eqs": {}
+}
