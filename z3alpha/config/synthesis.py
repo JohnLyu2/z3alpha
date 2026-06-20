@@ -23,7 +23,7 @@ class ExperimentConfig:
     timeout: int
     mcts_sims: int
     branched_sims: int
-    ln_strat_num: int
+    max_ln_strategies: int | None = None
     value_type: str = "par10"
     z3path: str | None = None
     parent_log_dir: str | None = None
@@ -63,7 +63,7 @@ def parse_experiment_config(raw: dict[str, Any]) -> ExperimentConfig:
         timeout=raw["timeout"],
         mcts_sims=raw["mcts_sims"],
         branched_sims=raw["branched_sims"],
-        ln_strat_num=raw["ln_strat_num"],
+        max_ln_strategies=raw.get("max_ln_strategies"),
         value_type=raw.get("value_type", "par10"),
         z3path=raw.get("z3path"),
         parent_log_dir=raw.get("parent_log_dir"),

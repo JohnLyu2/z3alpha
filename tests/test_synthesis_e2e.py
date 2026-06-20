@@ -24,14 +24,14 @@ _SMOKE_BENCH = str(_REPO_ROOT / "data" / "smoke" / "benchmarks" / "QF_NIA")
 pytestmark = pytest.mark.skipif(_Z3_PATH is None, reason="z3 binary not on PATH")
 
 
-def _make_run(mcts_sims: int = 3, branched_sims: int = 3, ln_strat_num: int = 1) -> SynthesisRun:
+def _make_run(mcts_sims: int = 3, branched_sims: int = 3, max_ln_strategies: int = 1) -> SynthesisRun:
     experiment = parse_experiment_config({
         "logic": "QF_NIA",
         "train_dir": _SMOKE_BENCH,
         "timeout": 2,
         "mcts_sims": mcts_sims,
         "branched_sims": branched_sims,
-        "ln_strat_num": ln_strat_num,
+        "max_ln_strategies": max_ln_strategies,
     })
 
     class _Args:
@@ -74,7 +74,7 @@ def test_linear_synthesis_output_files(tmp_path):
 
 
 def test_linear_synthesis_shortlist_matches_selected_file(tmp_path):
-    _, shortlist = synthesize_linear_strategies(_make_run(ln_strat_num=2), tmp_path, env=_env())
+    _, shortlist = synthesize_linear_strategies(_make_run(max_ln_strategies=2), tmp_path, env=_env())
 
     strats_from_file = [
         r["strat"]
@@ -97,7 +97,7 @@ def test_linear_synthesis_shortlist_results_match_bench_count(tmp_path):
 # ---------------------------------------------------------------------------
 
 def test_ml_synthesize_saves_selector(tmp_path):
-    ml_synthesize(_make_run(ln_strat_num=2), tmp_path, env=_env())
+    ml_synthesize(_make_run(max_ln_strategies=2), tmp_path, env=_env())
     assert (tmp_path / "selector.pkl").exists()
 
 

@@ -46,7 +46,7 @@ def synthesize_linear_strategies(run: SynthesisRun, log_folder: Path, env=None):
     logic = experiment.logic
     z3path = experiment.z3path if experiment.z3path else (env.z3_path or "z3")
     batch_size = env.workers
-    num_ln_strat = experiment.ln_strat_num
+    num_ln_strat = experiment.max_ln_strategies
     value_type = experiment.value_type
     random.seed(run.mcts.random_seed)
 

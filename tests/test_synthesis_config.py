@@ -18,7 +18,7 @@ def _minimal_experiment():
         "timeout": 1,
         "mcts_sims": 15,
         "branched_sims": 50,
-        "ln_strat_num": 5,
+        "max_ln_strategies": 5,
     }
 
 

@@ -34,7 +34,7 @@ def test_resolve_mcts_config_llm_prior_flags():
             "timeout": 1,
             "mcts_sims": 3,
             "branched_sims": 1,
-            "ln_strat_num": 1,
+            "max_ln_strategies": 1,
         }
     )
     cfg = resolve_mcts_config(Args(), experiment)
