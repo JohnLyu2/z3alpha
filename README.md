@@ -11,10 +11,11 @@ pip install z3-solver
 pip3 install -e .
 ```
 
-**Machine-local settings** (`env_config.json` at the repo root):
-- `workers` — parallel benchmark evaluations per simulation (default: 4)
+Z3alpha requires a Z3 binary and runs benchmarks in parallel workers. Before running any synthesis or evaluation, specify machine-specific settings in `env_config.json` at the repo root — these control which Z3 binary is used and how many parallel workers are launched:
+
 - `z3_path` — path to the Z3 binary (default: `z3` on `PATH`)
 - `z3_version` — if set, the binary version is verified at startup
+- `workers` — parallel benchmark evaluations per simulation (default: 4)
 - `machine_name` — informational label for result logs
 
 All fields are optional; missing fields use defaults.
@@ -47,7 +48,8 @@ The scripts in `data/ijcai24/benchmarks/download_scripts/` will download all ben
 
 ### Z3alpha Strategy Synthesis
 
-We provide sample configuration JSON files for the experiments in `data/ijcai24/configs/synthesis/`. When under the repository root, run the following command with the corresponding configuration file. 
+We provide configuration JSON files for the experiments in `data/ijcai24/configs/synthesis/`. When under the repository root, run the following command with the corresponding configuration file. 
+
 For example, to synthesize a strategy for *leipzig*, run:
 
 ```bash
