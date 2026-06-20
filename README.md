@@ -4,28 +4,20 @@ Our tool is built on top of the [Z3 SMT solver](https://github.com/Z3Prover/z3).
 
 ## Setup
 
-We recommend using a Python virtual environment:
-
 ```bash
 python -m venv venv
 source venv/bin/activate  # Unix/macOS
-```
-
-Install Z3alpha and its dependencies:
-
-1. **Z3 Solver**
-
-Z3alpha depends both on the Z3 binary and the Z3 Python bindings. The easiest way to install both is to run:
-
-```bash
 pip install z3-solver
-```
-
-2. **Install Z3alpha**
-
-```bash
 pip3 install -e .
 ```
+
+**Machine-local settings** (`env_config.json` at the repo root):
+- `workers` — parallel benchmark evaluations per simulation (default: 4)
+- `z3_path` — path to the Z3 binary (default: `z3` on `PATH`)
+- `z3_version` — if set, the binary version is verified at startup
+- `machine_name` — informational label for result logs
+
+All fields are optional; missing fields use defaults.
 
 ## A Synthesis Example
 
@@ -36,14 +28,6 @@ python -m z3alpha.synthesize data/smoke/configs/synthesis.json
 ```
 
 This runs Z3alpha on 10 QF_NIA benchmarks with 10 stage-1 MCTS simulations, 50 stage-2 simulations, and a 2-second per-benchmark timeout.
-
-**Machine-local settings** (`env_config.json` at the repo root):
-- `workers` — parallel benchmark evaluations per simulation (default: 4)
-- `z3_path` — path to the Z3 binary (default: `z3` on `PATH`)
-- `z3_version` — if set, the binary version is verified at startup
-- `machine_name` — informational label for result logs
-
-All fields are optional; missing fields use defaults.
 
 **Output files** (in `experiments/synthesis/out-<timestamp>/`):
 - `linear_strategy_summary.csv` — per-strategy: simulation id, strategy string, `n_solved`, `par2_avg`, `par10_avg`
