@@ -16,4 +16,3 @@ Data for the IJCAI 2024 paper.
 - `benchmarks/download_scripts/` — scripts to download the benchmark sets used in the paper
 - `configs/synthesis/` — synthesis configs for each experiment
 - `configs/eval/` — evaluation configs for each experiment
-- `results/` — sample synthesized strategies and experimental results

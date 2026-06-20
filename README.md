@@ -83,10 +83,6 @@ python scripts/eval_solvers.py data/ijcai24/configs/eval/leipzig.json
 The evaluation outcomes are saved in the directory specified by the `res_dir` entry in the configuration JSON file.
 
 
-### Results
-
-All experimental result data are included in `data/ijcai24/`. For each experiment, there is a subfolder (e.g., `data/ijcai24/results/QF_BV/core/`) containing all competing solvers' evaluation statistics and sample strategies synthesized by Z3alpha and FastSMT.
-
 
 
 ## SMT-COMP'24
