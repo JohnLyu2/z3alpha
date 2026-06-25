@@ -6,19 +6,34 @@ import json
 from pathlib import Path
 from typing import Any
 
-from z3alpha.tactics.catalog import PREPROCESS_NAME_TO_ID, SOLVER_NAME_TO_ID
+from z3alpha.tactics.catalog import NAME_TO_ID
 
 _LOGIC_CONFIGS_DIR = Path(__file__).resolve().parent / "logic_configs"
 
 
 def _parse(path: Path) -> dict[str, Any]:
+    """Parse a logic config JSON: ``{tactic_name: {"solver": bool, "params": {...}}}``,
+    where each param entry is ``{"default": ..., "values": [...]}``.
+
+    Both ``solver`` (default ``False``) and ``params`` (default ``{}``) are optional.
+    """
     with open(path, encoding="utf-8") as f:
         raw = json.load(f)
-    solvers = [SOLVER_NAME_TO_ID[n] for n in raw["solver_tactics"]]
-    pre = [PREPROCESS_NAME_TO_ID[n] for n in raw["preprocess_tactics"]]
+    solver_tactics: list[int] = []
+    preprocess_tactics: list[int] = []
+    params: dict[int, dict[str, dict[str, Any]]] = {}
+    for name, entry in raw.items():
+        tactic_id = NAME_TO_ID[name]
+        if entry.get("solver", False):
+            solver_tactics.append(tactic_id)
+        else:
+            preprocess_tactics.append(tactic_id)
+        if entry.get("params"):
+            params[tactic_id] = entry["params"]
     return {
-        "solver_tactics": solvers,
-        "preprocess_tactics": pre,
+        "solver_tactics": solver_tactics,
+        "preprocess_tactics": preprocess_tactics,
+        "params": params,
     }
 
 

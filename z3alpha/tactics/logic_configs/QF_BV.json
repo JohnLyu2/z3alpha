@@ -1,34 +1,67 @@
 {
-  "solver_tactics": ["smt", "qfbv"],
-  "preprocess_tactics": [
-    "bit-blast",
-    "simplify",
-    "propagate-values",
-    "ctx-simplify",
-    "elim-uncnstr",
-    "solve-eqs",
-    "purify-arith",
-    "max-bv-sharing",
-    "aig",
-    "reduce-bv-size",
-    "ackermannize_bv"
-  ],
-  "params": {
-    "smt": {
-      "random_seed": [0, 100, 200, 300, 400, 500]
-    },
-    "simplify": {
-      "elim_and": ["true", "false"],
-      "blast_distinct": ["true", "false"],
-      "local_ctx": ["true", "false"],
-      "pull_cheap_ite": ["true", "false"],
-      "som": ["true", "false"],
-      "flat": ["true", "false"],
-      "push_ite_bv": ["true", "false"],
-      "hoist_mul": ["true", "false"]
-    },
-    "propagate-values": {
-      "push_ite_bv": ["true", "false"]
+  "smt": {
+    "solver": true,
+    "params": {
+      "random_seed": {
+        "default": 0,
+        "values": [0, 100, 200, 300, 400, 500]
+      }
     }
-  }
+  },
+  "qfbv": {
+    "solver": true
+  },
+  "bit-blast": {},
+  "simplify": {
+    "params": {
+      "elim_and": {
+        "default": "false",
+        "values": ["true", "false"]
+      },
+      "blast_distinct": {
+        "default": "false",
+        "values": ["true", "false"]
+      },
+      "local_ctx": {
+        "default": "false",
+        "values": ["true", "false"]
+      },
+      "pull_cheap_ite": {
+        "default": "false",
+        "values": ["true", "false"]
+      },
+      "som": {
+        "default": "false",
+        "values": ["true", "false"]
+      },
+      "flat": {
+        "default": "true",
+        "values": ["true", "false"]
+      },
+      "push_ite_bv": {
+        "default": "false",
+        "values": ["true", "false"]
+      },
+      "hoist_mul": {
+        "default": "false",
+        "values": ["true", "false"]
+      }
+    }
+  },
+  "propagate-values": {
+    "params": {
+      "push_ite_bv": {
+        "default": "false",
+        "values": ["true", "false"]
+      }
+    }
+  },
+  "ctx-simplify": {},
+  "elim-uncnstr": {},
+  "solve-eqs": {},
+  "purify-arith": {},
+  "max-bv-sharing": {},
+  "aig": {},
+  "reduce-bv-size": {},
+  "ackermannize_bv": {}
 }

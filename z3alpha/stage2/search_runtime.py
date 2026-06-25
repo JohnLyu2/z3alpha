@@ -254,7 +254,7 @@ def run_branched_synthesis(
 ) -> str:
     """Run MCTS over conditional strategies; write ``synthesized_strategy.txt`` under ``log_folder``."""
     experiment = run.experiment
-    num_strat = experiment.ln_strat_num
+    num_strat = experiment.max_ln_strategies
     context = build_stage2_context(shortlist, bench_lst, num_strat)
     log.info(f"preprocess dict: {context.preprocess_actions}")
     log.info(f"solver dict: {context.solver_actions}")

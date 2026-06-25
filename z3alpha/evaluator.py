@@ -13,17 +13,30 @@ class SolverRunner:
 
     If z3_strategy is not None, the solver is assumed to be Z3 and the
     strategy is passed via the tactic.default_tactic parameter.
+
+    z3_extra_params are additional Z3 command-line arguments (e.g.
+    ``smt.random_seed=1`` or ``-v:10``), inserted before the benchmark path.
     """
 
-    def __init__(self, solver_path, smt_file, timeout, run_id, z3_strategy=None):
+    def __init__(
+        self,
+        solver_path,
+        smt_file,
+        timeout,
+        run_id,
+        z3_strategy=None,
+        z3_extra_params=None,
+    ):
         self.solver_path = solver_path
         self.smt_file = smt_file
         self.timeout = timeout
         self.z3_strategy = z3_strategy
+        self.z3_extra_params = list(z3_extra_params or [])
         self.run_id = run_id
 
     def _build_cmd(self) -> list[str]:
         cmd = [self.solver_path]
+        cmd.extend(self.z3_extra_params)
         if self.z3_strategy is not None:
             cmd.append(f"tactic.default_tactic={self.z3_strategy}")
         cmd.append(self.smt_file)
@@ -89,13 +102,21 @@ class SolverEvaluator:
     PAR scoring.
     """
 
-    def __init__(self, solver_path, benchmark_lst, timeout, batch_size):
+    def __init__(
+        self,
+        solver_path,
+        benchmark_lst,
+        timeout,
+        batch_size,
+        z3_extra_params=None,
+    ):
         self.solver_path = solver_path
         self.benchmark_list = benchmark_lst
         assert self.get_benchmark_size() > 0
         self.timeout = timeout
         assert self.timeout > 0
         self.batch_size = batch_size
+        self.z3_extra_params = list(z3_extra_params or [])
 
     def get_benchmark_size(self):
         return len(self.benchmark_list)
@@ -108,6 +129,7 @@ class SolverEvaluator:
             self.timeout,
             run_id,
             strat_str,
+            self.z3_extra_params,
         )
         return runner.execute()
 
@@ -117,6 +139,7 @@ class SolverEvaluator:
         """
         size = self.get_benchmark_size()
         results = [None] * size
+        solved_count = 0
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.batch_size) as executor:
             futures = {
@@ -129,8 +152,10 @@ class SolverEvaluator:
                 run_id, resTask, timeTask, pathTask = future.result()
                 solved = resTask == "sat" or resTask == "unsat"
                 results[run_id] = (solved, timeTask, resTask)
+                if solved:
+                    solved_count += 1
                 if progress_callback is not None:
-                    progress_callback(completed, size)
+                    progress_callback(completed, size, solved_count)
 
         for i in range(size):
             assert results[i] is not None

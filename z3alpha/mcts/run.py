@@ -12,6 +12,7 @@ from typing import Any, ClassVar
 from z3alpha.config.logging import attach_file_logger
 from z3alpha.mcts.llm_prior import LLMPriorConfig
 from z3alpha.mcts.node import MCTSNode
+from z3alpha.mcts.param_selection import ParamSelectionConfig
 from z3alpha.tactics.catalog import (
     PREPROCESS_CATALOG,
     SOLVER_CATALOG,
@@ -45,6 +46,7 @@ class MctsConfig:
     random_seed: int
     is_mean: bool = DEFAULT_IS_MEAN
     llm_prior: LLMPriorConfig | None = None
+    param_selector: ParamSelectionConfig | None = None
 
 
 class BaseMCTSRun:
@@ -109,13 +111,23 @@ class BaseMCTSRun:
         """Placeholder param heuristic. Override to set tactic params; default = no using-params."""
         return None
 
+    def _backup_params(self, value: float) -> None:
+        """Hook called after each simulation's reward is known; override to back up param-selector state."""
+
     def _priors_for(self, actions: list) -> dict[Any, float] | None:
         """Return mapping action -> prior P for expansion; ``None`` means uniform (1.0 per child)."""
         return None
 
     def _seed_expanded_children(self, node: MCTSNode, value: float) -> None:
-        """Optional post-rollout seeding for freshly expanded children."""
-        return
+        """Seed freshly expanded, never-visited children with the parent's
+        just-computed rollout value instead of leaving them at the
+        ``MCTSNode`` default of 0.0. Without this, PUCT treats unvisited
+        children as worst-case (reward is normalized to [0, 1]), so the
+        explore term has to do all the work to ever revisit them.
+        """
+        for child in node.children.values():
+            if child.visit_count == 0:
+                child.value_est = float(value)
 
     def _trace_format_action(self, action: Any) -> str:
         """Pretty-print ``action`` for MCTS trace logs (linear SMT tactic ids vs stage-2 values)."""
@@ -280,6 +292,7 @@ class BaseMCTSRun:
         self._update_top_strategies(value, str(self.env))
         self.trace_log.info(f"Final Return: {value}\n")
         self._backup(search_path, value)
+        self._backup_params(value)
 
     def _update_top_strategies(self, value: float, strategy: str) -> None:
         for i in range(3):

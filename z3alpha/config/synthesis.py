@@ -7,6 +7,7 @@ import os
 from typing import Any, Protocol, runtime_checkable
 
 from z3alpha.mcts.llm_prior import LLMPriorConfig
+from z3alpha.mcts.param_selection import DEFAULT_PARAM_C_UCB, ParamSelectionConfig
 from z3alpha.mcts.run import DEFAULT_IS_MEAN, MctsConfig
 
 # CLI / code defaults (experiment JSON does not set these; use --c-uct, --random-seed)
@@ -23,12 +24,11 @@ class ExperimentConfig:
     """One experiment file; see :func:`parse_experiment_config` for the JSON schema."""
 
     logic: str
-    batch_size: int
     train_dir: str
     timeout: int
     mcts_sims: int
     branched_sims: int
-    ln_strat_num: int
+    max_ln_strategies: int | None = None
     value_type: str = "par10"
     z3path: str | None = None
     parent_log_dir: str | None = None
@@ -64,12 +64,11 @@ def parse_experiment_config(raw: dict[str, Any]) -> ExperimentConfig:
 
     return ExperimentConfig(
         logic=raw["logic"],
-        batch_size=raw["batch_size"],
         train_dir=raw["train_dir"],
         timeout=raw["timeout"],
         mcts_sims=raw["mcts_sims"],
         branched_sims=raw["branched_sims"],
-        ln_strat_num=raw["ln_strat_num"],
+        max_ln_strategies=raw.get("max_ln_strategies"),
         value_type=raw.get("value_type", "par10"),
         z3path=raw.get("z3path"),
         parent_log_dir=raw.get("parent_log_dir"),
@@ -108,6 +107,7 @@ def resolve_mcts_config(args: MctsCliArgs, experiment: ExperimentConfig) -> Mcts
                 os.environ.get("Z3ALPHA_LLM_TEMPERATURE", DEFAULT_LLM_TEMPERATURE)
             ),
         )
+    param_selector = ParamSelectionConfig()
     return MctsConfig(
         sim_num=experiment.mcts_sims,
         timeout=experiment.timeout,
@@ -115,4 +115,5 @@ def resolve_mcts_config(args: MctsCliArgs, experiment: ExperimentConfig) -> Mcts
         random_seed=DEFAULT_RANDOM_SEED if args.random_seed is None else args.random_seed,
         is_mean=DEFAULT_IS_MEAN,
         llm_prior=llm_prior,
+        param_selector=param_selector,
     )

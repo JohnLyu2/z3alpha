@@ -1,38 +1,81 @@
 {
-  "solver_tactics": ["smt", "qflia"],
-  "preprocess_tactics": [
-    "pb2bv",
-    "simplify",
-    "propagate-values",
-    "ctx-simplify",
-    "elim-uncnstr",
-    "solve-eqs",
-    "propagate-ineqs",
-    "add-bounds",
-    "normalize-bounds",
-    "lia2pb"
-  ],
-  "params": {
-    "smt": {
-      "random_seed": [0, 100, 200, 300, 400, 500]
-    },
-    "simplify": {
-      "elim_and": ["true", "false"],
-      "blast_distinct": ["true", "false"],
-      "local_ctx": ["true", "false"],
-      "pull_cheap_ite": ["true", "false"],
-      "som": ["true", "false"],
-      "flat": ["true", "false"],
-      "push_ite_arith": ["true", "false"],
-      "hoist_ite": ["true", "false"],
-      "arith_lhs": ["true", "false"]
-    },
-    "add-bounds": {
-      "add_bound_lower": [-2, -4, -8, -16, -32],
-      "add_bound_upper": [2, 4, 8, 16, 32]
-    },
-    "lia2pb": {
-      "lia2pb_max_bits": [16, 32, 64, 128]
+  "smt": {
+    "solver": true,
+    "params": {
+      "random_seed": {
+        "default": 0,
+        "values": [0, 100, 200, 300, 400, 500]
+      }
+    }
+  },
+  "qflia": {
+    "solver": true
+  },
+  "pb2bv": {},
+  "simplify": {
+    "params": {
+      "elim_and": {
+        "default": "false",
+        "values": ["true", "false"]
+      },
+      "blast_distinct": {
+        "default": "false",
+        "values": ["true", "false"]
+      },
+      "local_ctx": {
+        "default": "false",
+        "values": ["true", "false"]
+      },
+      "pull_cheap_ite": {
+        "default": "false",
+        "values": ["true", "false"]
+      },
+      "som": {
+        "default": "false",
+        "values": ["true", "false"]
+      },
+      "flat": {
+        "default": "true",
+        "values": ["true", "false"]
+      },
+      "push_ite_arith": {
+        "default": "false",
+        "values": ["true", "false"]
+      },
+      "hoist_ite": {
+        "default": "false",
+        "values": ["true", "false"]
+      },
+      "arith_lhs": {
+        "default": "false",
+        "values": ["true", "false"]
+      }
+    }
+  },
+  "propagate-values": {},
+  "ctx-simplify": {},
+  "elim-uncnstr": {},
+  "solve-eqs": {},
+  "propagate-ineqs": {},
+  "add-bounds": {
+    "params": {
+      "add_bound_lower": {
+        "default": -2,
+        "values": [-2, -4, -8, -16, -32]
+      },
+      "add_bound_upper": {
+        "default": 2,
+        "values": [2, 4, 8, 16, 32]
+      }
+    }
+  },
+  "normalize-bounds": {},
+  "lia2pb": {
+    "params": {
+      "lia2pb_max_bits": {
+        "default": 32,
+        "values": [16, 32, 64, 128]
+      }
     }
   }
 }

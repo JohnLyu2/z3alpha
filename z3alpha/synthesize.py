@@ -17,10 +17,13 @@ from z3alpha.config import (
     setup_logging,
 )
 from z3alpha.experiment_metrics import append_run_metrics_row, compute_run_metrics
+from z3alpha.config.env import check_z3_version, load_env_config
 from z3alpha.mcts import LinearStrategySearchRun
+from z3alpha.smt_select import train_pwc_selector
 from z3alpha.stage2.search_runtime import run_branched_synthesis
 from z3alpha.strategy_portfolio import create_greedy_linear_strategy_portfolio
 from z3alpha.tactics.logic_config import load_logic_config
+from z3alpha.utils import create_benchmark_list
 
 log = logging.getLogger(__name__)
 
@@ -32,31 +35,21 @@ def _train_dir(experiment: ExperimentConfig) -> str:
     return raw
 
 
-def create_benchmark_list(benchmark_directories):
-    """Collect all .smt2 files from the given directories."""
-    benchmark_lst = []
-    for dir in benchmark_directories:
-        assert Path(dir).exists()
-        benchmark_lst += [
-            str(p) for p in sorted(list(Path(dir).rglob("*.smt2")))
-        ]
-    benchmark_lst.sort()
-    return benchmark_lst
-
-
 def _log_elapsed(start_time, label):
     elapsed = time.time() - start_time
     log.info(f"{label}: {elapsed:.0f}")
     return elapsed
 
 
-def synthesize_linear_strategies(run: SynthesisRun, log_folder: Path):
+def synthesize_linear_strategies(run: SynthesisRun, log_folder: Path, env=None):
+    if env is None:
+        env = load_env_config()
     experiment = run.experiment
     start_time = time.time()
     logic = experiment.logic
-    z3path = experiment.z3path if experiment.z3path else "z3"
-    batch_size = experiment.batch_size
-    num_ln_strat = experiment.ln_strat_num
+    z3path = experiment.z3path if experiment.z3path else (env.z3_path or "z3")
+    batch_size = env.workers
+    num_ln_strat = experiment.max_ln_strategies
     value_type = experiment.value_type
     random.seed(run.mcts.random_seed)
 
@@ -94,7 +87,7 @@ def synthesize_linear_strategies(run: SynthesisRun, log_folder: Path):
 
     _log_elapsed(start_time, "Linear strategy search time")
     shortlist = [(s, s1_res_dict[s]) for s in selected_strat]
-    return selected_strat, s1_bench_lst, shortlist, run1
+    return s1_bench_lst, shortlist
 
 
 def add_fail_if_undecided(strat):
@@ -114,22 +107,23 @@ def parallel_linear_strategies(ln_strat_lst, fail_if_undecided=True):
     return parallel_strats
 
 
-def parallel_synthesize(
-    run: SynthesisRun,
-    log_folder: Path,
-    metrics_csv: Path,
-    notes: str = "",
-):
+def ml_synthesize(run: SynthesisRun, log_folder: Path, env=None):
+    if env is None:
+        env = load_env_config()
     start_time = time.time()
 
-    selected_strats, _, _, linear_run = synthesize_linear_strategies(run, log_folder)
+    bench_lst, shortlist = synthesize_linear_strategies(run, log_folder, env=env)
 
-    parallel_strat = parallel_linear_strategies(selected_strats)
+    selector = train_pwc_selector(
+        shortlist=shortlist,
+        bench_paths=bench_lst,
+        timeout=run.experiment.timeout,
+        random_seed=run.mcts.random_seed,
+    )
 
-    parallel_strat_path = Path(log_folder) / "synthesized_strategy.txt"
-    with open(parallel_strat_path, "w") as f:
-        f.write(parallel_strat)
-    log.info(f"Final parallel strategy saved to {parallel_strat_path}")
+    selector_path = Path(log_folder) / "selector.pkl"
+    selector.save(selector_path)
+    log.info(f"PWC selector saved to {selector_path}")
 
     wall_time_s = _log_elapsed(start_time, "Total synthesis time")
     metrics = compute_run_metrics(linear_run.res_database, run.experiment.timeout)
@@ -158,12 +152,12 @@ def parallel_synthesize(
     log.info("Appended run metrics to %s", metrics_csv)
 
 
-def branched_synthesize(run: SynthesisRun, log_folder: Path):
+def branched_synthesize(run: SynthesisRun, log_folder: Path, env=None):
+    if env is None:
+        env = load_env_config()
     start_time = time.time()
 
-    _, bench_lst, shortlist, _ = synthesize_linear_strategies(
-        run, log_folder
-    )
+    bench_lst, shortlist = synthesize_linear_strategies(run, log_folder, env=env)
 
     run_branched_synthesis(run, shortlist, bench_lst, log_folder)
 
@@ -174,12 +168,6 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "json_config", type=str, help="The experiment configuration file in json"
-    )
-    parser.add_argument(
-        "--parallel",
-        "-p",
-        action="store_true",
-        help="Synthesize parallel strategy instead of branched strategy",
     )
     parser.add_argument(
         "--c-uct",
@@ -193,6 +181,11 @@ def main():
         default=None,
         dest="random_seed",
         help="Override random seed (default: z3alpha.config.synthesis.DEFAULT_RANDOM_SEED)",
+    )
+    parser.add_argument(
+        "--ml-selector",
+        action="store_true",
+        help="Use PWC ML selector instead of the default stage-2 branched MCTS",
     )
     parser.add_argument(
         "--llm-prior",
@@ -210,7 +203,8 @@ def main():
         help="Free-text note stored in experiments/run_metrics.csv (with --parallel)",
     )
     args = parser.parse_args()
-    load_dotenv()
+    env = load_env_config()
+    check_z3_version(env)
     with open(args.json_config, encoding="utf-8") as f:
         user = json.load(f)
     experiment = parse_experiment_config(user)
@@ -234,8 +228,10 @@ def main():
 
     if args.parallel:
         parallel_synthesize(run, log_folder, metrics_csv, notes=args.notes)
+    elif args.ml_selector:
+        ml_synthesize(run, log_folder, env=env)
     else:
-        branched_synthesize(run, log_folder)
+        branched_synthesize(run, log_folder, env=env)
 
 
 if __name__ == "__main__":

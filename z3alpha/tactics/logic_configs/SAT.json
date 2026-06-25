@@ -1,21 +1,38 @@
 {
-  "solver_tactics": ["smt", "sat"],
-  "preprocess_tactics": [
-    "simplify",
-    "propagate-values",
-    "ctx-simplify",
-    "elim-uncnstr",
-    "solve-eqs"
-  ],
-  "params": {
-    "smt": {
-      "random_seed": [0, 100, 200, 300, 400, 500]
-    },
-    "simplify": {
-      "elim_and": ["true", "false"],
-      "blast_distinct": ["true", "false"],
-      "local_ctx": ["true", "false"],
-      "pull_cheap_ite": ["true", "false"]
+  "smt": {
+    "solver": true,
+    "params": {
+      "random_seed": {
+        "default": 0,
+        "values": [0, 100, 200, 300, 400, 500]
+      }
     }
-  }
+  },
+  "sat": {
+    "solver": true
+  },
+  "simplify": {
+    "params": {
+      "elim_and": {
+        "default": "false",
+        "values": ["true", "false"]
+      },
+      "blast_distinct": {
+        "default": "false",
+        "values": ["true", "false"]
+      },
+      "local_ctx": {
+        "default": "false",
+        "values": ["true", "false"]
+      },
+      "pull_cheap_ite": {
+        "default": "false",
+        "values": ["true", "false"]
+      }
+    }
+  },
+  "propagate-values": {},
+  "ctx-simplify": {},
+  "elim-uncnstr": {},
+  "solve-eqs": {}
 }

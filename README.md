@@ -4,50 +4,62 @@ Our tool is built on top of the [Z3 SMT solver](https://github.com/Z3Prover/z3).
 
 ## Setup
 
-We recommend using a Python virtual environment:
-
 ```bash
 python -m venv venv
 source venv/bin/activate  # Unix/macOS
-```
-
-Install Z3alpha and its dependencies:
-
-1. **Z3 Solver**
-
-Z3alpha depends both on the Z3 binary and the Z3 Python bindings. The easiest way to install both is to run:
-
-```bash
 pip install z3-solver
-```
-
-2. **Install Z3alpha**
-
-```bash
 pip3 install -e .
 ```
 
+Z3alpha requires a Z3 binary and runs benchmarks in parallel workers. Before running any synthesis or evaluation, specify machine-specific settings in `env_config.json` at the repo root — these control which Z3 binary is used and how many parallel workers are launched:
+
+- `z3_path` — path to the Z3 binary (default: `z3` on `PATH`)
+- `z3_version` — if set, the binary version is verified at startup
+- `workers` — parallel benchmark evaluations per simulation (default: 4)
+- `machine_name` — informational label for result logs
+
+All fields are optional; missing fields use defaults.
+
 ## A Synthesis Example
 
-Here, we provide an example of synthesizing a tailored Z3 strategy for a toy benchmark set `data/smoke/benchmarks/`. 
-
-
-The command for this toy example is as follows:
+A smoke-test configuration for QF\_NIA is provided at `data/smoke/configs/synthesis.json`, with benchmarks in `data/smoke/benchmarks/QF_NIA/`. Run it with:
 
 ```bash
 python -m z3alpha.synthesize data/smoke/configs/synthesis.json
 ```
 
-The configuration file lists experiment fields only (see `z3alpha.config.ExperimentConfig` for the allowed schema; unknown keys are rejected). All MCTS knobs (sim count, timeout, PUCT exploration constant, random seed, mean-vs-max value backup) live in `z3alpha.config.MctsConfig`. Defaults come from constants in two places: `DEFAULT_C_UCT` and `DEFAULT_RANDOM_SEED` are in `z3alpha/config/synthesis.py`, while `DEFAULT_IS_MEAN = False` is in `z3alpha/mcts/run.py`. The PUCT constant and seed can be overridden via `--c-uct` and `--random-seed` on the CLI; `is_mean` is a code-level toggle (set to `True` in `MctsConfig` to use running-mean value backups instead of running-max). A smoke-test configuration is provided at `data/smoke/configs/synthesis.json`.
+This runs Z3alpha on 10 QF_NIA benchmarks with 10 stage-1 MCTS simulations, 50 stage-2 simulations, and a 2-second per-benchmark timeout.
 
-After this command finishes, outputs are saved under `experiments/synthesis/` in a directory named `out-<starting time:%Y-%m-%d_%H-%M-%S>`. Typical files:
+**Output files** (in `experiments/synthesis/out-<timestamp>/`):
+- `linear_strategy_summary.csv` — per-strategy: simulation id, strategy string, `n_solved`, `par2_avg`, `par10_avg`
+- `linear_strategy_per_benchmark.csv` — per-instance outcomes (`sat`/`unsat`/`timeout`/`error`, solve time)
+- `linear_selected_strategies.csv` — shortlist of strategies passed to stage 2
+- `synthesized_strategy.txt` — synthesized strategy string
 
-- `linear_strategy_mcts.log` / `stage2_mcts_trace.log` — MCTS search traces (linear vs. branched/conditional search)  
-- `linear_strategy_summary.csv` — columns `id` (MCTS simulation when first evaluated), `strategy`, then `n_solved`, `par2_avg`, `par10_avg` (mean penalized time per benchmark); the branched pass still uses in-memory timings for the shortlist  
-- `linear_strategy_per_benchmark.csv` — long-format log (`strat`, `benchmark`, `status`, `time_s`, `solved`): solver outcome per instance (`sat` / `unsat` / `unknown` / `timeout` / `error`, …)  
+## Tactic and Parameter Configuration
 
-- `linear_selected_strategies.csv` — shortlist passed to the branched/conditional MCTS pass  
-- `synthesized_strategy.txt` — final synthesized tactic string (branched mode; parallel mode uses the same name in the run folder)
+The tactic action space and the asscociated parameter search grids are defined in `z3alpha/tactics/logic_configs/`, one JSON file per SMT-LIB logic (e.g. `QF_NIA.json`). Each top-level key is a Z3 tactic name:
+
+```json
+"simplify": {
+  "solver": false,
+  "params": {
+    "elim_and": { "default": "false", "values": ["true", "false"] },
+    "hoist_mul": { "default": "false", "values": ["true", "false"] }
+  }
+},
+"smt": { "solver": true }
+```
+
+- Tactics with `"solver": true` terminate a strategy (leaf nodes); others are preprocessing steps.
+- `"params"` defines the parameter search grid: `"default"` is Z3's own default for that parameter (omitted from the synthesized strategy string if selected); `"values"` is the candidate set to explore.
+
+To add a new logic or extend an existing one, create or edit the corresponding file and run the validator to check tactic names, parameter names, and defaults against your Z3 binary:
+
+```bash
+python scripts/validate_logic_configs.py        # check
+python scripts/validate_logic_configs.py --fix  # auto-correct defaults
+```
 
 ## IJCAI-24 Reproduction
 
@@ -61,7 +73,8 @@ The scripts in `data/ijcai24/benchmarks/download_scripts/` will download all ben
 
 ### Z3alpha Strategy Synthesis
 
-We provide sample configuration JSON files for the experiments in `data/ijcai24/configs/synthesis/`. When under the repository root, run the following command with the corresponding configuration file. 
+We provide configuration JSON files for the experiments in `data/ijcai24/configs/synthesis/`. When under the repository root, run the following command with the corresponding configuration file. 
+
 For example, to synthesize a strategy for *leipzig*, run:
 
 ```bash
@@ -80,10 +93,6 @@ python scripts/eval_solvers.py data/ijcai24/configs/eval/leipzig.json
 
 The evaluation outcomes are saved in the directory specified by the `res_dir` entry in the configuration JSON file.
 
-
-### Results
-
-All experimental result data are included in `data/ijcai24/`. For each experiment, there is a subfolder (e.g., `data/ijcai24/results/QF_BV/core/`) containing all competing solvers' evaluation statistics and sample strategies synthesized by Z3alpha and FastSMT.
 
 
 

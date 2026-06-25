@@ -1,9 +1,8 @@
 {
   "logic": "QF_S",
-  "batch_size": 50,
   "train_dir": "data/ijcai24/benchmarks/QF_S",
   "timeout": 10,
   "mcts_sims": 800,
   "branched_sims": 300000,
-  "ln_strat_num": 20
+  "max_ln_strategies": 20
 }

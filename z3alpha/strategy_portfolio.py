@@ -1,4 +1,4 @@
-from z3alpha.utils import par_n_reward
+from z3alpha.utils import par_n_reward, par_n, solved_num
 
 
 # no incentive for early termination if not solved for now
@@ -29,29 +29,28 @@ def virtual_add_strategy(cur_best_res, strat_res):
 N = 10
 
 
-def create_greedy_linear_strategy_portfolio(max_selected, result_database, timeout):
+def create_greedy_linear_strategy_portfolio(max_ln_strategies, result_database, timeout):
     if not result_database:
         return [], "\n(no strategies evaluated)\n"
-    n = len(result_database)
-    effective = min(max_selected, n)
     selected_strat = []
     log_str = "\n"
     best_res = [(False, None)] * len(result_database[list(result_database.keys())[0]])
-    for i in range(effective):
+    i = 0
+    while max_ln_strategies is None or i < max_ln_strategies:
         best_strat = None
-        best_value = par_n_reward(best_res, N, timeout)
+        best_solved = solved_num(best_res)
         for strat in result_database:
             if strat in selected_strat:
                 continue
-            strat_res = result_database[strat]
-            virtual_res, _ = virtual_add_strategy(best_res, strat_res)
-            virtual_value = par_n_reward(virtual_res, N, timeout)
-            if virtual_value > best_value:
+            virtual_res, _ = virtual_add_strategy(best_res, result_database[strat])
+            if solved_num(virtual_res) > best_solved:
                 best_strat = strat
-                best_value = virtual_value
+                best_solved = solved_num(virtual_res)
         if best_strat is None:
             break
         selected_strat.append(best_strat)
-        best_res, beat_num = virtual_add_strategy(best_res, result_database[best_strat])
-        log_str += f"Select {i}'th strategy: {best_strat}\nimprove on {beat_num} instances,  new par10: {best_value:.5f}\n"
+        best_res, _ = virtual_add_strategy(best_res, result_database[best_strat])
+        par2 = par_n(best_res, 2, timeout) / len(best_res)
+        log_str += f"Select {i}'th strategy: {best_strat}\nsolved: {solved_num(best_res)},  par2: {par2:.1f}s\n"
+        i += 1
     return selected_strat, log_str

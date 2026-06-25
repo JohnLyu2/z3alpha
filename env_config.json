@@ -1,0 +1,6 @@
+{
+  "machine_name": "my-machine",
+  "z3_path": "z3",
+  "z3_version": "4.16.0",
+  "workers": 4
+}

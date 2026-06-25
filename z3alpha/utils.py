@@ -1,3 +1,16 @@
+from pathlib import Path
+
+
+def create_benchmark_list(benchmark_directories: list[str]) -> list[str]:
+    """Collect all .smt2 files from the given directories, sorted."""
+    benchmark_lst = []
+    for d in benchmark_directories:
+        assert Path(d).exists(), f"Benchmark directory not found: {d}"
+        benchmark_lst += [str(p) for p in sorted(Path(d).rglob("*.smt2"))]
+    benchmark_lst.sort()
+    return benchmark_lst
+
+
 def solved_num(res_list):
     return len([res for res in res_list if res[0]])
 
