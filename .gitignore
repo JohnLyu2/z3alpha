@@ -23,7 +23,7 @@ Thumbs.db
 experiments/
 
 # Custom datasets and dataset creation
-data/custom/qf_nia_leipzig_150/
+data/custom/
 scripts/dataset_scripts/
 
 # Build / dist
