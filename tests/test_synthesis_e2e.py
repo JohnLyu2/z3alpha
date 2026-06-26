@@ -50,7 +50,7 @@ def _env() -> EnvConfig:
 # ---------------------------------------------------------------------------
 
 def test_linear_synthesis_output_files(tmp_path):
-    bench_lst, shortlist = synthesize_linear_strategies(_make_run(), tmp_path, env=_env())
+    bench_lst, shortlist, _ = synthesize_linear_strategies(_make_run(), tmp_path, env=_env())
 
     assert bench_lst, "benchmark list is empty"
     assert shortlist, "shortlist is empty — no strategy solved any benchmark"
@@ -74,7 +74,7 @@ def test_linear_synthesis_output_files(tmp_path):
 
 
 def test_linear_synthesis_shortlist_matches_selected_file(tmp_path):
-    _, shortlist = synthesize_linear_strategies(_make_run(max_ln_strategies=2), tmp_path, env=_env())
+    _, shortlist, _ = synthesize_linear_strategies(_make_run(max_ln_strategies=2), tmp_path, env=_env())
 
     strats_from_file = [
         r["strat"]
@@ -84,7 +84,7 @@ def test_linear_synthesis_shortlist_matches_selected_file(tmp_path):
 
 
 def test_linear_synthesis_shortlist_results_match_bench_count(tmp_path):
-    bench_lst, shortlist = synthesize_linear_strategies(_make_run(), tmp_path, env=_env())
+    bench_lst, shortlist, _ = synthesize_linear_strategies(_make_run(), tmp_path, env=_env())
 
     for strat, results in shortlist:
         assert len(results) == len(bench_lst), (
@@ -118,7 +118,7 @@ def test_branched_synthesize_produces_strategy_file(tmp_path):
 
 def test_best_linear_strategy_solves_benchmark(tmp_path):
     """The best stage-1 strategy must solve at least one smoke benchmark."""
-    bench_lst, shortlist = synthesize_linear_strategies(_make_run(mcts_sims=5), tmp_path, env=_env())
+    bench_lst, shortlist, _ = synthesize_linear_strategies(_make_run(mcts_sims=5), tmp_path, env=_env())
 
     assert shortlist, "shortlist is empty"
     best_strat = shortlist[0][0]
@@ -131,7 +131,7 @@ def test_best_linear_strategy_solves_benchmark(tmp_path):
 def test_branched_strategy_solves_benchmark(tmp_path):
     """The branched-synthesis output strategy must solve at least one smoke benchmark."""
     run = _make_run(mcts_sims=5, branched_sims=5)
-    bench_lst, _ = synthesize_linear_strategies(run, tmp_path, env=_env())
+    bench_lst, _, _ = synthesize_linear_strategies(run, tmp_path, env=_env())
     branched_synthesize(run, tmp_path, env=_env())
 
     strat = (tmp_path / "synthesized_strategy.txt").read_text().strip()

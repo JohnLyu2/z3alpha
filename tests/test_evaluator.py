@@ -58,6 +58,14 @@ class TestSolverRunnerExecute(unittest.TestCase):
         self.assertEqual(res, "unsat")
         self.assertEqual(path, SAMPLE_SMT)
 
+    def test_crlf_sat_returns_sat(self) -> None:
+        """Windows Z3 stdout often ends lines with \\r\\n."""
+        runner = SolverRunner("/usr/bin/z3", SAMPLE_SMT, timeout=10, run_id=6)
+        run_id, res, runtime, path = _execute_with_mock(runner, (b"sat\r\n", b""))
+        self.assertEqual(run_id, 6)
+        self.assertEqual(res, "sat")
+        self.assertEqual(path, SAMPLE_SMT)
+
     def test_solver_error_line_returns_error(self) -> None:
         runner = SolverRunner("/usr/bin/z3", SAMPLE_SMT, timeout=10, run_id=5)
         run_id, res, runtime, path = _execute_with_mock(

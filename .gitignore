@@ -28,6 +28,10 @@ data/smtcomp26/submission/selectors/**/*.joblib
 data/smtcomp26/z3alpha2_smtcomp26.tar.gz
 data/smtcomp26/z3-4.16.0.tar.gz
 
+# Custom datasets and dataset creation
+data/custom/
+scripts/dataset_scripts/
+
 # Build / dist
 *.egg-info/
 *.egg

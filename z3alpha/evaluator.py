@@ -58,14 +58,14 @@ class SolverRunner:
             )
             return self.run_id, "error", runtime, self.smt_file
 
-        lines = text.rstrip("\n").split("\n")
+        lines = text.splitlines()
         if not lines or not lines[0].strip():
             logger.warning(
                 f"No lines in solver output: {self.solver_path}\ninstance: {self.smt_file}"
             )
             return self.run_id, "error", runtime, self.smt_file
 
-        res = lines[0]
+        res = lines[0].strip()
         if res.startswith("(error"):
             logger.warning(
                 f"Error occurred when solver: {self.solver_path}\n strategy: {self.z3_strategy}\ninstance: {self.smt_file}\nMessage: {res}"
