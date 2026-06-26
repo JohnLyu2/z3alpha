@@ -16,7 +16,6 @@ from z3alpha.experiment_metrics import (
     init_coverage_curve_csv,
     k_union,
     llm_calls_from_qa_log,
-    res_database_from_per_benchmark_csv,
 )
 
 
@@ -157,29 +156,6 @@ class TestLlmCallsFromQaLog(unittest.TestCase):
     def test_missing_log_is_zero(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             self.assertEqual(llm_calls_from_qa_log(Path(tmp) / "missing.log"), 0)
-
-
-class TestResDatabaseFromCsv(unittest.TestCase):
-    def test_roundtrip_shape(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / "per.csv"
-            with open(path, "w", newline="", encoding="utf-8") as f:
-                w = csv.writer(f)
-                w.writerow(["strat", "benchmark", "status", "time_s", "solved"])
-                w.writerow(["s1", "b0.smt2", "sat", "0.1", "True"])
-                w.writerow(["s1", "b1.smt2", "timeout", "10", "False"])
-                w.writerow(["s2", "b0.smt2", "sat", "0.2", "True"])
-                w.writerow(["s2", "b1.smt2", "sat", "0.3", "True"])
-
-            db = res_database_from_per_benchmark_csv(path)
-            self.assertEqual(len(db), 2)
-            self.assertEqual(len(db["s1"]), 2)
-            m = compute_run_metrics(db, timeout=10)
-            self.assertEqual(m["union"], 2)
-            self.assertEqual(m["best_single"], 2)
-            self.assertEqual(m["union_gap"], 0)
-            self.assertEqual(m["best_single_par2"], 0.5)
-            self.assertEqual(m["best_single_par10"], 0.5)
 
 
 if __name__ == "__main__":

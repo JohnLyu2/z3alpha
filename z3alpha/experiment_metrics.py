@@ -181,31 +181,3 @@ def llm_calls_from_qa_log(qa_log_path: Path) -> int:
             if kind in _LLM_API_QA_LOG_KINDS:
                 count += 1
     return count
-
-
-def res_database_from_per_benchmark_csv(csv_path: Path) -> dict[str, list[tuple]]:
-    """Rebuild res_database from linear_strategy_per_benchmark.csv."""
-    csv_path = Path(csv_path)
-    if not csv_path.is_file():
-        raise FileNotFoundError(csv_path)
-
-    by_strat: dict[str, dict[str, tuple]] = {}
-    bench_order: list[str] = []
-
-    with open(csv_path, newline="", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            strat = row["strat"]
-            bench = row["benchmark"]
-            solved = row["solved"].strip().lower() in ("true", "1", "yes")
-            time_s = float(row["time_s"])
-            status = row["status"]
-            if bench not in bench_order:
-                bench_order.append(bench)
-            by_strat.setdefault(strat, {})[bench] = (solved, time_s, status)
-
-    bench_order.sort()
-    result_database: dict[str, list[tuple]] = {}
-    for strat, bench_map in by_strat.items():
-        result_database[strat] = [bench_map[b] for b in bench_order]
-    return result_database
