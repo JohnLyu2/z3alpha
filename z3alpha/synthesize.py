@@ -7,6 +7,8 @@ import logging
 import json
 import datetime
 
+from dotenv import load_dotenv
+
 from z3alpha.config import (
     ExperimentConfig,
     SynthesisRun,
@@ -14,6 +16,7 @@ from z3alpha.config import (
     resolve_mcts_config,
     setup_logging,
 )
+from z3alpha.experiment_metrics import append_run_metrics_row, compute_run_metrics
 from z3alpha.config.env import check_z3_version, load_env_config
 from z3alpha.mcts import LinearStrategySearchRun
 from z3alpha.smt_select import train_pwc_selector
@@ -84,7 +87,70 @@ def synthesize_linear_strategies(run: SynthesisRun, log_folder: Path, env=None):
 
     _log_elapsed(start_time, "Linear strategy search time")
     shortlist = [(s, s1_res_dict[s]) for s in selected_strat]
-    return s1_bench_lst, shortlist
+    return s1_bench_lst, shortlist, run1
+
+
+def add_fail_if_undecided(strat):
+    return f"(then {strat} fail-if-undecided)"
+
+
+def parallel_linear_strategies(ln_strat_lst, fail_if_undecided=True):
+    assert len(ln_strat_lst) > 0, "No linear strategies provided"
+    if len(ln_strat_lst) == 1:
+        return ln_strat_lst[0]
+    parallel_strats = "(par-or"
+    for strat in ln_strat_lst:
+        if fail_if_undecided:
+            strat = add_fail_if_undecided(strat)
+        parallel_strats += f" {strat}"
+    parallel_strats += ")"
+    return parallel_strats
+
+
+def parallel_synthesize(
+    run: SynthesisRun,
+    log_folder: Path,
+    metrics_csv: Path,
+    notes: str = "",
+    env=None,
+):
+    if env is None:
+        env = load_env_config()
+    start_time = time.time()
+
+    _, shortlist, linear_run = synthesize_linear_strategies(run, log_folder, env=env)
+    selected_strats = [s for s, _ in shortlist]
+    parallel_strat = parallel_linear_strategies(selected_strats)
+
+    parallel_strat_path = Path(log_folder) / "synthesized_strategy.txt"
+    parallel_strat_path.write_text(parallel_strat, encoding="utf-8")
+    log.info("Final parallel strategy saved to %s", parallel_strat_path)
+
+    wall_time_s = _log_elapsed(start_time, "Total synthesis time")
+    metrics = compute_run_metrics(linear_run.res_database, run.experiment.timeout)
+    llm_calls = (
+        linear_run._scorer.api_call_count
+        if linear_run._scorer is not None
+        else 0
+    )
+    append_run_metrics_row(
+        metrics_csv,
+        {
+            "run_name": log_folder.name,
+            "sims": run.experiment.mcts_sims,
+            "num_strategies": metrics["num_strategies"],
+            "union": metrics["union"],
+            "best_single": metrics["best_single"],
+            "union_gap": metrics["union_gap"],
+            "best_single_par2": metrics["best_single_par2"],
+            "best_single_par10": metrics["best_single_par10"],
+            "k_union": metrics["k_union"],
+            "wall_time_s": int(wall_time_s),
+            "llm_calls": llm_calls,
+            "notes": notes,
+        },
+    )
+    log.info("Appended run metrics to %s", metrics_csv)
 
 
 def ml_synthesize(run: SynthesisRun, log_folder: Path, env=None):
@@ -92,7 +158,7 @@ def ml_synthesize(run: SynthesisRun, log_folder: Path, env=None):
         env = load_env_config()
     start_time = time.time()
 
-    bench_lst, shortlist = synthesize_linear_strategies(run, log_folder, env=env)
+    bench_lst, shortlist, _ = synthesize_linear_strategies(run, log_folder, env=env)
 
     selector = train_pwc_selector(
         shortlist=shortlist,
@@ -113,7 +179,7 @@ def branched_synthesize(run: SynthesisRun, log_folder: Path, env=None):
         env = load_env_config()
     start_time = time.time()
 
-    bench_lst, shortlist = synthesize_linear_strategies(run, log_folder, env=env)
+    bench_lst, shortlist, _ = synthesize_linear_strategies(run, log_folder, env=env)
 
     run_branched_synthesis(run, shortlist, bench_lst, log_folder)
 
@@ -139,6 +205,12 @@ def main():
         help="Override random seed (default: z3alpha.config.synthesis.DEFAULT_RANDOM_SEED)",
     )
     parser.add_argument(
+        "--parallel",
+        "-p",
+        action="store_true",
+        help="Stage 1 only: build a (par-or ...) portfolio and skip stage 2",
+    )
+    parser.add_argument(
         "--ml-selector",
         action="store_true",
         help="Use PWC ML selector instead of the default stage-2 branched MCTS",
@@ -146,36 +218,22 @@ def main():
     parser.add_argument(
         "--llm-prior",
         action="store_true",
-        help="Use OpenAI Chat Completions to score legal tactics as PUCT priors (stage 1 only; needs OPENAI_API_KEY)",
+        help=(
+            "Use the stage-1 LLM prior. Set OPENROUTER_API_KEY (or OPENAI_API_KEY) in .env; "
+            "optional Z3ALPHA_LLM_MODEL, Z3ALPHA_LLM_BASE_URL, Z3ALPHA_LLM_TIMEOUT, "
+            "and Z3ALPHA_LLM_TEMPERATURE."
+        ),
     )
     parser.add_argument(
-        "--llm-model",
+        "--notes",
         type=str,
-        default="gpt-5.4-mini",
-        help="OpenAI model id for --llm-prior (default: gpt-5.4-mini)",
-    )
-    parser.add_argument(
-        "--llm-base-url",
-        type=str,
-        default=None,
-        help="OpenAI API base URL for --llm-prior (default: https://api.openai.com/v1)",
-    )
-    parser.add_argument(
-        "--llm-timeout",
-        type=float,
-        default=None,
-        help="LLM HTTP timeout in seconds for --llm-prior (default: 30)",
-    )
-    parser.add_argument(
-        "--llm-temperature",
-        type=float,
-        default=None,
-        help="Sampling temperature for --llm-prior (default: 0)",
+        default="",
+        help="Free-text note stored in experiments/run_metrics.csv (with --parallel)",
     )
     args = parser.parse_args()
+    load_dotenv()
     env = load_env_config()
     check_z3_version(env)
-
     with open(args.json_config, encoding="utf-8") as f:
         user = json.load(f)
     experiment = parse_experiment_config(user)
@@ -195,7 +253,11 @@ def main():
     assert not log_folder.exists()
     log_folder.mkdir(parents=True)
 
-    if args.ml_selector:
+    metrics_csv = parent_dir.parent / "run_metrics.csv"
+
+    if args.parallel:
+        parallel_synthesize(run, log_folder, metrics_csv, notes=args.notes, env=env)
+    elif args.ml_selector:
         ml_synthesize(run, log_folder, env=env)
     else:
         branched_synthesize(run, log_folder, env=env)

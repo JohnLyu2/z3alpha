@@ -8,11 +8,25 @@ from dataclasses import replace
 from typing import Any
 
 from z3alpha.environment import LinearStrategyGame
-from z3alpha.mcts.llm_prior import LLMPriorScorer
+from z3alpha.experiment_metrics import (
+    append_coverage_curve_row,
+    compute_coverage_metrics,
+    filter_res_database_by_max_sim,
+    init_coverage_curve_csv,
+)
+from z3alpha.mcts.llm_prior import (
+    LLMPriorScorer,
+    RunContextVersion,
+    compute_run_context_version,
+    format_run_context,
+    root_partial_strategy,
+)
 from z3alpha.mcts.param_selection import MabParamSelector, ParamSelector
 from z3alpha.mcts.run import BaseMCTSRun, MctsConfig
 from z3alpha.tactics.catalog import tactic_name_for_action
 from z3alpha.utils import par_n, solved_num
+
+COVERAGE_CHECKPOINT_INTERVAL = 5
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +62,9 @@ class LinearStrategySearchRun(BaseMCTSRun):
         self._strat_first_sim: dict[str, int] = {}
         self._summary_csv_path = self.log_folder / "linear_strategy_summary.csv"
         self._per_bench_csv_path = self.log_folder / "linear_strategy_per_benchmark.csv"
+        self._coverage_curve_path = self.log_folder / "coverage_curve.csv"
         self._written_strats: set = set()
+        init_coverage_curve_csv(self._coverage_curve_path)
         with open(self._summary_csv_path, "w", newline="") as f:
             csv.writer(f).writerow(
                 ["id", "strategy", "n_solved", "par2_avg", "par10_avg"]
@@ -56,6 +72,8 @@ class LinearStrategySearchRun(BaseMCTSRun):
         with open(self._per_bench_csv_path, "w", newline="") as f:
             csv.writer(f).writerow(["strat", "benchmark", "status", "time_s", "solved"])
         self._scorer: LLMPriorScorer | None = None
+        self._llm_prior_expansion_this_sim = False
+        self._last_root_context_version: RunContextVersion | None = None
         lp = self.config.llm_prior
         if lp is not None and lp.enabled:
             llm_log_path = str(self.log_folder / "llm_prior_qa.log")
@@ -64,6 +82,53 @@ class LinearStrategySearchRun(BaseMCTSRun):
         ps = self.config.param_selector
         if ps is not None and ps.enabled:
             self._param_selector = MabParamSelector(c_ucb=ps.c_ucb, is_mean=self.is_mean)
+
+    def _maybe_refresh_root_priors(self) -> None:
+        if self._scorer is None or not self.root.is_expanded():
+            return
+        version = compute_run_context_version(self.res_database)
+        if version == self._last_root_context_version:
+            return
+        run_context, _ = format_run_context(
+            self.res_database, self.timeout, self.num_sim
+        )
+        partial = root_partial_strategy(self.logic)
+        actions = list(self.root.children.keys())
+        names = [tactic_name_for_action(int(a)) for a in actions]
+        by_name = self._scorer.score(
+            self.logic,
+            partial,
+            names,
+            sim_id=self.num_sim,
+            run_context=run_context,
+            run_context_version=version,
+        )
+        for i, action in enumerate(actions):
+            self.root.children[action].prior = float(by_name[names[i]])
+        self._last_root_context_version = version
+        logger.info(
+            "Root prior refresh sim %s: version=(%s, %s) source=%s %s",
+            self.num_sim,
+            version.num_strategies,
+            version.best_n_solved,
+            self._scorer.last_prior_source,
+            self._scorer._format_ranked_priors(by_name),
+        )
+
+    def _one_simulation(self) -> None:
+        self._llm_prior_expansion_this_sim = False
+        self._maybe_refresh_root_priors()
+        super()._one_simulation()
+        if self._scorer is not None and not self._llm_prior_expansion_this_sim:
+            logger.info(
+                "LLM prior sim %s: source=no_expansion (terminal or existing frontier)",
+                self.num_sim,
+            )
+
+    def _seed_expanded_children(self, node, value: float) -> None:
+        for child in node.children.values():
+            if child.visit_count == 0:
+                child.value_est = float(value)
 
     def params_for(self, action):
         if self._param_selector is None:
@@ -88,9 +153,18 @@ class LinearStrategySearchRun(BaseMCTSRun):
     def _priors_for(self, actions: list) -> dict[Any, float] | None:
         if self._scorer is None:
             return None
+        self._llm_prior_expansion_this_sim = True
         names = [tactic_name_for_action(int(a)) for a in actions]
+        run_context, run_context_version = format_run_context(
+            self.res_database, self.timeout, self.num_sim
+        )
         by_name = self._scorer.score(
-            self.logic, str(self.env), names, sim_id=self.num_sim
+            self.logic,
+            str(self.env),
+            names,
+            sim_id=self.num_sim,
+            run_context=run_context,
+            run_context_version=run_context_version,
         )
         return {a: float(by_name[names[i]]) for i, a in enumerate(actions)}
 
@@ -113,6 +187,20 @@ class LinearStrategySearchRun(BaseMCTSRun):
             if strat not in self._strat_first_sim:
                 self._strat_first_sim[strat] = self.num_sim
         self._write_new_results()
+        self._maybe_write_coverage_checkpoint()
+
+    def _maybe_write_coverage_checkpoint(self) -> None:
+        sims_done = self.num_sim + 1
+        if sims_done % COVERAGE_CHECKPOINT_INTERVAL != 0:
+            return
+        subset = filter_res_database_by_max_sim(
+            self.res_database,
+            self._strat_first_sim,
+            self.num_sim,
+        )
+        row = compute_coverage_metrics(subset)
+        row["sim"] = sims_done
+        append_coverage_curve_row(self._coverage_curve_path, row)
 
     def _write_summary_table(self) -> None:
         with open(self._summary_csv_path, "w", newline="") as f:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import MISSING, dataclass, fields
+import os
 from typing import Any, Protocol, runtime_checkable
 
 from z3alpha.mcts.llm_prior import LLMPriorConfig
@@ -12,6 +13,10 @@ from z3alpha.mcts.run import DEFAULT_IS_MEAN, MctsConfig
 # CLI / code defaults (experiment JSON does not set these; use --c-uct, --random-seed)
 DEFAULT_C_UCT = 0.5
 DEFAULT_RANDOM_SEED = 0
+DEFAULT_LLM_MODEL = "openrouter/free"
+DEFAULT_LLM_BASE_URL = "https://openrouter.ai/api/v1"
+DEFAULT_LLM_TIMEOUT = 30.0
+DEFAULT_LLM_TEMPERATURE = 0.0
 
 
 @dataclass(frozen=True)
@@ -86,21 +91,20 @@ def resolve_mcts_config(args: MctsCliArgs, experiment: ExperimentConfig) -> Mcts
     """
     llm_prior: LLMPriorConfig | None = None
     if getattr(args, "llm_prior", False):
+        base_url = os.environ.get("Z3ALPHA_LLM_BASE_URL", DEFAULT_LLM_BASE_URL)
+        api_key_env = (
+            "OPENROUTER_API_KEY"
+            if "openrouter.ai" in base_url.lower()
+            else "OPENAI_API_KEY"
+        )
         llm_prior = LLMPriorConfig(
             enabled=True,
-            model=(getattr(args, "llm_model", None) or "gpt-5.4-mini"),
-            base_url=(
-                getattr(args, "llm_base_url", None) or "https://api.openai.com/v1"
-            ),
-            llm_timeout=(
-                30.0
-                if getattr(args, "llm_timeout", None) is None
-                else float(args.llm_timeout)
-            ),
-            temperature=(
-                0.0
-                if getattr(args, "llm_temperature", None) is None
-                else float(args.llm_temperature)
+            model=os.environ.get("Z3ALPHA_LLM_MODEL", DEFAULT_LLM_MODEL),
+            base_url=base_url,
+            api_key_env=api_key_env,
+            llm_timeout=float(os.environ.get("Z3ALPHA_LLM_TIMEOUT", DEFAULT_LLM_TIMEOUT)),
+            temperature=float(
+                os.environ.get("Z3ALPHA_LLM_TEMPERATURE", DEFAULT_LLM_TEMPERATURE)
             ),
         )
     param_selector = ParamSelectionConfig()

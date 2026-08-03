@@ -9,9 +9,10 @@ from datetime import datetime
 
 from z3alpha.evaluator import SolverEvaluator
 from z3alpha.config import setup_logging
+from z3alpha.config.env import load_env_config
 from z3alpha.utils import par_n, solved_num
 
-_REQUIRED_KEYS = ("solvers", "timeout", "batch_size", "res_dir")
+_REQUIRED_KEYS = ("solvers", "timeout", "res_dir")
 
 log = logging.getLogger(__name__)
 
@@ -58,7 +59,7 @@ def main():
         sys.exit("Config key 'z3_extra_params' must be a list of strings")
     z3_extra_params = [str(p) for p in z3_extra_params]
     timeout = config["timeout"]
-    batch_size = config["batch_size"]
+    batch_size = config.get("batch_size", load_env_config().workers)
     res_dir = config["res_dir"]
 
     eval_list_file = config.get("eval_list_file")
