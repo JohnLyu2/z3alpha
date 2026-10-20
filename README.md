@@ -1,6 +1,8 @@
-**Z3alpha** synthesizes efficient Z3 strategies tailored to your problem set! See our IJCAI'24 paper [Layered and Staged Monte Carlo Tree Search for SMT Strategy Synthesis](https://arxiv.org/abs/2401.17159) for technical details. 
+**Z3alpha** synthesizes efficient Z3 strategies tailored to your problem set! See our [IJCAI'24 paper](https://arxiv.org/abs/2401.17159) and [extended journal paper](https://doi.org/10.1007/s00236-025-00495-x) for technical details.
 
 Our tool is built on top of the [Z3 SMT solver](https://github.com/Z3Prover/z3).
+
+Z3alpha has won multiple divisions at SMT-COMP in 2024, 2025, and 2026, including nonlinear integer and real arithmetic. See our [SMT-COMP results](#smt-comp-results) for highlights and official rankings.
 
 ## Setup
 
@@ -96,8 +98,17 @@ The evaluation outcomes are saved in the directory specified by the `res_dir` en
 
 
 
-## SMT-COMP'24
-As a derived solver, Z3alpha participated in [SMT-COMP 2024 (Single Query Track)](https://smt-comp.github.io/2024/results/results-single-query/) and won [some awards](https://drive.google.com/file/d/1dEeJFfzjJz4vp-mU5XiGnR-hHJdsU1QZ/view?usp=sharing).
+## SMT-COMP Results
+
+Z3alpha competed in the Single Query Track in 2024, 2025, and 2026. The table highlights its division wins under the Sequential Performance scoring scheme; the official results also list other scoring schemes and full rankings.
+
+| Year | Sequential Performance division wins | Official results |
+| --- | --- | --- |
+| 2024 | QF_NonLinearIntArith, QF_NonLinearRealArith | [SMT-COMP 2024](https://smt-comp.github.io/2024/results/results-single-query/) |
+| 2025 | Arith, QF_NonLinearIntArith, QF_NonLinearRealArith | [SMT-COMP 2025](https://smt-comp.github.io/2025/results/results-single-query/) |
+| 2026 | Arith, QF_NonLinearIntArith, QF_NonLinearRealArith | [SMT-COMP 2026](https://smt-comp.github.io/2026/results/results-single-query/) |
+
+Additional wins include UNSAT Performance in QF_Datatypes (2024), SAT Performance in QF_LinearIntArith (2024 and 2025), and UNSAT Performance in QF_Equality_NonLinearArith (2026).
 
 ## License
 Z3alpha is licensed under the [Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0).
